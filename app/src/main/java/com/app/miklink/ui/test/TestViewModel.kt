@@ -69,14 +69,12 @@ class TestViewModel @Inject constructor(
             try {
                 addLog("--- INIZIO TEST ---")
                 addLog("Cliente: ${client.companyName} | Presa: $socketName")
-
-                repository.setProbe(probe)
                 addLog("Sonda '${probe.name}' selezionata.")
 
                 if (profile.runTdr) {
                     if (probe.tdrSupported) {
                         addLog("Esecuzione TDR (Cable-Test)...")
-                        when (val tdrResult = repository.runCableTest(probe.testInterface)) {
+                        when (val tdrResult = repository.runCableTest(probe, probe.testInterface)) {
                             is UiState.Success -> {
                                 addLog("TDR: SUCCESSO.")
                                 testResults["tdr"] = tdrResult.data
@@ -94,7 +92,7 @@ class TestViewModel @Inject constructor(
 
                 if (profile.runLinkStatus) {
                     addLog("Esecuzione Test Stato Link...")
-                    when (val linkResult = repository.getLinkStatus(probe.testInterface)) {
+                    when (val linkResult = repository.getLinkStatus(probe, probe.testInterface)) {
                         is UiState.Success -> {
                             val data = linkResult.data
                             addLog("Stato Link: SUCCESSO (${data.status} @ ${data.rate})")
@@ -110,7 +108,7 @@ class TestViewModel @Inject constructor(
 
                 if (profile.runLldp) {
                     addLog("Esecuzione Test LLDP/CDP...")
-                    when (val neighborResult = repository.getNeighborsForInterface(probe.testInterface)) {
+                    when (val neighborResult = repository.getNeighborsForInterface(probe, probe.testInterface)) {
                         is UiState.Success -> {
                             val switch = findDirectlyConnectedSwitch(neighborResult.data)
                             if (switch != null) {
@@ -133,12 +131,12 @@ class TestViewModel @Inject constructor(
                     val targets = listOfNotNull(client.pingTarget1, client.pingTarget2, client.pingTarget3).filter { it.isNotBlank() }
                     targets.forEach { target ->
                         val resolvedTarget = if (target.equals("DHCP_GATEWAY", ignoreCase = true)) {
-                            repository.getDhcpGateway(probe.testInterface) ?: target
+                            repository.getDhcpGateway(probe, probe.testInterface) ?: target
                         } else {
                             target
                         }
 
-                        when (val pingResult = repository.runPing(resolvedTarget)) {
+                        when (val pingResult = repository.runPing(probe, resolvedTarget)) {
                             is UiState.Success -> addLog("Ping ($resolvedTarget): SUCCESSO (${pingResult.data.avgRtt}ms)")
                             is UiState.Error -> { addLog("Ping ($resolvedTarget): FALLITO (${pingResult.message})") ; overallStatus = "FAIL" }
                             UiState.Loading -> {}
@@ -153,11 +151,11 @@ class TestViewModel @Inject constructor(
                 addLog("--- FASE 4: PULIZIA FINALE ---")
                 vlanId?.let {
                     addLog("Rimozione VLAN ($it)...")
-                    repository.removeVlan(it)
+                    repository.removeVlan(probe, it)
                 }
                 ipId?.let {
                     addLog("Rimozione IP ($it)...")
-                    repository.removeIpAddress(it)
+                    repository.removeIpAddress(probe, it)
                 }
 
                 addLog("--- TEST COMPLETATO ---")

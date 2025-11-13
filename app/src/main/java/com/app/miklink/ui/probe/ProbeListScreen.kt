@@ -22,30 +22,31 @@ fun ProbeListScreen(
     navController: NavController,
     viewModel: ProbeListViewModel = hiltViewModel()
 ) {
-    val probes by viewModel.probes.collectAsStateWithLifecycle()
+    val probesWithStatus by viewModel.probes.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Manage Probes") }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("probe_edit/-1") }) {
+            FloatingActionButton(onClick = { navController.navigate("probe_add") }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Probe")
             }
         }
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            items(probes) { probe ->
+            items(probesWithStatus) { probeInfo ->
+                val probe = probeInfo.probe
                 ListItem(
                     headlineContent = { Text(probe.name) },
                     supportingContent = {
                         Text(
-                            "${probe.ipAddress} | ${probe.modelName ?: "Unknown Model"} | ${probe.testInterface}"
+                            "${probe.ipAddress} | ${probe.modelName ?: "Unknown Model"}"
                         )
                     },
                     leadingContent = {
                         Icon(
                             imageVector = Icons.Default.Circle,
-                            contentDescription = if (probe.isOnline) "Online" else "Offline",
-                            tint = if (probe.isOnline) Color.Green else Color.Red
+                            contentDescription = if (probeInfo.isOnline) "Online" else "Offline",
+                            tint = if (probeInfo.isOnline) Color.Green else Color.Red
                         )
                     },
                     modifier = Modifier.clickable {

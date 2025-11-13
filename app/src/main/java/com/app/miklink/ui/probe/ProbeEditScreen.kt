@@ -38,7 +38,7 @@ fun ProbeEditScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .navigationBarsPadding(),
-                enabled = name.isNotBlank() && ipAddress.isNotBlank()
+                enabled = name.isNotBlank() && ipAddress.isNotBlank() && verificationState is VerificationState.Success
             ) {
                 Text("Save")
             }
