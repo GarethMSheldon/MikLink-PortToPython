@@ -23,7 +23,7 @@ fun ProbeEditScreen(
     val isHttps by viewModel.isHttps.collectAsStateWithLifecycle()
     val testInterface by viewModel.testInterface.collectAsStateWithLifecycle()
     val verificationState by viewModel.verificationState.collectAsStateWithLifecycle()
-    
+
     val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
     if (isSaved) {
         LaunchedEffect(Unit) { navController.popBackStack() }
@@ -34,7 +34,10 @@ fun ProbeEditScreen(
         bottomBar = {
             Button(
                 onClick = viewModel::onSaveClicked,
-                modifier = Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .navigationBarsPadding(),
                 enabled = name.isNotBlank() && ipAddress.isNotBlank()
             ) {
                 Text("Save")
@@ -64,16 +67,14 @@ fun ProbeEditScreen(
 
             when (val state = verificationState) {
                 is VerificationState.Idle -> {
-                    Button(onClick = viewModel::onVerifyClicked) {
-                        Text("Verify Probe")
-                    }
+                    VerifyProbeButton(onClick = viewModel::onVerifyClicked)
                 }
                 is VerificationState.Loading -> {
                     CircularProgressIndicator()
                 }
                 is VerificationState.Success -> {
                     Text("Board: ${state.boardName ?: "Unknown"}", style = MaterialTheme.typography.bodyLarge)
-                    
+
                     var expanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                         OutlinedTextField(
@@ -82,14 +83,19 @@ fun ProbeEditScreen(
                             label = { Text("Test Interface") },
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
                             singleLine = true
                         )
                         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             state.interfaces.forEach { iface ->
                                 DropdownMenuItem(
                                     text = { Text(iface) },
-                                    onClick = { viewModel.testInterface.value = iface; expanded = false }
+                                    onClick = {
+                                        viewModel.testInterface.value = iface
+                                        expanded = false
+                                    }
                                 )
                             }
                         }
@@ -97,9 +103,18 @@ fun ProbeEditScreen(
                 }
                 is VerificationState.Error -> {
                     Text(state.message, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(8.dp))
+                    VerifyProbeButton(onClick = viewModel::onVerifyClicked)
                     OutlinedTextField(value = testInterface, onValueChange = { viewModel.testInterface.value = it }, label = { Text("Test Interface (Manual)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun VerifyProbeButton(onClick: () -> Unit) {
+    Button(onClick = onClick) {
+        Text("Verify Probe")
     }
 }
