@@ -128,7 +128,7 @@ class TestViewModel @Inject constructor(
 
                 if (profile.runPing) {
                     addLog("Esecuzione Test Ping...")
-                    val targets = listOfNotNull(client.pingTarget1, client.pingTarget2, client.pingTarget3).filter { it.isNotBlank() }
+                    val targets = listOfNotNull(profile.pingTarget1, profile.pingTarget2, profile.pingTarget3).filter { it.isNotBlank() }
                     targets.forEach { target ->
                         val resolvedTarget = if (target.equals("DHCP_GATEWAY", ignoreCase = true)) {
                             repository.getDhcpGateway(probe, probe.testInterface) ?: target

@@ -35,9 +35,7 @@ fun ClientEditScreen(
     val staticIp by viewModel.staticIp.collectAsStateWithLifecycle()
     val staticSubnet by viewModel.staticSubnet.collectAsStateWithLifecycle()
     val staticGateway by viewModel.staticGateway.collectAsStateWithLifecycle()
-    val pingTarget1 by viewModel.pingTarget1.collectAsStateWithLifecycle()
-    val pingTarget2 by viewModel.pingTarget2.collectAsStateWithLifecycle()
-    val pingTarget3 by viewModel.pingTarget3.collectAsStateWithLifecycle()
+    val socketPrefix by viewModel.socketPrefix.collectAsStateWithLifecycle()
     val lastFloor by viewModel.lastFloor.collectAsStateWithLifecycle()
     val lastRoom by viewModel.lastRoom.collectAsStateWithLifecycle()
 
@@ -67,6 +65,7 @@ fun ClientEditScreen(
             Text("Client Info", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(value = companyName, onValueChange = { viewModel.companyName.value = it }, label = { Text("Company Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = location, onValueChange = { viewModel.location.value = it }, label = { Text("Location") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = socketPrefix, onValueChange = { viewModel.socketPrefix.value = it }, label = { Text("Socket ID Prefix") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = notes, onValueChange = { viewModel.notes.value = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth())
 
             // Section: Sticky Fields
@@ -115,12 +114,6 @@ fun ClientEditScreen(
                 OutlinedTextField(value = staticGateway, onValueChange = { viewModel.staticGateway.value = it }, label = { Text("Gateway") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             }
             
-            // Section: Test Targets
-            Text("Custom Test Targets", style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(value = pingTarget1, onValueChange = { viewModel.pingTarget1.value = it }, label = { Text("Ping Target 1 (e.g., DHCP_GATEWAY)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = pingTarget2, onValueChange = { viewModel.pingTarget2.value = it }, label = { Text("Ping Target 2") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = pingTarget3, onValueChange = { viewModel.pingTarget3.value = it }, label = { Text("Ping Target 3") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-
             Spacer(Modifier.height(64.dp)) // Spacer for the bottom button
         }
     }

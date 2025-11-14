@@ -18,6 +18,9 @@ interface ReportDao {
     @Query("SELECT * FROM test_reports WHERE clientId = :clientId ORDER BY timestamp DESC")
     fun getReportsForClient(clientId: Long): Flow<List<Report>>
 
+    @Query("SELECT * FROM test_reports WHERE clientId = :clientId ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLastReportForClient(clientId: Long): Report?
+
     @Query("SELECT * FROM test_reports ORDER BY timestamp DESC")
     fun getAllReports(): Flow<List<Report>>
 }

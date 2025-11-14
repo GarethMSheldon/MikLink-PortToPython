@@ -15,10 +15,7 @@ data class Client(
     val staticIp: String?,
     val staticSubnet: String?,
     val staticGateway: String?,
-    val pingTarget1: String?,
-    val pingTarget2: String?,
-    val pingTarget3: String?,
-    val idPrefix: String = "A",
+    val socketPrefix: String = "",
     val nextIdNumber: Int = 1,
     val lastFloor: String? = null,
     val lastRoom: String? = null

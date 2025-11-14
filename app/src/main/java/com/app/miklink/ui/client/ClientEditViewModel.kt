@@ -31,12 +31,9 @@ class ClientEditViewModel @Inject constructor(
     val staticIp = MutableStateFlow("")
     val staticSubnet = MutableStateFlow("")
     val staticGateway = MutableStateFlow("")
-    val pingTarget1 = MutableStateFlow("")
-    val pingTarget2 = MutableStateFlow("")
-    val pingTarget3 = MutableStateFlow("")
+    val socketPrefix = MutableStateFlow("")
     val lastFloor = MutableStateFlow("")
     val lastRoom = MutableStateFlow("")
-
 
     private val _isSaved = MutableStateFlow(false)
     val isSaved = _isSaved.asStateFlow()
@@ -53,9 +50,7 @@ class ClientEditViewModel @Inject constructor(
                     staticIp.value = client.staticIp ?: ""
                     staticSubnet.value = client.staticSubnet ?: ""
                     staticGateway.value = client.staticGateway ?: ""
-                    pingTarget1.value = client.pingTarget1 ?: ""
-                    pingTarget2.value = client.pingTarget2 ?: ""
-                    pingTarget3.value = client.pingTarget3 ?: ""
+                    socketPrefix.value = client.socketPrefix
                     lastFloor.value = client.lastFloor ?: ""
                     lastRoom.value = client.lastRoom ?: ""
                 }
@@ -65,7 +60,6 @@ class ClientEditViewModel @Inject constructor(
 
     fun saveClient() {
         viewModelScope.launch {
-            // Preserve original sticky fields if not editing
             val originalClient = if(isEditing) clientDao.getClientById(clientId).firstOrNull() else null
 
             val client = Client(
@@ -78,10 +72,7 @@ class ClientEditViewModel @Inject constructor(
                 staticIp = staticIp.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
                 staticSubnet = staticSubnet.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
                 staticGateway = staticGateway.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
-                pingTarget1 = pingTarget1.value.takeIf { it.isNotBlank() },
-                pingTarget2 = pingTarget2.value.takeIf { it.isNotBlank() },
-                pingTarget3 = pingTarget3.value.takeIf { it.isNotBlank() },
-                idPrefix = originalClient?.idPrefix ?: "A",
+                socketPrefix = socketPrefix.value,
                 nextIdNumber = originalClient?.nextIdNumber ?: 1,
                 lastFloor = lastFloor.value.takeIf { it.isNotBlank() },
                 lastRoom = lastRoom.value.takeIf { it.isNotBlank() }

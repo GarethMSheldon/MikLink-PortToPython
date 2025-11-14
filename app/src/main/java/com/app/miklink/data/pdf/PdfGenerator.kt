@@ -10,6 +10,7 @@ import android.webkit.WebViewClient
 import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.Report
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,15 +32,26 @@ class PdfGenerator @Inject constructor(
         const val A4_HEIGHT_PT = 842
     }
 
+    private fun formatResults(resultsJson: String): String {
+        val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+        val adapter = moshi.adapter<Map<String, Any>>(type)
+        val results = adapter.fromJson(resultsJson) ?: return "<p>Error parsing results.</p>"
+
+        return results.entries.joinToString("") { (key, value) ->
+            "<div><h3>${key.uppercase(Locale.getDefault())}</h3><p>${value.toString().replace(",", ",<br>")}</p></div>"
+        }
+    }
+
     suspend fun populateSingleReportTemplate(report: Report, client: Client?): String {
         val template = withContext(Dispatchers.IO) { context.assets.open("report_template.html").bufferedReader().use { it.readText() } }
         val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(report.timestamp))
+        val formattedResults = formatResults(report.resultsJson)
 
         return template
             .replace("{{CLIENT_NAME}}", client?.companyName ?: "N/A")
             .replace("{{SOCKET_ID}}", report.socketName ?: "N/A")
             .replace("{{TEST_DATE_TIME}}", formattedDate)
-            .replace("{{RESULTS_JSON}}", report.resultsJson) 
+            .replace("{{RESULTS_HTML}}", formattedResults)
     }
 
     suspend fun populateProjectReportTemplate(reports: List<Report>, client: Client?): String {
@@ -49,8 +61,9 @@ class PdfGenerator @Inject constructor(
                 .plus("<td>${report.socketName ?: "N/A"}</td>")
                 .plus("<td>${report.floor ?: ""}/${report.room ?: ""}</td>")
                 .plus("<td>${report.overallStatus}</td>")
-                .plus("<td>N/A</td>") 
-                .plus("<td>N/A</td>") 
+                // Simplified for now - detailed results in single reports
+                .plus("<td>N/A</td>")
+                .plus("<td>N/A</td>")
                 .plus("</tr>")
         }
         return template
@@ -86,7 +99,7 @@ class PdfGenerator @Inject constructor(
         val pageInfo = PdfDocument.PageInfo.Builder(A4_WIDTH_PT, A4_HEIGHT_PT, 1).create()
         val document = PdfDocument()
         val page = document.startPage(pageInfo)
-        
+
         // Draw the webview to the PDF canvas
         webView.draw(page.canvas)
         document.finishPage(page)

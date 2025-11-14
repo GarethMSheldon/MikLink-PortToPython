@@ -27,7 +27,7 @@ fun ProbeListScreen(
     Scaffold(
         topBar = { TopAppBar(title = { Text("Manage Probes") }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("probe_add") }) {
+            FloatingActionButton(onClick = { navController.navigate("probe_edit/-1") }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Probe")
             }
         }
