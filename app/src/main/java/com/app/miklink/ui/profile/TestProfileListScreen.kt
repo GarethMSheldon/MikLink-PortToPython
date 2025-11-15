@@ -150,11 +150,6 @@ fun TestProfileListScreen(
                         )
                     }
                 }
-
-                // Spacer per FAB
-                item {
-                    Spacer(Modifier.height(80.dp))
-                }
             }
         }
     }

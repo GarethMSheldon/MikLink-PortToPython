@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -38,6 +39,11 @@ fun SettingsScreen(
                         )
                         Spacer(Modifier.width(12.dp))
                         Text("Impostazioni", fontWeight = FontWeight.Bold)
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -96,36 +102,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Sezione Gestione Dati
-            SettingsSection(
-                title = "Gestione Dati",
-                icon = Icons.Default.Folder,
-                iconColor = Color(0xFF2196F3)
-            ) {
-                SettingsCard(
-                    headline = "Clienti",
-                    subtitle = "Gestisci i tuoi clienti",
-                    leadingIcon = Icons.Default.Business,
-                    iconColor = Color(0xFF4CAF50),
-                    onClick = { navController.navigate("client_list") }
-                )
-
-                SettingsCard(
-                    headline = "Sonde",
-                    subtitle = "Configura le sonde MikroTik",
-                    leadingIcon = Icons.Default.Router,
-                    iconColor = Color(0xFF2196F3),
-                    onClick = { navController.navigate("probe_list") }
-                )
-
-                SettingsCard(
-                    headline = "Profili di Test",
-                    subtitle = "Crea e modifica profili di test",
-                    leadingIcon = Icons.Default.Checklist,
-                    iconColor = Color(0xFF9C27B0),
-                    onClick = { navController.navigate("profile_list") }
-                )
-            }
 
             // Sezione Aspetto
             SettingsSection(

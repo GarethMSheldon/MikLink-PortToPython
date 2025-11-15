@@ -275,9 +275,6 @@ class PdfGenerator @Inject constructor(
         canvas.drawText(dateStr, col2X + labelWidth, col2Y, textPaint)
         col2Y += LINE_HEIGHT
 
-        canvas.drawText("Location:", col2X, col2Y, textPaint)
-        val location = "${report.floor ?: "-"}/${report.room ?: "-"}"
-        canvas.drawText(location, col2X + labelWidth, col2Y, textPaint)
 
         yPos += LINE_HEIGHT + 4f
 
@@ -411,15 +408,10 @@ class PdfGenerator @Inject constructor(
                 canvas.drawText("• ${neighbor.identity ?: "Unknown"}", MARGIN + 20f, yPos, textPaint)
                 yPos += LINE_HEIGHT
 
-                neighbor.interfaceName?.let {
-                    canvas.drawText("  Interface: $it", MARGIN + 30f, yPos, smallTextPaint)
-                    yPos += LINE_HEIGHT - 2f
+                neighbor.systemCaps?.let {
+                    canvas.drawText("Capabilities: $it", MARGIN, yPos, textPaint)
+                    yPos += LINE_HEIGHT
                 }
-                neighbor.vlanId?.let {
-                    canvas.drawText("  VLAN: $it", MARGIN + 30f, yPos, smallTextPaint)
-                    yPos += LINE_HEIGHT - 2f
-                }
-                yPos += 4f
             }
         }
         return yPos + 8f
@@ -519,7 +511,6 @@ class PdfGenerator @Inject constructor(
             if (yPos > PAGE_BREAK_THRESHOLD) return@forEach // Stop if page full
 
             canvas.drawText(report.socketName ?: "N/A", MARGIN, yPos, textPaint)
-            canvas.drawText("${report.floor ?: "-"}/${report.room ?: "-"}", MARGIN + 150f, yPos, textPaint)
 
             val statusPaint = if (report.overallStatus == "PASS") successPaint else failPaint
             canvas.drawText(report.overallStatus, MARGIN + 280f, yPos, statusPaint)

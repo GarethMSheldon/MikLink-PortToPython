@@ -11,10 +11,13 @@ data class Client(
     val location: String? = "Sede",
     val notes: String?,
     val networkMode: String,
-    val vlanId: Int?,
     val staticIp: String?,
     val staticSubnet: String?,
     val staticGateway: String?,
+    // Nuovo: preferire CIDR rispetto a IP+Subnet legacy
+    val staticCidr: String? = null,
+    // Nuovo: soglia minima link per PASS ("10M","100M","1G","10G")
+    val minLinkRate: String = "1G",
     val socketPrefix: String = "",
     val nextIdNumber: Int = 1,
     val lastFloor: String? = null,

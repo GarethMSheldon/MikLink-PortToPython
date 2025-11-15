@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +49,11 @@ fun HistoryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Test History") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -261,14 +267,8 @@ fun ReportListItem(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = buildString {
-                    append("${report.floor ?: "-"}/${report.room ?: "-"}")
-                    append(" • ")
-                    append(
-                        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                            .format(Date(report.timestamp))
-                    )
-                },
+                text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                    .format(Date(report.timestamp)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

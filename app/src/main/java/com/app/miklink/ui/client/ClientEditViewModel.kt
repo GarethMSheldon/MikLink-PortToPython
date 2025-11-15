@@ -31,6 +31,10 @@ class ClientEditViewModel @Inject constructor(
     val staticIp = MutableStateFlow("")
     val staticSubnet = MutableStateFlow("")
     val staticGateway = MutableStateFlow("")
+    // Nuovi campi
+    val staticCidr = MutableStateFlow("")
+    val minLinkRate = MutableStateFlow("1G")
+
     val socketPrefix = MutableStateFlow("")
     val lastFloor = MutableStateFlow("")
     val lastRoom = MutableStateFlow("")
@@ -46,10 +50,11 @@ class ClientEditViewModel @Inject constructor(
                     location.value = client.location ?: ""
                     notes.value = client.notes ?: ""
                     networkMode.value = NetworkMode.fromDbValue(client.networkMode)
-                    vlanId.value = client.vlanId?.toString() ?: ""
                     staticIp.value = client.staticIp ?: ""
                     staticSubnet.value = client.staticSubnet ?: ""
                     staticGateway.value = client.staticGateway ?: ""
+                    staticCidr.value = client.staticCidr ?: ""
+                    minLinkRate.value = client.minLinkRate
                     socketPrefix.value = client.socketPrefix
                     lastFloor.value = client.lastFloor ?: ""
                     lastRoom.value = client.lastRoom ?: ""
@@ -68,14 +73,13 @@ class ClientEditViewModel @Inject constructor(
                 location = location.value.takeIf { it.isNotBlank() },
                 notes = notes.value.takeIf { it.isNotBlank() },
                 networkMode = networkMode.value.name,
-                vlanId = vlanId.value.toIntOrNull(),
                 staticIp = staticIp.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
                 staticSubnet = staticSubnet.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
                 staticGateway = staticGateway.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
+                staticCidr = staticCidr.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
+                minLinkRate = minLinkRate.value,
                 socketPrefix = socketPrefix.value,
-                nextIdNumber = originalClient?.nextIdNumber ?: 1,
-                lastFloor = lastFloor.value.takeIf { it.isNotBlank() },
-                lastRoom = lastRoom.value.takeIf { it.isNotBlank() }
+                nextIdNumber = originalClient?.nextIdNumber ?: 1
             )
             clientDao.insert(client)
             _isSaved.value = true

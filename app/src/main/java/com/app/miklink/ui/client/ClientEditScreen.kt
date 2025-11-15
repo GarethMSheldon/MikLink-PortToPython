@@ -4,10 +4,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -31,16 +37,24 @@ fun ClientEditScreen(
     val location by viewModel.location.collectAsStateWithLifecycle()
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val networkMode by viewModel.networkMode.collectAsStateWithLifecycle()
-    val vlanId by viewModel.vlanId.collectAsStateWithLifecycle()
     val staticIp by viewModel.staticIp.collectAsStateWithLifecycle()
     val staticSubnet by viewModel.staticSubnet.collectAsStateWithLifecycle()
     val staticGateway by viewModel.staticGateway.collectAsStateWithLifecycle()
+    val staticCidr by viewModel.staticCidr.collectAsStateWithLifecycle()
+    val minLinkRate by viewModel.minLinkRate.collectAsStateWithLifecycle()
     val socketPrefix by viewModel.socketPrefix.collectAsStateWithLifecycle()
-    val lastFloor by viewModel.lastFloor.collectAsStateWithLifecycle()
-    val lastRoom by viewModel.lastRoom.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(if (viewModel.isEditing) "Edit Client" else "New Client") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(if (viewModel.isEditing) "Edit Client" else "New Client") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    }
+                }
+            )
+        },
         bottomBar = {
             Button(
                 onClick = viewModel::saveClient,
@@ -68,12 +82,6 @@ fun ClientEditScreen(
             OutlinedTextField(value = socketPrefix, onValueChange = { viewModel.socketPrefix.value = it }, label = { Text("Socket ID Prefix") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = notes, onValueChange = { viewModel.notes.value = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth())
 
-            // Section: Sticky Fields
-            Text("Sticky Fields", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = lastFloor, onValueChange = { viewModel.lastFloor.value = it }, label = { Text("Last Floor") }, modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(value = lastRoom, onValueChange = { viewModel.lastRoom.value = it }, label = { Text("Last Room") }, modifier = Modifier.weight(1f), singleLine = true)
-            }
 
             // Section: Network Settings
             Text("Network Settings", style = MaterialTheme.typography.titleMedium)
@@ -106,14 +114,35 @@ fun ClientEditScreen(
                 }
             }
 
-            OutlinedTextField(value = vlanId, onValueChange = { viewModel.vlanId.value = it }, label = { Text("VLAN ID") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
 
             if (networkMode == NetworkMode.STATIC) {
-                OutlinedTextField(value = staticIp, onValueChange = { viewModel.staticIp.value = it }, label = { Text("Static IP Address") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = staticSubnet, onValueChange = { viewModel.staticSubnet.value = it }, label = { Text("Subnet Mask") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = staticCidr, onValueChange = { viewModel.staticCidr.value = it }, label = { Text("Static IP (CIDR), es. 172.16.0.1/24") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                // Campi legacy opzionali
+                OutlinedTextField(value = staticIp, onValueChange = { viewModel.staticIp.value = it }, label = { Text("[Legacy] Static IP Address") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = staticSubnet, onValueChange = { viewModel.staticSubnet.value = it }, label = { Text("[Legacy] Subnet Mask") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(value = staticGateway, onValueChange = { viewModel.staticGateway.value = it }, label = { Text("Gateway") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             }
-            
+
+            // Min Link Rate (lista fissa)
+            Text("Min Link Rate PASS", style = MaterialTheme.typography.titleMedium)
+            val options = listOf("10M", "100M", "1G", "10G")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                options.forEach { opt: String ->
+                    FilterChip(
+                        selected = minLinkRate == opt,
+                        onClick = { viewModel.minLinkRate.value = opt },
+                        label = { Text(opt) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
+            }
+
             Spacer(Modifier.height(64.dp)) // Spacer for the bottom button
         }
     }

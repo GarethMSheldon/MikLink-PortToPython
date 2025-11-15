@@ -12,13 +12,5 @@ data class EthernetInterfaceResponse(
     @Json(name = "name") val name: String
 )
 
-// Wrapper for the result of a probe connection check
-sealed class ProbeCheckResult {
-    data class Success(
-        val boardName: String,
-        val interfaces: List<String>,
-        val tdrSupported: Boolean
-    ) : ProbeCheckResult()
-
-    data class Error(val message: String) : ProbeCheckResult()
-}
+// Note: ProbeCheckResult è definito in com.app.miklink.data.repository.AppRepository
+// Non duplicare qui per evitare ambiguità di import

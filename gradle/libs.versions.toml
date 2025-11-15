@@ -32,6 +32,11 @@ moshi = "1.15.1"
 # LIFECYCLE
 lifecycleRuntimeKtx = "2.8.3"
 
+# TESTING
+junit = "4.13.2"
+androidx-test-ext-junit = "1.1.5"
+espresso = "3.5.1"
+
 [libraries]
 
 # KOTLIN
@@ -74,6 +79,11 @@ okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-i
 moshi-core = { group = "com.squareup.moshi", name = "moshi", version.ref = "moshi" }
 moshi-kotlin = { group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshi" }
 moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshi" }
+
+# TESTING
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

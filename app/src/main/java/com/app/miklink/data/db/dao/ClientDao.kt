@@ -26,6 +26,6 @@ interface ClientDao {
     @Query("SELECT * FROM clients WHERE clientId = :id")
     fun getClientById(id: Long): Flow<Client?>
 
-    @Query("UPDATE clients SET nextIdNumber = nextIdNumber + 1, lastFloor = :floor, lastRoom = :room WHERE clientId = :id")
-    suspend fun updateNextIdAndStickyFields(id: Long, floor: String?, room: String?)
+    @Query("UPDATE clients SET nextIdNumber = nextIdNumber + 1 WHERE clientId = :id")
+    suspend fun incrementNextIdNumber(id: Long)
 }

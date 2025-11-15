@@ -169,11 +169,6 @@ fun ClientListScreen(
                         )
                     }
                 }
-
-                // Spacer per FAB
-                item {
-                    Spacer(Modifier.height(80.dp))
-                }
             }
         }
     }
@@ -241,39 +236,6 @@ fun ClientCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                }
-
-                // Info aggiuntive se presenti
-                if (!client.lastFloor.isNullOrBlank() || !client.lastRoom.isNullOrBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (!client.lastFloor.isNullOrBlank()) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                            ) {
-                                Text(
-                                    text = "Piano: ${client.lastFloor}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        if (!client.lastRoom.isNullOrBlank()) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                            ) {
-                                Text(
-                                    text = "Stanza: ${client.lastRoom}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
                     }
                 }
             }

@@ -17,6 +17,7 @@ import com.app.miklink.ui.profile.TestProfileEditScreen
 import com.app.miklink.ui.profile.TestProfileListScreen
 import com.app.miklink.ui.settings.SettingsScreen
 import com.app.miklink.ui.test.TestExecutionScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun NavGraph() {
@@ -26,16 +27,20 @@ fun NavGraph() {
         // Main Screen
         composable("dashboard") { DashboardScreen(navController) }
 
-        // Test Execution
+        // Test Execution - use path-segments for robustness
         composable(
-            route = "test_execution/clientId={clientId}&probeId={probeId}&profileId={profileId}&socketName={socketName}",
+            route = "test_execution/{clientId}/{probeId}/{profileId}/{socketName}",
             arguments = listOf(
                 navArgument("clientId") { type = NavType.LongType },
                 navArgument("probeId") { type = NavType.LongType },
                 navArgument("profileId") { type = NavType.LongType },
                 navArgument("socketName") { type = NavType.StringType }
             )
-        ) { TestExecutionScreen(navController) }
+        ) { backStackEntry ->
+            // Scope ViewModel to this NavBackStackEntry to avoid stale shared state
+            val vm: com.app.miklink.ui.test.TestViewModel = hiltViewModel(backStackEntry)
+            TestExecutionScreen(navController, vm)
+        }
 
         // History and Reports
         composable("history") { HistoryScreen(navController) }

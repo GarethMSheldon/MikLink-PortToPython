@@ -1,6 +1,5 @@
 package com.app.miklink.data.network
 
-import okhttp3.Credentials
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
@@ -25,7 +24,7 @@ class AuthInterceptor @Inject constructor() : Interceptor {
         }
 
         val newRequest = originalRequest.newBuilder()
-            .header("Authorization", Credentials.basic(user, pass))
+            .header("Authorization", okhttp3.Credentials.basic(user, pass))
             .build()
 
         return chain.proceed(newRequest)

@@ -2,11 +2,12 @@ package com.app.miklink.ui.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,13 +31,25 @@ fun TestProfileEditScreen(
     val runLinkStatus by viewModel.runLinkStatus.collectAsStateWithLifecycle()
     val runLldp by viewModel.runLldp.collectAsStateWithLifecycle()
     val runPing by viewModel.runPing.collectAsStateWithLifecycle()
-    val runTraceroute by viewModel.runTraceroute.collectAsStateWithLifecycle()
     val pingTarget1 by viewModel.pingTarget1.collectAsStateWithLifecycle()
     val pingTarget2 by viewModel.pingTarget2.collectAsStateWithLifecycle()
     val pingTarget3 by viewModel.pingTarget3.collectAsStateWithLifecycle()
+    val runTraceroute by viewModel.runTraceroute.collectAsStateWithLifecycle()
+    val tracerouteTarget by viewModel.tracerouteTarget.collectAsStateWithLifecycle()
+    val tracerouteMaxHops by viewModel.tracerouteMaxHops.collectAsStateWithLifecycle()
+    val tracerouteTimeoutMs by viewModel.tracerouteTimeoutMs.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(if (viewModel.isEditing) "Edit Profile" else "Add Profile") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(if (viewModel.isEditing) "Edit Profile" else "Add Profile") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    }
+                }
+            )
+        },
         bottomBar = {
             Button(
                 onClick = viewModel::saveProfile,
@@ -51,7 +64,7 @@ fun TestProfileEditScreen(
             modifier = Modifier
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp), // Add padding for FAB
+            contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -66,7 +79,7 @@ fun TestProfileEditScreen(
                 SwitchListItem(checked = runLinkStatus, onCheckedChange = { viewModel.runLinkStatus.value = it }, headlineText = "Run Link Status Test")
                 SwitchListItem(checked = runLldp, onCheckedChange = { viewModel.runLldp.value = it }, headlineText = "Run LLDP/CDP Neighbor Test")
                 SwitchListItem(checked = runPing, onCheckedChange = { viewModel.runPing.value = it }, headlineText = "Run Ping Test")
-                SwitchListItem(checked = runTraceroute, onCheckedChange = { viewModel.runTraceroute.value = it }, headlineText = "Run Traceroute Test")
+                SwitchListItem(checked = runTraceroute, onCheckedChange = { viewModel.runTraceroute.value = it }, headlineText = "Run Traceroute")
             }
 
             if (runPing) {
@@ -76,6 +89,19 @@ fun TestProfileEditScreen(
                         OutlinedTextField(value = pingTarget1, onValueChange = { viewModel.pingTarget1.value = it }, label = { Text("Ping Target 1") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(value = pingTarget2, onValueChange = { viewModel.pingTarget2.value = it }, label = { Text("Ping Target 2") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(value = pingTarget3, onValueChange = { viewModel.pingTarget3.value = it }, label = { Text("Ping Target 3") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    }
+                }
+            }
+
+            if (runTraceroute) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Traceroute", style = MaterialTheme.typography.titleMedium)
+                        OutlinedTextField(value = tracerouteTarget, onValueChange = { viewModel.tracerouteTarget.value = it }, label = { Text("Target (IP/hostname o DHCP_GATEWAY)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(value = tracerouteMaxHops, onValueChange = { viewModel.tracerouteMaxHops.value = it }, label = { Text("Max Hops") }, modifier = Modifier.weight(1f), singleLine = true)
+                            OutlinedTextField(value = tracerouteTimeoutMs, onValueChange = { viewModel.tracerouteTimeoutMs.value = it }, label = { Text("Timeout per hop (ms)") }, modifier = Modifier.weight(1f), singleLine = true)
+                        }
                     }
                 }
             }

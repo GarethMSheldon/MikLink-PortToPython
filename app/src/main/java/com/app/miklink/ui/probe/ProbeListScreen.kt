@@ -150,11 +150,6 @@ fun ProbeListScreen(
                         )
                     }
                 }
-
-                // Spacer per FAB
-                item {
-                    Spacer(Modifier.height(80.dp))
-                }
             }
         }
     }

@@ -10,8 +10,6 @@ data class Report(
     val clientId: Long?,
     val timestamp: Long,
     val socketName: String?,
-    val floor: String?,
-    val room: String?,
     val notes: String?,
     val probeName: String?,
     val profileName: String?,

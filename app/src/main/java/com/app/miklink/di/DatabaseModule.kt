@@ -52,12 +52,11 @@ object DatabaseModule {
         testProfileDao.insert(
             TestProfile(
                 profileName = "Full Test",
-                profileDescription = "TDR, Link, LLDP, Ping, and Traceroute",
+                profileDescription = "TDR, Link, LLDP, and Ping",
                 runTdr = true,
                 runLinkStatus = true,
                 runLldp = true,
                 runPing = true,
-                runTraceroute = true,
                 pingTarget1 = "DHCP_GATEWAY",
                 pingTarget2 = "8.8.8.8"
             )
@@ -70,7 +69,6 @@ object DatabaseModule {
                 runLinkStatus = true,
                 runLldp = false,
                 runPing = true,
-                runTraceroute = false,
                 pingTarget1 = "DHCP_GATEWAY"
             )
         )

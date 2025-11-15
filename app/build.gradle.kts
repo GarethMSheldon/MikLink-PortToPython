@@ -86,6 +86,10 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.moshi.core)
     implementation(libs.moshi.kotlin)
-    ksp(libs.moshi.kotlin.codegen)
 
+    // Unit & Instrumentation test dependencies
+    // Use version catalog entries for test dependencies
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.espresso.core)
 }

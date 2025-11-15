@@ -1,7 +1,6 @@
 package com.app.miklink.di
 
 import android.annotation.SuppressLint
-import com.app.miklink.data.network.AuthInterceptor
 import com.squareup.moshi.FromJson
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.ToJson
@@ -23,10 +22,6 @@ import javax.net.ssl.X509TrustManager
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-
-    @Provides
-    @Singleton
-    fun provideAuthInterceptor(): AuthInterceptor = AuthInterceptor()
 
     @Provides
     @Singleton
@@ -76,19 +71,15 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
-        authInterceptor: AuthInterceptor,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
         val builder = OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
 
-        // Create a trust manager that does not validate certificate chains
+        // Trust-all SSL for self-signed MikroTik HTTPS
         val trustAllCerts = arrayOf<TrustManager>(createUnsafeTrustManager())
-        val sslContext = SSLContext.getInstance("SSL")
+        val sslContext = SSLContext.getInstance("TLS")
         sslContext.init(null, trustAllCerts, java.security.SecureRandom())
-
-        // Create an ssl socket factory with our all-trusting manager
         builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
         builder.hostnameVerifier { _, _ -> true }
 

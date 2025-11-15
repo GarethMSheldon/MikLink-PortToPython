@@ -13,9 +13,13 @@ data class TestProfile(
     val runLinkStatus: Boolean,
     val runLldp: Boolean,
     val runPing: Boolean,
-    val runTraceroute: Boolean,
-    // Temporary fields for Phase 3b
+    // Ping targets
     val pingTarget1: String? = null,
     val pingTarget2: String? = null,
-    val pingTarget3: String? = null
+    val pingTarget3: String? = null,
+    // Nuovi: Traceroute
+    val runTraceroute: Boolean = false,
+    val tracerouteTarget: String? = null, // IP/hostname o "DHCP_GATEWAY"
+    val tracerouteMaxHops: Int = 30,
+    val tracerouteTimeoutMs: Int = 3000
 )

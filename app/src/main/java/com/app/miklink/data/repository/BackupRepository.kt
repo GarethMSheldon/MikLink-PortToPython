@@ -5,7 +5,6 @@ import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.ProbeConfig
 import com.app.miklink.data.db.model.TestProfile
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,23 +22,16 @@ class BackupRepository @Inject constructor(
         val probes = probeConfigDao.getAllProbes().first()
         val profiles = testProfileDao.getAllProfiles().first()
         val backupData = BackupData(probes, profiles)
-        
-        val type = Types.newParameterizedType(BackupData::class.java)
-        val adapter = moshi.adapter<BackupData>(type)
+        val adapter = moshi.adapter(BackupData::class.java)
         return adapter.toJson(backupData)
     }
 
     suspend fun importConfigFromJson(json: String) {
-        val type = Types.newParameterizedType(BackupData::class.java)
-        val adapter = moshi.adapter<BackupData>(type)
+        val adapter = moshi.adapter(BackupData::class.java)
         val backupData = adapter.fromJson(json)
-
         if (backupData != null) {
-            // Clear existing data
             probeConfigDao.deleteAll()
             testProfileDao.deleteAll()
-            
-            // Insert new data
             probeConfigDao.insertAll(backupData.probes)
             testProfileDao.insertAll(backupData.profiles)
         }

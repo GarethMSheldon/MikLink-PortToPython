@@ -6,13 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.*
 import com.app.miklink.data.db.model.*
 import com.app.miklink.data.repository.AppRepository
+import com.app.miklink.data.repository.AppRepository.NetworkConfigFeedback
 import com.app.miklink.utils.UiState
-import com.app.miklink.utils.findDirectlyConnectedSwitch
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -33,58 +34,173 @@ class TestViewModel @Inject constructor(
     private val _log = MutableStateFlow<List<String>>(emptyList())
     val log = _log.asStateFlow()
 
-    private val _uiState = MutableStateFlow<UiState<Report>>(UiState.Loading)
+    private val _uiState = MutableStateFlow<UiState<Report>>(UiState.Idle)
     val uiState = _uiState.asStateFlow()
 
-    init {
-        startTest()
+    // Override per-singolo-test: se non nullo, verrà usato in applyClientNetworkConfig
+    var overrideClientNetwork: Client? = null
+
+    private val _sections = MutableStateFlow<List<TestSection>>(emptyList())
+    val sections: StateFlow<List<TestSection>> = _sections.asStateFlow()
+    private val _isRunning = MutableStateFlow(false)
+    val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+
+    // Helper per aggiornare/aggiungere una sezione
+    private fun upsertSection(section: TestSection) {
+        val current = _sections.value.toMutableList()
+        val idx = current.indexOfFirst { it.type == section.type }
+        if (idx >= 0) current[idx] = section else current.add(section)
+        _sections.value = current
+    }
+
+    // init { startTest() } // rimosso: l'avvio è manuale da UI
+
+    fun resetState() {
+        _log.value = emptyList()
+        _uiState.value = UiState.Idle
+        _sections.value = emptyList()
+        _isRunning.value = false
+        overrideClientNetwork = null
     }
 
     fun startTest() {
+        // Guard: evita doppio avvio se già in esecuzione
+        if (_isRunning.value) {
+            addLog("Ignorato startTest(): test già in esecuzione")
+            return
+        }
         viewModelScope.launch {
             _log.value = emptyList()
             _uiState.value = UiState.Loading
+            _sections.value = emptyList()
+            _isRunning.value = true
 
-            val clientId: Long = savedStateHandle.get("clientId") ?: -1
-            val probeId: Long = savedStateHandle.get("probeId") ?: -1
-            val profileId: Long = savedStateHandle.get("profileId") ?: -1
-            val socketName: String = savedStateHandle.get("socketName") ?: ""
+            // Read SavedStateHandle defensively: Nav may pass path segments as Strings
+            val clientId: Long = (savedStateHandle.get<Long>("clientId") ?: savedStateHandle.get<String>("clientId")?.toLongOrNull() ?: -1L)
+            val probeId: Long = (savedStateHandle.get<Long>("probeId") ?: savedStateHandle.get<String>("probeId")?.toLongOrNull() ?: -1L)
+            val profileId: Long = (savedStateHandle.get<Long>("profileId") ?: savedStateHandle.get<String>("profileId")?.toLongOrNull() ?: -1L)
+            val socketNameRaw: String = (savedStateHandle.get<String>("socketName") ?: "")
+
+            // Decode URI-encoded socketName
+            val socketName = try {
+                android.net.Uri.decode(socketNameRaw)
+            } catch (e: Exception) {
+                socketNameRaw
+            }
+
+            // Validate parameters
+            if (clientId <= 0 || probeId <= 0 || profileId <= 0) {
+                addLog("ERRORE: Parametri di test non validi. client=$clientId probe=$probeId profile=$profileId")
+                _uiState.value = UiState.Error("Parametri di navigazione non validi. Impossibile avviare il test.")
+                _isRunning.value = false
+                return@launch
+            }
 
             val client = clientDao.getClientById(clientId).firstOrNull()
             val probe = probeDao.getProbeById(probeId).firstOrNull()
             val profile = profileDao.getProfileById(profileId).firstOrNull()
 
             if (client == null || probe == null || profile == null) {
-                addLog("ERRORE: Dati di test non validi.")
-                _uiState.value = UiState.Error("Could not load test data.")
+                addLog("ERRORE: Dati di test non trovati nel database. client=$clientId probe=$probeId profile=$profileId socket=$socketName")
+                _uiState.value = UiState.Error("Impossibile caricare i dati di test. Cliente, sonda o profilo non esistono.")
+                _isRunning.value = false
                 return@launch
             }
 
             val testResults = mutableMapOf<String, Any>()
             var overallStatus = "PASS"
-            val vlanId: String? = null
-            val ipId: String? = null
 
             try {
                 addLog("--- INIZIO TEST ---")
+                // Sezione Network INFO (placeholder iniziale)
+                upsertSection(
+                    TestSection(
+                        category = TestSectionCategory.INFO,
+                        type = TestSectionType.NETWORK,
+                        title = "Rete (Client Config)",
+                        status = "INFO",
+                        details = listOf(TestDetail("Stato", "In corso..."))
+                    )
+                )
+
                 addLog("Cliente: ${client.companyName} | Presa: $socketName")
                 addLog("Sonda '${probe.name}' selezionata.")
 
-                // Imposta la probe corrente nel repository
-                repository.setProbe(probe)
+                // 1) Applica configurazione rete cliente (persistente) + eventuale override per singolo test
+                addLog("Applicazione configurazione rete (${overrideClientNetwork?.networkMode ?: client.networkMode})...")
+                when (val apply = repository.applyClientNetworkConfig(probe, client, overrideClientNetwork)) {
+                    is UiState.Success -> {
+                        val fb = apply.data
+                        addLog("Rete: ${fb.mode} ${fb.address ?: ""} gw=${fb.gateway ?: ""}")
+                        testResults["network"] = fb
+                        upsertSection(
+                            TestSection(
+                                category = TestSectionCategory.INFO,
+                                type = TestSectionType.NETWORK,
+                                title = "Rete (Client Config)",
+                                status = if ((fb.address ?: fb.gateway) != null) "PASS" else "INFO",
+                                details = listOf(
+                                    TestDetail("Modalità", fb.mode),
+                                    TestDetail("Interfaccia", fb.interfaceName),
+                                    TestDetail("Indirizzo", fb.address ?: "-"),
+                                    TestDetail("Gateway", fb.gateway ?: "-"),
+                                    TestDetail("DNS", fb.dns ?: "-"),
+                                    TestDetail("Messaggio", fb.message)
+                                )
+                            )
+                        )
+                    }
+                    is UiState.Error -> {
+                        addLog("Configurazione rete: FALLITA (${apply.message})")
+                        overallStatus = "FAIL"
+                    }
+                    else -> {}
+                }
 
+                // 2) TDR
                 if (profile.runTdr) {
                     if (probe.tdrSupported) {
                         addLog("Esecuzione TDR (Cable-Test)...")
-                        when (val tdrResult = repository.runCableTest(probe.testInterface)) {
+                        // TDR placeholder
+                        upsertSection(
+                            TestSection(
+                                category = TestSectionCategory.TEST,
+                                type = TestSectionType.TDR,
+                                title = "TDR (Cable-Test)",
+                                status = "INFO",
+                                details = listOf(TestDetail("Stato", "In corso..."))
+                            )
+                        )
+                        when (val tdrResult = repository.runCableTest(probe, probe.testInterface)) {
                             is UiState.Success -> {
                                 addLog("TDR: SUCCESSO.")
                                 testResults["tdr"] = tdrResult.data
+                                // Aggiorna sezione TDR con risultati
+                                upsertSection(
+                                    TestSection(
+                                        category = TestSectionCategory.TEST,
+                                        type = TestSectionType.TDR,
+                                        title = "TDR (Cable-Test)",
+                                        status = "PASS",
+                                        details = listOf(TestDetail("Risultato", "SUCCESSO"))
+                                    )
+                                )
                             }
                             is UiState.Error -> {
                                 addLog("TDR: FALLITO (${tdrResult.message})")
                                 overallStatus = "FAIL"
+                                // Aggiorna sezione TDR con errore
+                                upsertSection(
+                                    TestSection(
+                                        category = TestSectionCategory.TEST,
+                                        type = TestSectionType.TDR,
+                                        title = "TDR (Cable-Test)",
+                                        status = "FAIL",
+                                        details = listOf(TestDetail("Risultato", "FALLITO"), TestDetail("Motivo", tdrResult.message))
+                                    )
+                                )
                             }
+                            UiState.Idle -> {}
                             UiState.Loading -> {}
                         }
                     } else {
@@ -92,95 +208,310 @@ class TestViewModel @Inject constructor(
                     }
                 }
 
+                // 3) Link Status + soglia minLinkRate
                 if (profile.runLinkStatus) {
                     addLog("Esecuzione Test Stato Link...")
-                    when (val linkResult = repository.getLinkStatus(probe.testInterface)) {
+                    // Link placeholder
+                    upsertSection(
+                        TestSection(
+                            category = TestSectionCategory.TEST,
+                            type = TestSectionType.LINK,
+                            title = "Link",
+                            status = "INFO",
+                            details = listOf(TestDetail("Stato", "In corso..."))
+                        )
+                    )
+                    when (val linkResult = repository.getLinkStatus(probe, probe.testInterface)) {
                         is UiState.Success -> {
                             val data = linkResult.data
-                            addLog("Stato Link: SUCCESSO (${data.status} @ ${data.rate})")
+                            addLog("Stato Link: ${data.status} @ ${data.rate ?: "?"}")
                             testResults["link"] = data
 
                             // Se il link è down, interrompi il test
-                            if (data.status.contains("down", ignoreCase = true)) {
+                            val isDown = data.status.contains("down", ignoreCase = true)
+                            if (isDown) {
                                 addLog("ATTENZIONE: Link DOWN rilevato. Test interrotto.")
                                 overallStatus = "FAIL"
-                                addLog("--- TEST COMPLETATO ---")
-
-                                val type: Type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
-                                val adapter: JsonAdapter<Map<String, Any>> = moshi.adapter(type)
-                                val resultsJson = adapter.toJson(testResults)
-
-                                val report = Report(
-                                    clientId = clientId,
-                                    timestamp = System.currentTimeMillis(),
-                                    socketName = socketName,
-                                    probeName = probe.name,
-                                    profileName = profile.profileName,
-                                    overallStatus = overallStatus,
-                                    resultsJson = resultsJson,
-                                    floor = client.lastFloor,
-                                    room = client.lastRoom,
-                                    notes = "Test interrotto: Link DOWN"
+                                // Aggiorna sezione Link come FAIL
+                                upsertSection(
+                                    TestSection(
+                                        category = TestSectionCategory.TEST,
+                                        type = TestSectionType.LINK,
+                                        title = "Link",
+                                        status = "FAIL",
+                                        details = listOf(
+                                            TestDetail("Status", data.status),
+                                            TestDetail("Rate", data.rate ?: "-")
+                                        )
+                                    )
                                 )
-
-                                _uiState.value = UiState.Success(report)
+                                finalizeAndEmit(reportClient = client, reportProbe = probe, reportProfile = profile, socketName = socketName, overallStatus = overallStatus, testResults = testResults, notes = "Test interrotto: Link DOWN")
                                 return@launch
                             }
+
+                            // Verifica soglia minLinkRate
+                            val okRate = isRateOk(data.rate, client.minLinkRate)
+                            if (!okRate) {
+                                addLog("Velocità link inferiore alla soglia (${client.minLinkRate}) → FAIL")
+                                overallStatus = "FAIL"
+                            } else {
+                                addLog("Velocità link conforme alla soglia minima (${client.minLinkRate}) → PASS")
+                            }
+                            val linkPass = okRate
+                            // Aggiorna sezione Link con risultato puntuale
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.LINK,
+                                    title = "Link",
+                                    status = if (linkPass) "PASS" else "FAIL",
+                                    details = listOf(
+                                        TestDetail("Status", data.status),
+                                        TestDetail("Rate", data.rate ?: "-")
+                                    )
+                                )
+                            )
                         }
                         is UiState.Error -> {
                             addLog("Stato Link: FALLITO (${linkResult.message})")
                             overallStatus = "FAIL"
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.LINK,
+                                    title = "Link",
+                                    status = "FAIL",
+                                    details = listOf(TestDetail("Errore", linkResult.message))
+                                )
+                            )
                         }
+                        UiState.Idle -> {}
                         UiState.Loading -> {}
                     }
                 }
 
+                // 4) LLDP/CDP Discovery
                 if (profile.runLldp) {
-                    addLog("Esecuzione Test LLDP/CDP...")
-                    when (val neighborResult = repository.getNeighborsForInterface(probe.testInterface)) {
+                    addLog("Esecuzione discovery LLDP/CDP...")
+                    upsertSection(
+                        TestSection(
+                            category = TestSectionCategory.INFO,
+                            type = TestSectionType.LLDP,
+                            title = "LLDP/CDP",
+                            status = "INFO",
+                            details = listOf(TestDetail("Stato", "In corso..."))
+                        )
+                    )
+                    when (val lldpResult = repository.getNeighborsForInterface(probe, probe.testInterface)) {
                         is UiState.Success -> {
-                            val switch = findDirectlyConnectedSwitch(neighborResult.data)
-                            if (switch != null) {
-                                addLog("LLDP: SUCCESSO (Switch: ${switch.identity}, Porta: ${switch.interfaceName})")
-                                testResults["lldp"] = switch
+                            val neighbors = lldpResult.data
+                            if (neighbors.isNotEmpty()) {
+                                val neighbor = neighbors.first()
+                                addLog("LLDP/CDP: Rilevato '${neighbor.identity ?: "Unknown"}' su porta ${neighbor.interfaceName ?: "-"}")
+                                testResults["lldp"] = neighbor
+                                upsertSection(
+                                    TestSection(
+                                        category = TestSectionCategory.INFO,
+                                        type = TestSectionType.LLDP,
+                                        title = "LLDP/CDP",
+                                        status = "PASS",
+                                        details = listOf(
+                                            TestDetail("Identity", neighbor.identity ?: "-"),
+                                            TestDetail("Porta", neighbor.interfaceName ?: "-"),
+                                            TestDetail("Caps", neighbor.systemCaps ?: "-"),
+                                            TestDetail("Protocollo", neighbor.discoveredBy ?: "-")
+                                        )
+                                    )
+                                )
                             } else {
-                                addLog("LLDP: NESSUN RISULTATO (Nessuno switch 'bridge' trovato)")
+                                addLog("LLDP/CDP: Nessun neighbor rilevato")
+                                upsertSection(
+                                    TestSection(
+                                        category = TestSectionCategory.INFO,
+                                        type = TestSectionType.LLDP,
+                                        title = "LLDP/CDP",
+                                        status = "INFO",
+                                        details = listOf(TestDetail("Risultato", "Nessun neighbor rilevato"))
+                                    )
+                                )
                             }
                         }
                         is UiState.Error -> {
-                            addLog("LLDP: FALLITO (${neighborResult.message})")
-                            overallStatus = "FAIL"
+                            addLog("LLDP/CDP: FALLITO (${lldpResult.message})")
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.INFO,
+                                    type = TestSectionType.LLDP,
+                                    title = "LLDP/CDP",
+                                    status = "INFO",
+                                    details = listOf(TestDetail("Errore", lldpResult.message))
+                                )
+                            )
                         }
-                        UiState.Loading -> {}
+                        else -> {}
                     }
                 }
 
+                // 5) Ping Tests
                 if (profile.runPing) {
-                    addLog("Esecuzione Test Ping...")
-                    val targets = listOfNotNull(profile.pingTarget1, profile.pingTarget2, profile.pingTarget3).filter { it.isNotBlank() }
-                    targets.forEach { target ->
-                        val resolvedTarget = if (target.equals("DHCP_GATEWAY", ignoreCase = true)) {
-                            repository.getDhcpGateway(probe.testInterface) ?: target
-                        } else {
-                            target
+                    val pingTargets = listOfNotNull(profile.pingTarget1, profile.pingTarget2, profile.pingTarget3).filter { it.isNotBlank() }
+                    if (pingTargets.isEmpty()) {
+                        addLog("Ping: SALTATO (nessun target configurato)")
+                        upsertSection(
+                            TestSection(
+                                category = TestSectionCategory.TEST,
+                                type = TestSectionType.PING,
+                                title = "Ping",
+                                status = "SKIPPED",
+                                details = listOf(TestDetail("Motivo", "Nessun target configurato"))
+                            )
+                        )
+                    } else {
+                        addLog("Esecuzione Ping verso ${pingTargets.size} target...")
+                        val pingDetails = mutableListOf<TestDetail>()
+                        var allPingsPassed = true
+
+                        for (target in pingTargets) {
+                            val resolvedTarget = try {
+                                repository.resolveTargetIp(probe, target, probe.testInterface)
+                            } catch (e: Exception) {
+                                addLog("Ping $target: Risoluzione fallita (${e.message})")
+                                pingDetails.add(TestDetail(target, "Risoluzione fallita"))
+                                allPingsPassed = false
+                                continue
+                            }
+
+                            if (resolvedTarget.equals("DHCP_GATEWAY", ignoreCase = true)) {
+                                addLog("Ping $target: SALTATO (gateway DHCP non disponibile)")
+                                pingDetails.add(TestDetail(target, "Gateway non risolto"))
+                                continue
+                            }
+
+                            addLog("Ping verso $resolvedTarget...")
+                            when (val pingResult = repository.runPing(probe, resolvedTarget, probe.testInterface)) {
+                                is UiState.Success -> {
+                                    val avgRtt = pingResult.data.avgRtt ?: "N/A"
+                                    addLog("Ping $resolvedTarget: SUCCESSO ($avgRtt)")
+                                    testResults["ping_$target"] = pingResult.data
+                                    pingDetails.add(TestDetail(target, avgRtt))
+                                }
+                                is UiState.Error -> {
+                                    addLog("Ping $resolvedTarget: FALLITO (${pingResult.message})")
+                                    pingDetails.add(TestDetail(target, "FAIL"))
+                                    allPingsPassed = false
+                                }
+                                else -> {}
+                            }
                         }
 
-                        when (val pingResult = repository.runPing(resolvedTarget, probe.testInterface)) {
-                            is UiState.Success -> {
-                                val avgRtt = pingResult.data.avgRtt
-                                if (!avgRtt.isNullOrBlank() && avgRtt.toDoubleOrNull() != null && avgRtt.toDouble() > 0) {
-                                    addLog("Ping ($resolvedTarget): SUCCESSO (${avgRtt}ms)")
-                                    testResults["ping_$resolvedTarget"] = pingResult.data
-                                } else {
-                                    addLog("Ping ($resolvedTarget): FALLITO (Nessuna risposta)")
-                                    overallStatus = "FAIL"
+                        val pingStatus = if (allPingsPassed && pingDetails.isNotEmpty()) "PASS" else if (pingDetails.isEmpty()) "SKIPPED" else "FAIL"
+                        upsertSection(
+                            TestSection(
+                                category = TestSectionCategory.TEST,
+                                type = TestSectionType.PING,
+                                title = "Ping",
+                                status = pingStatus,
+                                details = pingDetails
+                            )
+                        )
+                        if (!allPingsPassed) overallStatus = "FAIL"
+                    }
+                }
+
+                // 6) Traceroute (per profilo)
+                if (profile.runTraceroute) {
+                    val target = profile.tracerouteTarget?.takeIf { it.isNotBlank() }
+                    if (target == null) {
+                        // Mostra card SKIPPED se abilitato ma target mancante
+                        upsertSection(
+                            TestSection(
+                                category = TestSectionCategory.TEST,
+                                type = TestSectionType.TRACEROUTE,
+                                title = "Traceroute",
+                                status = "SKIPPED",
+                                details = listOf(TestDetail("Motivo", "Target non impostato"))
+                            )
+                        )
+                    } else {
+                        addLog("Esecuzione Traceroute verso $target ...")
+                        // Traceroute placeholder
+                        upsertSection(
+                            TestSection(
+                                category = TestSectionCategory.TEST,
+                                type = TestSectionType.TRACEROUTE,
+                                title = "Traceroute",
+                                status = "INFO",
+                                details = listOf(TestDetail("Stato", "In corso..."))
+                            )
+                        )
+                        val resolvedTarget = try {
+                            repository.resolveTargetIp(probe, target, probe.testInterface)
+                        } catch (e: Exception) {
+                            addLog("Traceroute: Risoluzione target fallita (${e.message})")
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.TRACEROUTE,
+                                    title = "Traceroute",
+                                    status = "FAIL",
+                                    details = listOf(TestDetail("Errore", "Risoluzione target fallita"))
+                                )
+                            )
+                            overallStatus = "FAIL"
+                            null
+                        }
+
+                        if (resolvedTarget != null && !resolvedTarget.equals("DHCP_GATEWAY", ignoreCase = true)) {
+                            when (val tr = repository.runTraceroute(probe, resolvedTarget, probe.testInterface, profile.tracerouteMaxHops, profile.tracerouteTimeoutMs)) {
+                                is UiState.Idle -> {
+                                    // Non dovrebbe mai accadere qui, ignora
                                 }
+                                is UiState.Success -> {
+                                    val hops = tr.data
+                                    val reached = hops.lastOrNull()?.host?.isNotBlank() == true
+                                    addLog("Traceroute: ${if (reached) "SUCCESSO" else "PARZIALE"} (hops=${hops.size})")
+                                    testResults["traceroute"] = hops
+                                    // Aggiorna sezione Traceroute con risultato
+                                    upsertSection(
+                                        TestSection(
+                                            category = TestSectionCategory.TEST,
+                                            type = TestSectionType.TRACEROUTE,
+                                            title = "Traceroute",
+                                            status = if (reached) "PASS" else "FAIL",
+                                            details = hops.mapIndexed { idx, h ->
+                                                val hopNum = h.hop ?: (idx + 1).toString()
+                                                TestDetail("Hop $hopNum", "${h.host ?: "*"}${h.avgRtt?.let { " ($it)" } ?: ""}")
+                                            }
+                                        )
+                                    )
+                                    if (!reached) overallStatus = "FAIL"
+                                }
+                                is UiState.Error -> {
+                                    addLog("Traceroute: FALLITO (${tr.message})")
+                                    overallStatus = "FAIL"
+                                    upsertSection(
+                                        TestSection(
+                                            category = TestSectionCategory.TEST,
+                                            type = TestSectionType.TRACEROUTE,
+                                            title = "Traceroute",
+                                            status = "FAIL",
+                                            details = listOf(TestDetail("Errore", tr.message))
+                                        )
+                                    )
+                                }
+                                UiState.Loading -> {}
                             }
-                            is UiState.Error -> {
-                                addLog("Ping ($resolvedTarget): FALLITO (${pingResult.message})")
-                                overallStatus = "FAIL"
-                            }
-                            UiState.Loading -> {}
+                        } else if (resolvedTarget != null) {
+                            addLog("Traceroute: SALTATO (gateway DHCP non risolto)")
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.TRACEROUTE,
+                                    title = "Traceroute",
+                                    status = "SKIPPED",
+                                    details = listOf(TestDetail("Motivo", "Gateway DHCP non disponibile"))
+                                )
+                            )
                         }
                     }
                 }
@@ -188,46 +519,165 @@ class TestViewModel @Inject constructor(
             } catch (e: Exception) {
                 addLog("ERRORE IRREVERSIBILE: ${e.message}")
                 overallStatus = "FAIL"
-            } finally {
-                addLog("--- FASE 4: PULIZIA FINALE ---")
-                vlanId?.let {
-                    addLog("Rimozione VLAN ($it)...")
-                    repository.removeVlan(it)
-                }
-                ipId?.let {
-                    addLog("Rimozione IP ($it)...")
-                    repository.removeIpAddress(it)
-                }
-
-                addLog("--- TEST COMPLETATO ---")
             }
 
-            val type: Type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
-            val adapter: JsonAdapter<Map<String, Any>> = moshi.adapter(type)
-            val resultsJson = adapter.toJson(testResults)
-
-            val report = Report(
-                clientId = clientId,
-                timestamp = System.currentTimeMillis(),
-                socketName = socketName,
-                probeName = probe.name,
-                profileName = profile.profileName,
-                overallStatus = overallStatus,
-                resultsJson = resultsJson,
-                floor = client.lastFloor,
-                room = client.lastRoom,
-                notes = null
+            addLog("--- TEST COMPLETATO ---")
+            _isRunning.value = false
+            finalizeAndEmit(
+                reportClient = client, reportProbe = probe, reportProfile = profile, socketName = socketName,
+                overallStatus = overallStatus, testResults = testResults, notes = null
             )
-
-            _uiState.value = UiState.Success(report)
         }
+    }
+
+    private fun isRateOk(rate: String?, min: String): Boolean {
+        // Use RateParser to normalize both values to Mbps
+        val actual = com.app.miklink.utils.RateParser.parseToMbps(rate)
+        val threshold = com.app.miklink.utils.RateParser.parseToMbps(min)
+
+        // Se rate è nullo o non riconosciuto (parsato come 0), FAIL
+        if (actual == 0 && !rate.isNullOrBlank()) {
+            addLog("ATTENZIONE: Formato velocità non riconosciuto ('$rate') → FAIL")
+        } else if (rate.isNullOrBlank()) {
+            addLog("ATTENZIONE: Velocità non disponibile → FAIL")
+        }
+
+        return actual >= threshold
+    }
+
+    private fun finalizeAndEmit(
+        reportClient: Client,
+        reportProbe: ProbeConfig,
+        reportProfile: TestProfile,
+        socketName: String,
+        overallStatus: String,
+        testResults: Map<String, Any>,
+        notes: String?
+    ) {
+        // Costruisci sezioni per UI
+        val built = buildSectionsFromResults(testResults)
+         _sections.value = built
+
+        val type: Type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+        val adapter: JsonAdapter<Map<String, Any>> = moshi.adapter(type)
+        val resultsJson = adapter.toJson(testResults)
+
+        val report = Report(
+            clientId = reportClient.clientId,
+            timestamp = System.currentTimeMillis(),
+            socketName = socketName,
+            notes = notes,
+            probeName = reportProbe.name,
+            profileName = reportProfile.profileName,
+            overallStatus = overallStatus,
+            resultsJson = resultsJson
+        )
+
+        _uiState.value = UiState.Success(report)
+    }
+
+    private fun buildSectionsFromResults(results: Map<String, Any>): List<TestSection> {
+         val list = mutableListOf<TestSection>()
+         // Network (INFO)
+        (results["network"])?.let { fb ->
+            val map = fb as? NetworkConfigFeedback
+             if (map != null) {
+                 list += TestSection(
+                     category = TestSectionCategory.INFO,
+                     type = TestSectionType.NETWORK,
+                     title = "Rete (Client Config)",
+                     status = if ((map.address ?: map.gateway) != null) "PASS" else "INFO",
+                     details = listOf(
+                         TestDetail("Modalità", map.mode),
+                         TestDetail("Interfaccia", map.interfaceName),
+                         TestDetail("Indirizzo", map.address ?: "-"),
+                         TestDetail("Gateway", map.gateway ?: "-"),
+                         TestDetail("DNS", map.dns ?: "-"),
+                         TestDetail("Messaggio", map.message)
+                     )
+                 )
+             }
+         }
+         // Link (TEST)
+        (results["link"])?.let { l ->
+            val link = l as? com.app.miklink.data.network.MonitorResponse
+            if (link != null) {
+                val pass = !link.status.contains("down", true)
+                list += TestSection(
+                    category = TestSectionCategory.TEST,
+                    type = TestSectionType.LINK,
+                    title = "Link",
+                    status = if (pass) "PASS" else "FAIL",
+                    details = listOf(
+                        TestDetail("Status", link.status),
+                        TestDetail("Rate", link.rate ?: "-")
+                    )
+                )
+            }
+        }
+        // LLDP (INFO)
+        (results["lldp"])?.let { n ->
+            val sw = n as? com.app.miklink.data.network.NeighborDetail
+            if (sw != null) {
+                list += TestSection(
+                    category = TestSectionCategory.INFO,
+                    type = TestSectionType.LLDP,
+                    title = "LLDP/CDP",
+                    status = "PASS",
+                    details = listOf(
+                        TestDetail("Identity", sw.identity ?: "-"),
+                        TestDetail("Porta", sw.interfaceName ?: "-"),
+                        TestDetail("Caps", sw.systemCaps ?: "-"),
+                        TestDetail("Protocollo", sw.discoveredBy ?: "-")
+                    )
+                )
+            }
+        }
+        // Ping (TEST)
+        val pingDetails = results.filter { it.key.startsWith("ping_") }.map { (k, v) ->
+            val pr = v as? com.app.miklink.data.network.PingResult
+            TestDetail(k.removePrefix("ping_"), pr?.avgRtt ?: "-")
+        }
+        if (pingDetails.isNotEmpty()) {
+            val ok = pingDetails.all { it.value.isNotBlank() && it.value != "-" }
+            list += TestSection(TestSectionCategory.TEST, TestSectionType.PING, "Ping", status = if (ok) "PASS" else "FAIL", details = pingDetails)
+        }
+        // Traceroute (TEST)
+        (results["traceroute"])?.let { tr ->
+            val hops = (tr as? List<*>)?.mapNotNull { it as? com.app.miklink.data.network.TracerouteHop } ?: emptyList()
+            val reached = hops.lastOrNull()?.host?.isNotBlank() == true
+            val hopDetails = if (hops.isNotEmpty()) {
+                hops.mapIndexed { idx, h ->
+                    val label = "Hop ${h.hop ?: (idx + 1).toString()}"
+                    val value = "${h.host ?: "*"}${h.avgRtt?.let { " ($it)" } ?: ""}"
+                    TestDetail(label, value)
+                }
+            } else emptyList()
+            list += TestSection(TestSectionCategory.TEST, TestSectionType.TRACEROUTE, "Traceroute", status = if (reached) "PASS" else if (hops.isNotEmpty()) "PARTIAL" else "FAIL", details = hopDetails)
+        }
+        // TDR (TEST)
+        (results["tdr"])?.let { t ->
+            val cbl = t as? com.app.miklink.data.network.CableTestResult
+            if (cbl != null) {
+                val pairs = cbl.cablePairs
+                 val pairDetails = pairs.mapIndexed { idx, p ->
+                    val pair = p["pair"] ?: "Pair ${idx + 1}"
+                    val status = p["status"] ?: "-"
+                    val lengthStr = (p["length"] ?: p["len"]) ?: ""
+                     val detail = if (lengthStr.isNotBlank()) "$status $lengthStr" else status
+                     TestDetail(pair, detail)
+                 }
+                 list += TestSection(TestSectionCategory.TEST, TestSectionType.TDR, "TDR (Cable-Test)", status = (cbl.status.ifBlank { "PASS" }).uppercase(), details = pairDetails)
+             }
+         }
+        return list
     }
 
     fun saveReportToDb(report: Report) {
         viewModelScope.launch {
             reportDao.insert(report)
             report.clientId?.let {
-                clientDao.updateNextIdAndStickyFields(it, report.floor, report.room)
+                clientDao.incrementNextIdNumber(it)
             }
         }
     }

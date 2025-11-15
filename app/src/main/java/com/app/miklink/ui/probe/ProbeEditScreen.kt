@@ -3,6 +3,8 @@ package com.app.miklink.ui.probe
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,7 +34,16 @@ fun ProbeEditScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(if (viewModel.isEditing) "Edit Probe" else "Add Probe") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(if (viewModel.isEditing) "Edit Probe" else "Add Probe") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    }
+                }
+            )
+        },
         bottomBar = {
             Button(
                 onClick = viewModel::onSaveClicked,

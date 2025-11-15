@@ -1,14 +1,21 @@
 package com.app.miklink.ui.dashboard
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -16,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,9 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.app.miklink.data.db.model.Client
-import com.app.miklink.data.db.model.ProbeConfig
-import com.app.miklink.data.db.model.TestProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +54,10 @@ fun DashboardScreen(
     val isProbeOnline by viewModel.isProbeOnline.collectAsStateWithLifecycle()
 
     val isTestButtonEnabled = selectedClient != null && selectedProbe != null &&
-                            selectedProfile != null && socketName.isNotBlank() && isProbeOnline
+                            selectedProfile != null && socketName.isNotBlank()
+
+    // Warning per sonda offline (non bloccante)
+    val showProbeOfflineWarning = selectedProbe != null && !isProbeOnline
 
     // Animazione pulsante quando pronto
     val infiniteTransition = rememberInfiniteTransition(label = "button_pulse")
@@ -129,13 +137,42 @@ fun DashboardScreen(
                         }
                     }
 
+                    // Warning chip per sonda offline
+                    AnimatedVisibility(visible = showProbeOfflineWarning) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "Sonda offline: il test potrebbe fallire",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+
                     Button(
                         onClick = {
+                            val encodedSocket = Uri.encode(socketName)
                             navController.navigate(
-                                "test_execution/clientId=${selectedClient!!.clientId}" +
-                                "&probeId=${selectedProbe!!.probeId}" +
-                                "&profileId=${selectedProfile!!.profileId}" +
-                                "&socketName=$socketName"
+                                "test_execution/${selectedClient!!.clientId}/${selectedProbe!!.probeId}/${selectedProfile!!.profileId}/$encodedSocket"
                             )
                         },
                         modifier = Modifier
@@ -299,7 +336,7 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         leadingIcon = {
-                            Icon(Icons.Default.Label, contentDescription = null)
+                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null)
                         },
                         shape = RoundedCornerShape(8.dp)
                     )
@@ -318,7 +355,7 @@ fun StatusChip(
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = color.copy(alpha = 0.15f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f))
+        border = BorderStroke(1.dp, color.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -354,8 +391,6 @@ private fun <T> SelectionCard(
     emptyMessage: String,
     leadingIcon: (@Composable () -> Unit)? = null
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -419,51 +454,101 @@ private fun <T> SelectionCard(
                     }
                 }
             } else {
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        value = selectedItem?.let(itemToString) ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        placeholder = { Text("Seleziona...") },
-                        leadingIcon = leadingIcon,
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                        )
+                // Selezione con RadioButton List
+                var expanded by remember { mutableStateOf(false) }
+
+                // Campo di selezione (clickable per espandere/collassare)
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = !expanded },
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(
+                        1.dp,
+                        if (expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        leadingIcon?.invoke()
+                        if (leadingIcon != null) {
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = selectedItem?.let(itemToString) ?: "Seleziona...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (selectedItem != null)
+                                MaterialTheme.colorScheme.onSurface
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (expanded) "Chiudi" else "Apri",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Lista espandibile con RadioButton
+                AnimatedVisibility(
+                    visible = expanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items.forEach { item ->
-                            DropdownMenuItem(
-                                text = {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onItemSelected(item)
+                                        expanded = false
+                                    },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (item == selectedItem)
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                else
+                                    MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (item == selectedItem)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.outlineVariant
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = item == selectedItem,
+                                        onClick = {
+                                            onItemSelected(item)
+                                            expanded = false
+                                        }
+                                    )
+                                    Spacer(Modifier.width(12.dp))
                                     Text(
-                                        itemToString(item),
+                                        text = itemToString(item),
+                                        style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = if (item == selectedItem)
                                             FontWeight.Bold
                                         else
                                             FontWeight.Normal
                                     )
-                                },
-                                onClick = {
-                                    onItemSelected(item)
-                                    expanded = false
-                                },
-                                leadingIcon = if (item == selectedItem) {
-                                    { Icon(Icons.Default.Check, contentDescription = null) }
-                                } else null
-                            )
+                                }
+                            }
                         }
                     }
                 }
