@@ -301,50 +301,104 @@ class TestViewModel @Inject constructor(
                 if (profile.runTdr) {
                     if (probe.tdrSupported) {
                         addLog("Esecuzione TDR (Cable-Test)...")
-                        // TDR placeholder
+
+                        // Stato iniziale: in attesa
                         upsertSection(
                             TestSection(
                                 category = TestSectionCategory.TEST,
                                 type = TestSectionType.TDR,
                                 title = "TDR (Cable-Test)",
                                 status = "INFO",
-                                details = listOf(TestDetail("Stato", "In corso..."))
+                                details = listOf(
+                                    TestDetail("Stato", "Avvio test in corso..."),
+                                    TestDetail("Nota", "Il test può richiedere 10-30 secondi")
+                                )
                             )
                         )
+
                         when (val tdrResult = repository.runCableTest(probe, probe.testInterface)) {
                             is UiState.Success -> {
                                 addLog("TDR: SUCCESSO.")
                                 testResults["tdr"] = tdrResult.data
-                                // Aggiorna sezione TDR con risultati
+
+                                // Determinare lo stato in base a status principale e cable pairs
+                                val mainStatus = tdrResult.data.status.lowercase()
+                                val isMainStatusOk = mainStatus in listOf("ok", "open", "link-ok", "running")
+
+                                val allPairsOk = tdrResult.data.cablePairs?.all {
+                                    val pairStatus = it["status"]?.lowercase()
+                                    pairStatus == "open" || pairStatus == "ok"
+                                } ?: true  // Se null, usa solo main status
+
+                                // PASS se main status ok E (pairs ok O pairs assenti)
+                                val status = if (isMainStatusOk && allPairsOk) "PASS" else "WARN"
+
+                                val details = mutableListOf(
+                                    TestDetail("Risultato", tdrResult.data.status.uppercase()),
+                                    TestDetail("Coppie testate", tdrResult.data.cablePairs?.size?.toString() ?: "N/A")
+                                )
+
+                                tdrResult.data.cablePairs?.forEach { pair ->
+                                    val pairName = pair["pair"] ?: "Unknown"
+                                    val pairStatus = pair["status"] ?: "Unknown"
+                                    val pairLength = pair["length"] ?: "N/A"
+                                    details.add(TestDetail(pairName, "$pairStatus ($pairLength)"))
+                                }
+
                                 upsertSection(
                                     TestSection(
                                         category = TestSectionCategory.TEST,
                                         type = TestSectionType.TDR,
                                         title = "TDR (Cable-Test)",
-                                        status = "PASS",
-                                        details = listOf(TestDetail("Risultato", "SUCCESSO"))
+                                        status = status,
+                                        details = details
                                     )
                                 )
                             }
+
                             is UiState.Error -> {
                                 addLog("TDR: FALLITO (${tdrResult.message})")
-                                overallStatus = "FAIL"
-                                // Aggiorna sezione TDR con errore
+
+                                // Distinguere tra errori hardware vs errori temporanei
+                                val isFatal = tdrResult.message.contains("non supportato", ignoreCase = true)
+                                val status = if (isFatal) "SKIP" else "FAIL"
+
                                 upsertSection(
                                     TestSection(
                                         category = TestSectionCategory.TEST,
                                         type = TestSectionType.TDR,
                                         title = "TDR (Cable-Test)",
-                                        status = "FAIL",
-                                        details = listOf(TestDetail("Risultato", "FALLITO"), TestDetail("Motivo", tdrResult.message))
+                                        status = status,
+                                        details = listOf(
+                                            TestDetail("Risultato", if (isFatal) "NON SUPPORTATO" else "FALLITO"),
+                                            TestDetail("Motivo", tdrResult.message)
+                                        )
                                     )
                                 )
+
+                                // Non bloccare il test se TDR fallisce per incompatibilità hardware
+                                if (!isFatal) {
+                                    overallStatus = "FAIL"
+                                }
                             }
+
                             UiState.Idle -> {}
                             UiState.Loading -> {}
                         }
                     } else {
                         addLog("TDR: SALTATO (Sonda '${probe.modelName}' non compatibile)")
+                        upsertSection(
+                            TestSection(
+                                category = TestSectionCategory.TEST,
+                                type = TestSectionType.TDR,
+                                title = "TDR (Cable-Test)",
+                                status = "SKIP",
+                                details = listOf(
+                                    TestDetail("Stato", "Saltato"),
+                                    TestDetail("Motivo", "Hardware non supporta TDR")
+                                )
+                            )
+                        )
                     }
                 }
 

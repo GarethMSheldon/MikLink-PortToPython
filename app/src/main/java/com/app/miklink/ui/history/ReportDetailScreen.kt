@@ -237,7 +237,14 @@ fun SummaryTab(results: ParsedResults?) {
         if (!tdrList.isNullOrEmpty()) {
             TestSectionCard(
                 title = "TDR",
-                status = if (tdrList.any { it.status.contains("fail", true) }) "FAIL" else "INFO",
+                status = when {
+                    tdrList.any { it.status.contains("fail", ignoreCase = true) || it.status.contains("short", ignoreCase = true) } -> "FAIL"
+                    tdrList.any {
+                        val s = it.status.lowercase()
+                        s in listOf("ok", "open", "link-ok")
+                    } -> "PASS"
+                    else -> "INFO"
+                },
                 icon = Icons.Default.Cable,
                 statusColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.testTag("TdrResultCard"),
@@ -245,7 +252,7 @@ fun SummaryTab(results: ParsedResults?) {
             ) {
                 tdrList.forEach { r ->
                     Text("Status: ${r.status}", fontWeight = FontWeight.Bold)
-                    r.cablePairs.forEach { pairMap ->
+                    r.cablePairs?.forEach { pairMap ->
                         pairMap.forEach { (k, v) ->
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(k)

@@ -21,7 +21,7 @@ data class NumbersRequest(@Json(name = "numbers") val numbers: String)
 
 // Risorse Sonda
 data class SystemResource(@Json(name = "board-name") val boardName: String)
-data class EthernetInterface(val name: String)
+data class EthernetInterface(@Json(name = "name") val name: String)
 
 // DHCP client info esteso
 
@@ -63,8 +63,14 @@ data class DhcpClientAdd(@Json(name = "interface") val `interface`: String, @Jso
 
 // Risultati Test
 
-data class CableTestRequest(@Json(name = "numbers") val numbers: String)
-data class CableTestResult(@Json(name = "cable-pairs") val cablePairs: List<Map<String, String>>, val status: String)
+data class CableTestRequest(
+    @Json(name = "numbers") val numbers: String,
+    val duration: String = "5s"  // ESSENZIALE per evitare timeout "Session closed"
+)
+data class CableTestResult(
+    @Json(name = "cable-pairs") val cablePairs: List<Map<String, String>>?,  // Nullable: alcuni elementi dell'array non hanno cable-pairs
+    val status: String
+)
 
 
 data class MonitorRequest(@Json(name = "numbers") val numbers: String, @Json(name = "once") val once: Boolean = true)

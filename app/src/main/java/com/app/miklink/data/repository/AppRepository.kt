@@ -138,9 +138,16 @@ class AppRepository @Inject constructor(
         try {
             val api = buildServiceFor(probe)
             val boardName = api.getSystemResource(ProplistRequest(listOf("board-name"))).firstOrNull()?.boardName ?: "Unknown Board"
-            val interfaces = api.getEthernetInterfaces().map { it.name }
+            val interfacesRaw = api.getEthernetInterfaces()
+            android.util.Log.d("AppRepository", "checkProbeConnection: Ricevute ${interfacesRaw.size} interfacce dall'API")
+            val interfaces = interfacesRaw.map {
+                android.util.Log.d("AppRepository", "checkProbeConnection: Interface name = '${it.name}'")
+                it.name
+            }
+            android.util.Log.d("AppRepository", "checkProbeConnection: Interfacce mappate: $interfaces")
             ProbeCheckResult.Success(boardName, interfaces)
         } catch (e: Exception) {
+            android.util.Log.e("AppRepository", "checkProbeConnection: Errore durante la verifica", e)
             ProbeCheckResult.Error(e.message ?: "An unknown error occurred while connecting to the probe.")
         }
     }
@@ -292,10 +299,60 @@ dns = null,
 
     // --- TEST FUNCTIONS ---
 
-    suspend fun runCableTest(probe: ProbeConfig, interfaceName: String): UiState<CableTestResult> = safeApiCall {
-        val api = buildServiceFor(probe)
-        val results = api.runCableTest(CableTestRequest(interfaceName))
-        results.lastOrNull() ?: throw IllegalStateException("No cable test results returned")
+    suspend fun runCableTest(probe: ProbeConfig, interfaceName: String): UiState<CableTestResult> {
+        android.util.Log.d("TDR_DEBUG", "=== Cable-Test Request Start ===")
+        android.util.Log.d("TDR_DEBUG", "Probe: ${probe.name} @ ${probe.ipAddress}")
+        android.util.Log.d("TDR_DEBUG", "Interface: $interfaceName")
+        android.util.Log.d("TDR_DEBUG", "TDR Supported: ${probe.tdrSupported}")
+
+        val startTime = System.currentTimeMillis()
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val api = buildServiceFor(probe)
+                android.util.Log.d("TDR_DEBUG", "API service built, calling cable-test...")
+
+                val results = api.runCableTest(CableTestRequest(interfaceName))
+                val elapsed = System.currentTimeMillis() - startTime
+
+                android.util.Log.d("TDR_DEBUG", "Response received after ${elapsed}ms")
+                android.util.Log.d("TDR_DEBUG", "Results count: ${results.size}")
+                results.forEachIndexed { index, result ->
+                    android.util.Log.d("TDR_DEBUG", "  [$index] Status: ${result.status}")
+                    android.util.Log.d("TDR_DEBUG", "       Cable pairs: ${result.cablePairs?.size ?: 0}")
+                    result.cablePairs?.forEach { pair ->
+                        android.util.Log.d("TDR_DEBUG", "         - $pair")
+                    }
+                }
+
+                // Filtrare risultati validi: con cable-pairs O con status positivo
+                val finalResult = results.lastOrNull {
+                    it.cablePairs != null || it.status.lowercase() in listOf("ok", "open", "link-ok", "running")
+                } ?: throw IllegalStateException("No valid cable test results found (no cable-pairs and no valid status)")
+
+                UiState.Success(finalResult)
+
+            } catch (e: SocketTimeoutException) {
+                val elapsed = System.currentTimeMillis() - startTime
+                android.util.Log.e("TDR_DEBUG", "TIMEOUT after ${elapsed}ms: ${e.message}", e)
+                UiState.Error("Timeout durante cable-test (>${elapsed/1000}s). Il comando potrebbe richiedere più tempo su questo modello.")
+
+            } catch (e: HttpException) {
+                android.util.Log.e("TDR_DEBUG", "HTTP ERROR ${e.code()}: ${e.message()}", e)
+                val errorBody = e.response()?.errorBody()?.string()
+                android.util.Log.e("TDR_DEBUG", "Error body: $errorBody")
+
+                when (e.code()) {
+                    500 -> UiState.Error("Cable-Test non supportato da questo hardware MikroTik")
+                    400 -> UiState.Error("Richiesta cable-test non valida: $errorBody")
+                    else -> UiState.Error("Errore HTTP ${e.code()}: ${e.message()}")
+                }
+
+            } catch (e: Exception) {
+                android.util.Log.e("TDR_DEBUG", "GENERIC ERROR: ${e::class.simpleName} - ${e.message}", e)
+                UiState.Error("Errore cable-test: ${e.message ?: "Errore sconosciuto"}")
+            }
+        }
     }
 
     suspend fun getLinkStatus(probe: ProbeConfig, interfaceName: String): UiState<MonitorResponse> = safeApiCall {
