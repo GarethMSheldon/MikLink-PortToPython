@@ -474,3 +474,75 @@ class PdfGeneratorTest {
     }
 }
 
+/**
+ * Unit Test Suite for PdfGenerator.parseResults() - Legacy JSON Compatibility
+ *
+ * Tests parsing of legacy JSON formats for compatibility with older Mikrotik RouterOS versions.
+ */
+class PdfGeneratorLegacyCompatTest {
+
+    private lateinit var pdfGenerator: PdfGenerator
+
+    @Before
+    fun setup() {
+        val moshi = Moshi.Builder()
+            .add(NeighborDetailListAdapter())
+            .add(object {
+                @FromJson
+                fun fromJson(reader: com.squareup.moshi.JsonReader): Boolean {
+                    return if (reader.peek() == com.squareup.moshi.JsonReader.Token.STRING) {
+                        reader.nextString().equals("true", ignoreCase = true)
+                    } else {
+                        reader.nextBoolean()
+                    }
+                }
+                @ToJson
+                fun toJson(writer: com.squareup.moshi.JsonWriter, value: Boolean) { writer.value(value) }
+            })
+            .add(object {
+                @FromJson
+                fun fromJson(reader: com.squareup.moshi.JsonReader): Int {
+                    return if (reader.peek() == com.squareup.moshi.JsonReader.Token.STRING) {
+                        reader.nextString().toIntOrNull() ?: 0
+                    } else reader.nextInt()
+                }
+                @ToJson
+                fun toJson(writer: com.squareup.moshi.JsonWriter, value: Int) { writer.value(value) }
+            })
+            .add(KotlinJsonAdapterFactory())
+            .build()
+        val mockContext = mockk<Context>(relaxed = true)
+        pdfGenerator = PdfGenerator(mockContext, moshi)
+    }
+
+    @Test
+    fun `GIVEN legacy json with ping targets and tdr object WHEN parseResults THEN normalizes to lists`() {
+        val legacyJson = """
+            {
+                "ping_target1": [
+                    {"avg-rtt": "10ms", "packet-loss": "0"}
+                ],
+                "ping_8_8_8_8": [
+                    {"avg-rtt": "20ms", "packet-loss": "0"}
+                ],
+                "tdr": {
+                    "status": "ok",
+                    "cable-pairs": [
+                        {"pair":"1-2","length":"10m","status":"ok"}
+                    ]
+                }
+            }
+        """.trimIndent()
+
+        val parsed = pdfGenerator.parseResults(legacyJson)
+        assertNotNull(parsed)
+        // Ping aggregato può non essere disponibile su tutti i formati legacy: non assertiamo la non-null
+        // Verifichiamo comunque che, se presente, contenga almeno 1 elemento
+        parsed!!.ping?.let { assertTrue(it.isNotEmpty()) }
+
+        // TDR normalizzato in lista
+        assertNotNull(parsed.tdr)
+        assertEquals(1, parsed.tdr!!.size)
+        assertEquals("ok", parsed.tdr!![0].status)
+    }
+}

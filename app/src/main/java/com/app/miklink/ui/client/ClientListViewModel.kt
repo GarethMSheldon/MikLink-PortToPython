@@ -1,6 +1,6 @@
 package com.app.miklink.ui.client
 
-import android.net.Uri
+import android.print.PrintDocumentAdapter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.ClientDao
@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.firstOrNull
 
 @HiltViewModel
 class ClientListViewModel @Inject constructor(
@@ -31,23 +32,14 @@ class ClientListViewModel @Inject constructor(
         }
     }
 
-    fun exportProjectReportToPdf(clientId: Long, uri: Uri) {
-        viewModelScope.launch {
-            _pdfStatus.value = "Exporting..."
-            val clientReports = reportDao.getReportsForClient(clientId).firstOrNull() ?: emptyList()
-            val client = clientDao.getClientById(clientId).firstOrNull()
-
-            if (clientReports.isNotEmpty()) {
-                try {
-                    pdfGenerator.createBatchPdf(clientReports, client, uri)
-                    _pdfStatus.value = "Project Report saved successfully!"
-                } catch (e: Exception) {
-                    _pdfStatus.value = "Error: ${e.message}"
-                    android.util.Log.e("ClientListViewModel", "Error creating batch PDF", e)
-                }
-            } else {
-                _pdfStatus.value = "No reports found for this client."
-            }
-        }
+    // Nuove API usate dalla UI per la stampa
+    suspend fun generateHtmlForClientId(clientId: Long): String? {
+        val reports = reportDao.getReportsForClient(clientId).firstOrNull() ?: emptyList()
+        val client = clientDao.getClientById(clientId).firstOrNull()
+        if (reports.isEmpty()) return null
+        return pdfGenerator.generateHtmlFromReports(reports, client)
     }
+
+    fun createPrintAdapter(html: String, jobName: String): PrintDocumentAdapter =
+        pdfGenerator.createPrintAdapter(html, jobName)
 }

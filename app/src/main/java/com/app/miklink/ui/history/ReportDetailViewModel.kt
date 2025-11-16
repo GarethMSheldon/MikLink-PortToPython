@@ -1,6 +1,6 @@
 package com.app.miklink.ui.history
 
-import android.net.Uri
+import android.print.PrintDocumentAdapter
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +13,7 @@ import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -59,20 +60,19 @@ class ReportDetailViewModel @Inject constructor(
         }
     }
 
-    override fun exportReportToPdf(uri: Uri) {
-        viewModelScope.launch {
-            val currentReport = report.value ?: return@launch
-            val client = currentReport.clientId?.let { clientDao.getClientById(it).firstOrNull() }
+    // Sospeso: recupera client e costruisce HTML
+    suspend fun generateHtmlForCurrentReport(): String? {
+        val currentReport = report.value ?: return null
+        val client = currentReport.clientId?.let { id -> clientDao.getClientById(id).firstOrNull() }
+        return pdfGenerator.generateHtmlFromReports(listOf(currentReport), client)
+    }
 
-            _pdfStatus.value = "Generating PDF..."
-            try {
-                pdfGenerator.createPdfFromReport(currentReport, client, uri)
-                _pdfStatus.value = "PDF saved successfully."
-            } catch (e: Exception) {
-                _pdfStatus.value = "Error: ${e.message}"
-                android.util.Log.e("ReportDetailViewModel", "Error creating PDF", e)
-            }
-        }
+    fun createPrintAdapter(html: String, jobName: String): PrintDocumentAdapter =
+        pdfGenerator.createPrintAdapter(html, jobName)
+
+    override fun exportReportToPdf() {
+        // No-op: la stampa è demandata alla UI
+        _pdfStatus.value = ""
     }
 
     private fun parseResults(json: String): ParsedResults? {

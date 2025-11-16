@@ -1,8 +1,9 @@
 package com.app.miklink.ui.client
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import android.content.Context
+import android.print.PrintAttributes
+import android.print.PrintManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -17,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,18 +39,8 @@ fun ClientListScreen(
     viewModel: ClientListViewModel = hiltViewModel()
 ) {
     val clients by viewModel.clients.collectAsStateWithLifecycle()
-    var selectedClientIdForExport by remember { mutableStateOf<Long?>(null) }
-
-    val createProjectReportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri: Uri? ->
-        uri?.let {
-            selectedClientIdForExport?.let { clientId ->
-                viewModel.exportProjectReportToPdf(clientId, it)
-                selectedClientIdForExport = null
-            }
-        }
-    }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val fabContent: @Composable () -> Unit = {
         if (clients.isNotEmpty()) {
@@ -169,9 +161,16 @@ fun ClientListScreen(
                             client = client,
                             onClick = { navController.navigate("client_edit/${client.clientId}") },
                             onExportClick = {
-                                selectedClientIdForExport = client.clientId
-                                val fileName = "project_report_${client.companyName}.pdf"
-                                createProjectReportLauncher.launch(fileName)
+                                val activity = context as? Activity
+                                if (activity == null) return@ClientCard
+                                coroutineScope.launch {
+                                    val html = viewModel.generateHtmlForClientId(client.clientId)
+                                    if (html.isNullOrBlank()) return@launch
+                                    val jobName = "project_report_${client.companyName}"
+                                    val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                                    val adapter = viewModel.createPrintAdapter(html, jobName)
+                                    printManager?.print(jobName, adapter, PrintAttributes.Builder().build())
+                                }
                             }
                         )
                     }

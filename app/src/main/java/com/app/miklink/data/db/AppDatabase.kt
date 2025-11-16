@@ -13,7 +13,7 @@ import com.app.miklink.data.db.model.TestProfile
 
 @Database(
     entities = [Client::class, ProbeConfig::class, TestProfile::class, Report::class],
-    version = 8,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

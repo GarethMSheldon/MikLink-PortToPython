@@ -11,6 +11,8 @@ import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.ProbeConfig
 import com.app.miklink.data.network.*
+import com.app.miklink.data.network.dto.SpeedTestRequest
+import com.app.miklink.data.network.dto.SpeedTestResult
 import com.app.miklink.utils.UiState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,8 @@ import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import retrofit2.HttpException
 import retrofit2.Retrofit
+import java.net.ConnectException
+import java.net.SocketTimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -336,6 +340,51 @@ dns = null,
         }
         val api = buildServiceFor(probe)
         api.runPing(PingRequest(address = resolvedTarget, `interface` = interfaceName, count = count.toString()))
+    }
+
+    suspend fun runSpeedTest(probe: ProbeConfig, client: Client): UiState<SpeedTestResult> {
+        if (client.speedTestServerAddress.isNullOrBlank()) {
+            return UiState.Error("Indirizzo server speed test non configurato.")
+        }
+
+        return try {
+            val api = buildServiceFor(probe)
+
+            // Crea l'oggetto Request con i parametri nel body (non nella query string)
+            val requestBody = SpeedTestRequest(
+                address = client.speedTestServerAddress,
+                user = client.speedTestServerUser ?: "admin",
+                password = client.speedTestServerPassword ?: "",
+                testDuration = "5"
+            )
+
+            // Passa l'oggetto request nel body
+            val response = api.runSpeedTest(requestBody)
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                val result = body?.lastOrNull { it.status == "done" } ?: body?.lastOrNull()
+                if (result != null) {
+                    UiState.Success(result)
+                } else {
+                    UiState.Error("Risposta vuota dal server.")
+                }
+            } else {
+                when (response.code()) {
+                    400 -> UiState.Error("Errore 400: Richiesta non valida. (Controlla i parametri)")
+                    401, 403 -> UiState.Error("Errore 401: Username o Password del server errati.")
+                    else -> UiState.Error("Errore API: ${response.code()} ${response.message()}")
+                }
+            }
+        } catch (e: HttpException) {
+            UiState.Error("Errore HTTP: ${e.message() ?: e.message}")
+        } catch (e: SocketTimeoutException) {
+            UiState.Error("Server non raggiungibile (Timeout).")
+        } catch (e: ConnectException) {
+            UiState.Error("Impossibile connettersi al server.")
+        } catch (e: Exception) {
+            UiState.Error("Errore sconosciuto: ${e.message}")
+        }
     }
 
 

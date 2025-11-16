@@ -1,30 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
-    <title>Project Report</title>
+    <meta charset="utf-8" />
+    <title>Report Certificazione</title>
     <style>
-        body { font-family: sans-serif; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
-        th { background-color: #f2f2f2; }
+        body { font-family: Arial, sans-serif; margin: 20px; color: #333; line-height: 1.5; }
+        h2 { color: #004D40; margin: 0 0 10px 0; }
+        .header { margin-bottom: 16px; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; background: #fafafa; }
+        .card .title { font-size: 12px; color: #555; display: flex; align-items: center; gap: 6px; }
+        .card .value { font-size: 18px; font-weight: bold; color: #212121; margin-top: 4px; }
+        .card.pass { background: #E8F5E9; }
+        .card.fail { background: #FFEBEE; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        thead th { background: #ECEFF1; font-weight: bold; border: 1px solid #cfd8dc; padding: 8px; text-align: left; }
+        tbody td { border: 1px solid #e0e0e0; padding: 8px; vertical-align: top; word-wrap: break-word; }
+        .status-pass { color: #2E7D32; font-weight: bold; }
+        .status-fail { color: #C62828; font-weight: bold; }
+        .footer { margin-top: 16px; font-size: 12px; color: #555; }
+        .warn { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #f57c00; background: #FFF8E1; border-radius: 6px; }
     </style>
 </head>
 <body>
-    <h1>Project Summary: {{CLIENT_NAME}}</h1>
-    <p><strong>Export Date:</strong> {{EXPORT_DATE}}</p>
+    <div class="header">
+        <h2>Report Certificazione: {{CLIENT_NAME}}</h2>
+    </div>
+
+    <div class="cards">
+        <div class="card info">
+            <div class="title">ℹ️ Totali</div>
+            <div class="value">{{TOTAL_TESTS}}</div>
+        </div>
+        <div class="card pass">
+            <div class="title">✓ Passati</div>
+            <div class="value">{{PASSED_TESTS}}</div>
+        </div>
+        <div class="card fail">
+            <div class="title">❌ Falliti</div>
+            <div class="value">{{FAILED_TESTS}}</div>
+        </div>
+    </div>
+
     <table>
         <thead>
             <tr>
-                <th>Socket Name</th>
-                <th>Floor/Room</th>
-                <th>Final Outcome</th>
-                <th>TDR Length</th>
-                <th>Switch Port (LLDP)</th>
+                {{TABLE_HEADERS}}
             </tr>
         </thead>
         <tbody>
             {{TABLE_ROWS}}
         </tbody>
     </table>
+
+    <div class="footer">
+        {{FOOTER_WARNING}}
+    </div>
 </body>
 </html>

@@ -1,6 +1,5 @@
 package com.app.miklink.ui.history
 
-import android.net.Uri
 import com.app.miklink.data.db.model.Report
 import com.app.miklink.ui.history.model.ParsedResults
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +13,5 @@ interface ReportDetailScreenStateProvider {
     val socketName: MutableStateFlow<String>
     val notes: MutableStateFlow<String>
     fun updateReportDetails()
-    fun exportReportToPdf(uri: Uri)
+    fun exportReportToPdf()
 }
-

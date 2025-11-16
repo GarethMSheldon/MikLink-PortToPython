@@ -59,8 +59,8 @@ class ReportDetailScreenLocalTest {
         }
         composeRule.onNodeWithTag("PingDetailsView").assertDoesNotExist()
         composeRule.onNodeWithTag("PingResultCard").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag("PingDetailsView").assertIsDisplayed()
         composeRule.onNodeWithText("Avg: 10ms").assertIsDisplayed()
     }
 }
-

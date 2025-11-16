@@ -21,5 +21,9 @@ data class Client(
     val socketPrefix: String = "",
     val nextIdNumber: Int = 1,
     val lastFloor: String? = null,
-    val lastRoom: String? = null
+    val lastRoom: String? = null,
+    // Speed Test configuration
+    val speedTestServerAddress: String? = null,
+    val speedTestServerUser: String? = null,
+    val speedTestServerPassword: String? = null
 )

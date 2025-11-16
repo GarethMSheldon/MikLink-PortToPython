@@ -17,5 +17,6 @@ data class TestProfile(
     val pingTarget1: String? = null,
     val pingTarget2: String? = null,
     val pingTarget3: String? = null,
-    val pingCount: Int = 4 // numero ping per target (range 1-20)
+    val pingCount: Int = 4, // numero ping per target (range 1-20)
+    val runSpeedTest: Boolean = false
 )

@@ -63,6 +63,8 @@ class ReportDetailScreenTest {
         composeRule.onNodeWithTag("PingDetailsView").assertDoesNotExist()
         // Step 2: Click sulla card Ping
         composeRule.onNodeWithTag("PingResultCard").performClick()
+        // Attendere fine animazioni/ricomposizioni per evitare flakiness
+        composeRule.waitForIdle()
         // Step 3: Dettagli visibili
         composeRule.onNodeWithTag("PingDetailsView").assertIsDisplayed()
         // Step 4: Verifica dati fittizi

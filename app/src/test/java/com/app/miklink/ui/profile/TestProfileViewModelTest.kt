@@ -515,5 +515,67 @@ class TestProfileViewModelTest {
             })
         }
     }
-}
 
+    // ============================================
+    // TEST 8: Speed Test Configuration
+    // ============================================
+
+    @Test
+    fun `GIVEN new profile mode WHEN ViewModel created THEN runSpeedTest is false by default`() = runTest {
+        // Given: New profile mode
+        every { savedStateHandle.get<Long>("profileId") } returns -1L
+
+        // When: ViewModel is created
+        viewModel = TestProfileViewModel(testProfileDao, savedStateHandle)
+
+        // Then: runSpeedTest should be false (default)
+        assertFalse(viewModel.runSpeedTest.value)
+    }
+
+    @Test
+    fun `GIVEN runSpeedTest is true WHEN saveProfile called THEN repository insert is called with runSpeedTest true`() = runTest {
+        // Given: ViewModel with runSpeedTest enabled
+        every { savedStateHandle.get<Long>("profileId") } returns -1L
+        viewModel = TestProfileViewModel(testProfileDao, savedStateHandle)
+        viewModel.profileName.value = "Speed Test Profile"
+        viewModel.runSpeedTest.value = true
+
+        // When: saveProfile is called
+        viewModel.saveProfile()
+
+        // Then: DAO insert should be called with runSpeedTest = true
+        coVerify {
+            testProfileDao.insert(match { profile ->
+                profile.runSpeedTest == true &&
+                profile.profileName == "Speed Test Profile"
+            })
+        }
+    }
+
+    @Test
+    fun `GIVEN edit mode with runSpeedTest true WHEN ViewModel created THEN runSpeedTest is loaded correctly`() = runTest {
+        // Given: SavedStateHandle with valid profileId and runSpeedTest = true
+        val existingProfile = TestProfile(
+            profileId = 999L,
+            profileName = "Existing Speed Test Profile",
+            profileDescription = "With speed test",
+            runTdr = false,
+            runLinkStatus = true,
+            runLldp = false,
+            runPing = true,
+            pingTarget1 = "8.8.8.8",
+            pingCount = 4,
+            runSpeedTest = true
+        )
+
+        every { savedStateHandle.get<Long>("profileId") } returns 999L
+        coEvery { testProfileDao.getProfileById(999L) } returns flowOf(existingProfile)
+
+        // When: ViewModel is created
+        viewModel = TestProfileViewModel(testProfileDao, savedStateHandle)
+
+        // Then: runSpeedTest should be loaded as true
+        assertTrue(viewModel.runSpeedTest.value)
+        assertEquals("Existing Speed Test Profile", viewModel.profileName.value)
+    }
+}

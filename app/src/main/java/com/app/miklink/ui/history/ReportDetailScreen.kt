@@ -1,8 +1,9 @@
 package com.app.miklink.ui.history
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import android.content.Context
+import android.print.PrintAttributes
+import android.print.PrintManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -40,12 +42,8 @@ fun ReportDetailScreen(
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Summary", "Physical Layer", "Edit")
-    
-    val createDocumentLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri: Uri? ->
-        uri?.let { viewModel.exportReportToPdf(it) }
-    }
+
+    val context = LocalContext.current
 
     LaunchedEffect(pdfStatus) {
         if (pdfStatus.isNotBlank()) {
@@ -66,9 +64,30 @@ fun ReportDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { 
-                        val fileName = "report_${report?.reportId ?: ""}.pdf"
-                        createDocumentLauncher.launch(fileName)
+                    IconButton(onClick = {
+                        val activity = context as? Activity
+                        if (activity == null) {
+                            coroutineScope.launch { snackbarHostState.showSnackbar("Errore: Activity non disponibile") }
+                            return@IconButton
+                        }
+                        // 1. Genera HTML
+                        coroutineScope.launch {
+                            val html = viewModel.generateHtmlForCurrentReport()
+                            if (html.isNullOrBlank()) {
+                                snackbarHostState.showSnackbar("Errore: impossibile generare l'HTML")
+                                return@launch
+                            }
+                            val jobName = "MikLink Report"
+                            // 2. PrintManager
+                            val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                            if (printManager == null) {
+                                snackbarHostState.showSnackbar("Errore: Servizio di stampa non trovato")
+                                return@launch
+                            }
+                            // 3. Adapter e stampa
+                            val adapter = viewModel.createPrintAdapter(html, jobName)
+                            printManager.print(jobName, adapter, PrintAttributes.Builder().build())
+                        }
                     }) {
                         // Use same visual treatment as Settings top icon (primary tint, no extra bg)
                         Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))

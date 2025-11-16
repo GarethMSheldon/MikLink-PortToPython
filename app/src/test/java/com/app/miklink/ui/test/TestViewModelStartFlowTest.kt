@@ -1,29 +1,23 @@
 package com.app.miklink.ui.test
 
 import androidx.lifecycle.SavedStateHandle
-import app.cash.turbine.test
 import com.app.miklink.data.db.dao.ClientDao
 import com.app.miklink.data.db.dao.ProbeConfigDao
 import com.app.miklink.data.db.dao.ReportDao
 import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.ProbeConfig
-import com.app.miklink.data.db.model.Report
 import com.app.miklink.data.db.model.TestProfile
-import com.app.miklink.data.network.NeighborDetail
-import com.app.miklink.data.network.PingResult
 import com.app.miklink.data.network.MonitorResponse
 import com.app.miklink.data.repository.AppRepository
 import com.app.miklink.data.repository.AppRepository.NetworkConfigFeedback
 import com.app.miklink.utils.UiState
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import java.lang.reflect.Type
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -67,7 +61,9 @@ class TestViewModelStartFlowTest {
         val fakeMapAdapter = mockk<JsonAdapter<Map<String, Any>>>(relaxed = true) {
             every { toJson(any()) } returns "{}"
         }
-        every { moshi.adapter<Map<String, Any>>(any()) } returns fakeMapAdapter
+        // Mock per entrambe le signature di adapter() usate nel ViewModel
+        every { moshi.adapter<Map<String, Any>>(any<Class<*>>()) } returns fakeMapAdapter
+        every { moshi.adapter<Map<String, Any>>(any<java.lang.reflect.Type>()) } returns fakeMapAdapter
     }
 
     @After
@@ -114,7 +110,8 @@ class TestViewModelStartFlowTest {
             pingTarget1 = "8.8.8.8",
             pingTarget2 = null,
             pingTarget3 = null,
-            pingCount = pingCount
+            pingCount = pingCount,
+            runSpeedTest = true // abilitiamo anche lo speed test per verificare il non-invocato
         )
         return Triple(client, probe, profile)
     }
@@ -156,5 +153,46 @@ class TestViewModelStartFlowTest {
         coVerify(exactly = 0) { repository.getLinkStatus(any(), any()) }
         coVerify(exactly = 0) { repository.getNeighborsForInterface(any(), any()) }
         coVerify(exactly = 0) { repository.runPing(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `startTest with link no-link stops pipeline and fails immediately`() = runTest(testDispatcher) {
+        // Arrange
+        val (client, probe, profile) = buildHappyPathFixtures()
+
+        every { clientDao.getClientById(1L) } returns flowOf(client)
+        every { probeDao.getProbeById(2L) } returns flowOf(probe)
+        every { profileDao.getProfileById(3L) } returns flowOf(profile)
+
+        coEvery { repository.applyClientNetworkConfig(probe, client, any()) } returns UiState.Success(
+            NetworkConfigFeedback(
+                mode = "DHCP",
+                interfaceName = probe.testInterface,
+                address = "192.168.88.10",
+                gateway = "192.168.88.1",
+                dns = "8.8.8.8",
+                message = "ok"
+            )
+        )
+        coEvery { repository.getLinkStatus(probe, probe.testInterface) } returns UiState.Success(
+            MonitorResponse(status = "no-link", rate = "no-link")
+        )
+
+        createViewModelWithSavedState(clientId = 1L, probeId = 2L, profileId = 3L)
+
+        // Act
+        viewModel.startTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Assert
+        val final = viewModel.uiState.value
+        assertTrue(final is UiState.Success)
+        val report = (final as UiState.Success).data
+        assertEquals("FAIL", report.overallStatus)
+        assertTrue((report.notes ?: "").contains("NO LINK", ignoreCase = true))
+
+        // Verifica che la pipeline si sia interrotta: nessun ping o speed test
+        coVerify(exactly = 0) { repository.runPing(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { repository.runSpeedTest(any(), any()) }
     }
 }

@@ -40,6 +40,11 @@ fun ClientEditScreen(
     val minLinkRate by viewModel.minLinkRate.collectAsStateWithLifecycle()
     val socketPrefix by viewModel.socketPrefix.collectAsStateWithLifecycle()
 
+    // Speed Test configuration
+    val speedTestServerAddress by viewModel.speedTestServerAddress.collectAsStateWithLifecycle()
+    val speedTestServerUser by viewModel.speedTestServerUser.collectAsStateWithLifecycle()
+    val speedTestServerPassword by viewModel.speedTestServerPassword.collectAsStateWithLifecycle()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -138,6 +143,34 @@ fun ClientEditScreen(
                     )
                 }
             }
+
+            // Speed Test Configuration
+            HorizontalDivider()
+            Text("Speed Test Configuration", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = speedTestServerAddress,
+                onValueChange = { viewModel.speedTestServerAddress.value = it },
+                label = { Text("Server Speed Test (Address)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                supportingText = { Text("Indirizzo IP o hostname del server MikroTik per lo speed test") }
+            )
+            OutlinedTextField(
+                value = speedTestServerUser,
+                onValueChange = { viewModel.speedTestServerUser.value = it },
+                label = { Text("Utente Server Speed Test") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                supportingText = { Text("Opzionale (default: admin)") }
+            )
+            OutlinedTextField(
+                value = speedTestServerPassword,
+                onValueChange = { viewModel.speedTestServerPassword.value = it },
+                label = { Text("Password Server Speed Test") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                supportingText = { Text("Opzionale") }
+            )
 
             Spacer(Modifier.height(64.dp)) // Spacer for the bottom button
         }

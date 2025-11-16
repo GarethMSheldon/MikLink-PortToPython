@@ -1,8 +1,9 @@
 package com.app.miklink.ui.history
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import android.content.Context
+import android.print.PrintAttributes
+import android.print.PrintManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +25,8 @@ import com.app.miklink.ui.history.model.ReportsByClient
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +40,8 @@ fun HistoryScreen(
     var expandedClientId by remember { mutableStateOf<Long?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Long?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(pdfStatus) {
         if (pdfStatus.isNotBlank()) {
@@ -113,6 +118,22 @@ fun HistoryScreen(
                         onReportRepeat = { report ->
                             // TODO: Navigate to test with pre-filled params
                         },
+                        onExportAll = {
+                            val activity = context as? Activity
+                            if (activity == null) {
+                                coroutineScope.launch { snackbarHostState.showSnackbar("Errore: Activity non disponibile") }
+                                return@ClientReportsCard
+                            }
+                            val html = viewModel.generateHtmlForClientReports(clientData)
+                            val jobName = "${clientData.client?.companyName ?: "Client"} Reports"
+                            val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                            if (printManager == null) {
+                                coroutineScope.launch { snackbarHostState.showSnackbar("Errore: Servizio di stampa non trovato") }
+                                return@ClientReportsCard
+                            }
+                            val adapter = viewModel.createPrintAdapter(html, jobName)
+                            printManager.print(jobName, adapter, PrintAttributes.Builder().build())
+                        },
                         viewModel = viewModel
                     )
                 }
@@ -157,14 +178,9 @@ fun ClientReportsCard(
     onReportEdit: (Long) -> Unit,
     onReportDelete: (Long) -> Unit,
     onReportRepeat: (Report) -> Unit,
+    onExportAll: () -> Unit,
     viewModel: HistoryViewModel
 ) {
-    val exportBatchLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri: Uri? ->
-        uri?.let { viewModel.exportClientReports(clientData, it) }
-    }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp)
@@ -209,9 +225,7 @@ fun ClientReportsCard(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Styled export icon: use same visual treatment as Settings (primary tint, no bg)
-                    IconButton(onClick = {
-                        exportBatchLauncher.launch("${clientData.client?.companyName ?: "Client"}_Reports.pdf")
-                    }) {
+                    IconButton(onClick = { onExportAll() }) {
                         Icon(
                             Icons.Default.PictureAsPdf,
                             contentDescription = "Export all",

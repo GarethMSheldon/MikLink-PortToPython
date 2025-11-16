@@ -1,6 +1,9 @@
 package com.app.miklink.data.network
 
+import com.app.miklink.data.network.dto.SpeedTestRequest
+import com.app.miklink.data.network.dto.SpeedTestResult
 import com.squareup.moshi.Json
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -156,4 +159,9 @@ interface MikroTikApiService {
 
     @POST("/rest/ping")
     suspend fun runPing(@Body request: PingRequest): List<PingResult>
+
+    @POST("/rest/tool/speed-test")
+    suspend fun runSpeedTest(
+        @Body request: SpeedTestRequest
+    ): Response<List<SpeedTestResult>>
 }

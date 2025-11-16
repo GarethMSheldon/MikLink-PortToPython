@@ -35,6 +35,7 @@ fun TestProfileEditScreen(
     val pingTarget2 by viewModel.pingTarget2.collectAsStateWithLifecycle()
     val pingTarget3 by viewModel.pingTarget3.collectAsStateWithLifecycle()
     val pingCount by viewModel.pingCount.collectAsStateWithLifecycle()
+    val runSpeedTest by viewModel.runSpeedTest.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -76,6 +77,7 @@ fun TestProfileEditScreen(
                 SwitchListItem(checked = runLinkStatus, onCheckedChange = { viewModel.runLinkStatus.value = it }, headlineText = "Run Link Status Test")
                 SwitchListItem(checked = runLldp, onCheckedChange = { viewModel.runLldp.value = it }, headlineText = "Run LLDP/CDP Neighbor Test")
                 SwitchListItem(checked = runPing, onCheckedChange = { viewModel.runPing.value = it }, headlineText = "Run Ping Test")
+                SwitchListItem(checked = runSpeedTest, onCheckedChange = { viewModel.runSpeedTest.value = it }, headlineText = "Run Speed Test", supportingText = "Richiede configurazione server nel client")
             }
 
             if (runPing) {

@@ -1,6 +1,5 @@
 package com.app.miklink.ui.history
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.ClientDao
@@ -14,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.print.PrintDocumentAdapter
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
@@ -84,36 +84,11 @@ class HistoryViewModel @Inject constructor(
         }
     }
 
-    fun exportClientReports(clientReports: ReportsByClient, uri: Uri) {
-        viewModelScope.launch {
-            _pdfStatus.value = "Generating batch PDF..."
-            try {
-                pdfGenerator.createBatchPdf(clientReports.reports, clientReports.client, uri)
-                _pdfStatus.value = "PDF saved successfully (${clientReports.reports.size} reports)"
-            } catch (e: Exception) {
-                _pdfStatus.value = "Error: ${e.message}"
-                android.util.Log.e("HistoryViewModel", "Error creating batch PDF", e)
-            }
-        }
+    // Nuove API per la stampa dalla UI
+    fun generateHtmlForClientReports(clientReports: ReportsByClient): String {
+        return pdfGenerator.generateHtmlFromReports(clientReports.reports, clientReports.client)
     }
 
-    fun exportProjectReportToPdf(clientId: Long, uri: Uri) {
-        viewModelScope.launch {
-            _pdfStatus.value = "Exporting..."
-            val clientReports = reportDao.getReportsForClient(clientId).firstOrNull() ?: emptyList()
-            val client = clientDao.getClientById(clientId).firstOrNull()
-
-            if (clientReports.isNotEmpty()) {
-                try {
-                    pdfGenerator.createBatchPdf(clientReports, client, uri)
-                    _pdfStatus.value = "Project Report saved successfully!"
-                } catch (e: Exception) {
-                    _pdfStatus.value = "Error: ${e.message}"
-                    android.util.Log.e("HistoryViewModel", "Error creating project PDF", e)
-                }
-            } else {
-                _pdfStatus.value = "No reports found for this client."
-            }
-        }
-    }
+    fun createPrintAdapter(html: String, jobName: String): PrintDocumentAdapter =
+        pdfGenerator.createPrintAdapter(html, jobName)
 }

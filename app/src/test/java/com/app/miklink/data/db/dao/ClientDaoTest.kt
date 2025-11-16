@@ -308,4 +308,79 @@ class ClientDaoTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    /**
+     * Test 7: Speed Test Configuration Fields
+     * Verifica che i nuovi campi speedTestServerAddress, speedTestServerUser, speedTestServerPassword
+     * vengano salvati e recuperati correttamente
+     */
+    @Test
+    fun `test speedTest configuration fields are persisted correctly`() = runTest {
+        // Arrange
+        val client = Client(
+            companyName = "SpeedTest Corp",
+            location = "Sede",
+            notes = "Cliente con configurazione speed test",
+            networkMode = "DHCP",
+            staticIp = null,
+            staticSubnet = null,
+            staticGateway = null,
+            minLinkRate = "1G",
+            socketPrefix = "SPD",
+            speedTestServerAddress = "speedtest.example.com",
+            speedTestServerUser = "admin",
+            speedTestServerPassword = "password123"
+        )
+
+        // Act
+        dao.insert(client)
+
+        // Assert
+        dao.getAllClients().test {
+            val result = awaitItem()
+            assertEquals(1, result.size)
+            val savedClient = result[0]
+            assertEquals("speedtest.example.com", savedClient.speedTestServerAddress)
+            assertEquals("admin", savedClient.speedTestServerUser)
+            assertEquals("password123", savedClient.speedTestServerPassword)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /**
+     * Test 8: Speed Test Configuration Fields - Null Values
+     * Verifica che i campi speedTest possano essere null
+     */
+    @Test
+    fun `test speedTest configuration fields can be null`() = runTest {
+        // Arrange
+        val client = Client(
+            companyName = "NoSpeedTest Corp",
+            location = "Sede",
+            notes = "Cliente senza speed test",
+            networkMode = "DHCP",
+            staticIp = null,
+            staticSubnet = null,
+            staticGateway = null,
+            minLinkRate = "1G",
+            socketPrefix = "NST",
+            speedTestServerAddress = null,
+            speedTestServerUser = null,
+            speedTestServerPassword = null
+        )
+
+        // Act
+        dao.insert(client)
+
+        // Assert
+        dao.getAllClients().test {
+            val result = awaitItem()
+            assertEquals(1, result.size)
+            val savedClient = result[0]
+            assertEquals(null, savedClient.speedTestServerAddress)
+            assertEquals(null, savedClient.speedTestServerUser)
+            assertEquals(null, savedClient.speedTestServerPassword)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

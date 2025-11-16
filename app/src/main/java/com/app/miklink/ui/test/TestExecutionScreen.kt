@@ -1,9 +1,10 @@
 package com.app.miklink.ui.test
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,6 +31,26 @@ import com.app.miklink.ui.test.TestSectionCategory.*
 import com.app.miklink.ui.test.TestSectionType.*
 import com.app.miklink.utils.UiState
 import com.app.miklink.ui.common.TestSectionCard
+
+// Helper per estrarre velocità e CPU load da stringhe come:
+// "91.9Mbps local-cpu-load:100%" -> ("91.9Mbps", "100%")
+private fun parseSpeedAndLoad(fullText: String?): Pair<String, String?> {
+    if (fullText.isNullOrBlank()) return "-" to null
+    val trimmed = fullText.trim()
+    val speed = trimmed.split(" ").firstOrNull()?.trim().orEmpty()
+    val marker = "local-cpu-load:"
+    val idx = trimmed.indexOf(marker, ignoreCase = true)
+    val load = if (idx >= 0) {
+        val after = trimmed.substring(idx + marker.length).trim()
+        after.split(" ", "\n", "\t").firstOrNull()?.trim()?.ifBlank { null }
+    } else null
+    return (if (speed.isBlank()) "-" else speed) to load
+}
+
+private fun isSpeedDetailLabel(label: String): Boolean {
+    val l = label.lowercase()
+    return l == "tcp download" || l == "tcp upload" || l == "udp download" || l == "udp upload"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -254,7 +275,7 @@ fun TestInProgressView(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(16.dp).fillMaxSize(),
+        modifier = modifier.padding(16.dp).fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Header con progress indicator
@@ -302,7 +323,7 @@ fun TestInProgressView(
 
         if (showRawLog) {
             // Raw log
-            RawLogsPane(log = log, modifier = Modifier.fillMaxSize())
+            RawLogsPane(log = log, modifier = Modifier.fillMaxWidth().weight(1f))
         } else {
             // Sections cards
             val infoSections = sections.filter { it.category == INFO }
@@ -338,6 +359,7 @@ fun TestInProgressView(
                             LINK -> Icons.Default.Link to MaterialTheme.colorScheme.tertiary
                             PING -> Icons.Default.Wifi to Color(0xFF2196F3)
                             TDR -> Icons.Default.Cable to MaterialTheme.colorScheme.primary
+                            SPEED -> Icons.Default.Speed to Color(0xFFFF9800)
                             else -> Icons.Default.Info to MaterialTheme.colorScheme.onSurfaceVariant
                         }
                         // Passiamo i dettagli della sezione così com'erano (persistiti dal ViewModel)
@@ -532,7 +554,37 @@ fun TestCompletedView(
 
         if (sections.isEmpty() || showRawLog) {
             item {
-                RawLogsPane(log = log, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp))
+                // FIX: Non possiamo usare LazyColumn dentro LazyColumn
+                // Usiamo Column + verticalScroll per i log nella schermata risultati
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 160.dp, max = 400.dp),
+                    tonalElevation = 2.dp,
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        log.forEach { line ->
+                            val color = when {
+                                line.contains("ERRORE", true) || line.contains("FALLITO", true) || line.contains("FAIL", true) -> MaterialTheme.colorScheme.error
+                                line.contains("SUCCESSO", true) || line.contains("PASS", true) -> Color(0xFF2E7D32)
+                                else -> MaterialTheme.colorScheme.onSurface
+                            }
+                            Text(
+                                text = line,
+                                color = color,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
             }
             return@LazyColumn
         }
@@ -704,6 +756,51 @@ fun TestCompletedView(
                 }
             }
         }
+
+        // Speed Test card (single, fixed order)
+        item {
+            val speedSec = testSections.find { it.type == SPEED }
+            if (speedSec != null) {
+                TestSectionCard(
+                    title = speedSec.title,
+                    status = speedSec.status,
+                    icon = Icons.Default.Speed,
+                    statusColor = Color(0xFFFF9800)
+                ) {
+                    speedSec.details.forEach { d ->
+                        // Gestione formattata per righe speed e warning
+                        when {
+                            isSpeedDetailLabel(d.label) -> {
+                                val (speed, load) = parseSpeedAndLoad(d.value)
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(d.label)
+                                    Text(speed, fontWeight = FontWeight.Bold)
+                                }
+                                if (!load.isNullOrBlank()) {
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("CPU Load")
+                                        Text(load, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            d.label.equals("Avviso", ignoreCase = true) -> {
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(d.value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            else -> {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(d.label)
+                                    Text(d.value, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -752,7 +849,7 @@ private fun RawLogsPane(log: List<String>, modifier: Modifier = Modifier) {
         if (log.isNotEmpty()) state.animateScrollToItem(log.lastIndex)
     }
     Surface(modifier = modifier, tonalElevation = 2.dp, shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-        LazyColumn(state = state, modifier = Modifier.fillMaxSize().padding(12.dp)) {
+        LazyColumn(state = state, modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             items(log.size) { idx ->
                 val line = log[idx]
                 val color = when {

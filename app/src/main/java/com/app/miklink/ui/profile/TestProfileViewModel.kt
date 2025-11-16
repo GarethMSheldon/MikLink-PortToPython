@@ -35,6 +35,7 @@ class TestProfileViewModel @Inject constructor(
     val pingTarget2 = MutableStateFlow("")
     val pingTarget3 = MutableStateFlow("")
     val pingCount = MutableStateFlow("4") // count ping (1-20)
+    val runSpeedTest = MutableStateFlow(false)
 
     private val _isSaved = MutableStateFlow(false)
     val isSaved = _isSaved.asStateFlow()
@@ -53,6 +54,7 @@ class TestProfileViewModel @Inject constructor(
                     pingTarget2.value = profile.pingTarget2 ?: ""
                     pingTarget3.value = profile.pingTarget3 ?: ""
                     pingCount.value = profile.pingCount.toString()
+                    runSpeedTest.value = profile.runSpeedTest
                 }
             }
         }
@@ -71,7 +73,8 @@ class TestProfileViewModel @Inject constructor(
                 pingTarget1 = pingTarget1.value.takeIf { it.isNotBlank() },
                 pingTarget2 = pingTarget2.value.takeIf { it.isNotBlank() },
                 pingTarget3 = pingTarget3.value.takeIf { it.isNotBlank() },
-                pingCount = pingCount.value.toIntOrNull()?.coerceIn(1, 20) ?: 4 // validazione range
+                pingCount = pingCount.value.toIntOrNull()?.coerceIn(1, 20) ?: 4, // validazione range
+                runSpeedTest = runSpeedTest.value
             )
             testProfileDao.insert(profile)
             _isSaved.value = true

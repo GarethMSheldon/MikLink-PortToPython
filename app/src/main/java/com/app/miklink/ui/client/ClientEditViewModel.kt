@@ -39,6 +39,11 @@ class ClientEditViewModel @Inject constructor(
     val lastFloor = MutableStateFlow("")
     val lastRoom = MutableStateFlow("")
 
+    // Speed Test configuration
+    val speedTestServerAddress = MutableStateFlow("")
+    val speedTestServerUser = MutableStateFlow("")
+    val speedTestServerPassword = MutableStateFlow("")
+
     private val _isSaved = MutableStateFlow(false)
     val isSaved = _isSaved.asStateFlow()
 
@@ -58,6 +63,10 @@ class ClientEditViewModel @Inject constructor(
                     socketPrefix.value = client.socketPrefix
                     lastFloor.value = client.lastFloor ?: ""
                     lastRoom.value = client.lastRoom ?: ""
+                    // Speed Test
+                    speedTestServerAddress.value = client.speedTestServerAddress ?: ""
+                    speedTestServerUser.value = client.speedTestServerUser ?: ""
+                    speedTestServerPassword.value = client.speedTestServerPassword ?: ""
                 }
             }
         }
@@ -79,7 +88,10 @@ class ClientEditViewModel @Inject constructor(
                 staticCidr = staticCidr.value.takeIf { it.isNotBlank() && networkMode.value == NetworkMode.STATIC },
                 minLinkRate = minLinkRate.value,
                 socketPrefix = socketPrefix.value,
-                nextIdNumber = originalClient?.nextIdNumber ?: 1
+                nextIdNumber = originalClient?.nextIdNumber ?: 1,
+                speedTestServerAddress = speedTestServerAddress.value.takeIf { it.isNotBlank() },
+                speedTestServerUser = speedTestServerUser.value.takeIf { it.isNotBlank() },
+                speedTestServerPassword = speedTestServerPassword.value.takeIf { it.isNotBlank() }
             )
             clientDao.insert(client)
             _isSaved.value = true

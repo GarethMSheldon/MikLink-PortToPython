@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.*
 import com.app.miklink.data.db.model.*
+import com.app.miklink.data.network.dto.SpeedTestResult
 import com.app.miklink.data.repository.AppRepository
-import com.app.miklink.data.repository.AppRepository.NetworkConfigFeedback
 import com.app.miklink.utils.UiState
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
@@ -40,6 +40,10 @@ class TestViewModel @Inject constructor(
     // Persistenza dettagli ping: non vengono resettati al completamento del test
     private val _pingDetails = MutableStateFlow<List<TestDetail>?>(null)
     val pingDetails: StateFlow<List<TestDetail>?> = _pingDetails.asStateFlow()
+
+    // Speed Test state
+    private val _speedTestState = MutableStateFlow<UiState<SpeedTestResult>>(UiState.Idle)
+    val speedTestState: StateFlow<UiState<SpeedTestResult>> = _speedTestState.asStateFlow()
 
     // Override per-singolo-test: se non nullo, verrà usato in applyClientNetworkConfig
     var overrideClientNetwork: Client? = null
@@ -157,7 +161,143 @@ class TestViewModel @Inject constructor(
                     else -> {}
                 }
 
-                // 2) TDR
+                // 2) Link Status + soglia minLinkRate (spostato prima del TDR per stop immediato)
+                if (profile.runLinkStatus) {
+                    addLog("Esecuzione Test Stato Link...")
+                    // Link placeholder
+                    upsertSection(
+                        TestSection(
+                            category = TestSectionCategory.TEST,
+                            type = TestSectionType.LINK,
+                            title = "Link",
+                            status = "INFO",
+                            details = listOf(TestDetail("Stato", "In corso..."))
+                        )
+                    )
+                    when (val linkResult = repository.getLinkStatus(probe, probe.testInterface)) {
+                        is UiState.Success -> {
+                            val data = linkResult.data
+                            addLog("Stato Link: ${data.status} @ ${data.rate ?: "?"}")
+                            testResults["link"] = data
+
+                            // FAIL immediato: stato no-link (Layer1) → interrompi pipeline
+                            val containsNoLink = { s: String? ->
+                                s?.replace(" ", "-")?.contains("no-link", ignoreCase = true) == true
+                            }
+                            if (containsNoLink(data.status) || containsNoLink(data.rate)) {
+                                addLog("ATTENZIONE: NO LINK rilevato. Test interrotto.")
+                                overallStatus = "FAIL"
+                                upsertSection(
+                                    TestSection(
+                                        category = TestSectionCategory.TEST,
+                                        type = TestSectionType.LINK,
+                                        title = "Link",
+                                        status = "FAIL",
+                                        details = listOf(
+                                            TestDetail("Status", data.status),
+                                            TestDetail("Rate", data.rate ?: "-")
+                                        )
+                                    )
+                                )
+                                // Chiudi test immediatamente
+                                _isRunning.value = false
+                                emitImmediateFail(
+                                    reportClient = client,
+                                    reportProbe = probe,
+                                    reportProfile = profile,
+                                    socketName = socketName,
+                                    overallStatus = overallStatus,
+                                    notes = "Test interrotto: NO LINK",
+                                    testResults = testResults
+                                )
+                                return@launch
+                            }
+
+                            // Se il link è down, interrompi il test
+                            val isDown = data.status.contains("down", ignoreCase = true)
+                            if (isDown) {
+                                addLog("ATTENZIONE: Link DOWN rilevato. Test interrotto.")
+                                overallStatus = "FAIL"
+                                // Aggiorna sezione Link come FAIL
+                                upsertSection(
+                                    TestSection(
+                                        category = TestSectionCategory.TEST,
+                                        type = TestSectionType.LINK,
+                                        title = "Link",
+                                        status = "FAIL",
+                                        details = listOf(
+                                            TestDetail("Status", data.status),
+                                            TestDetail("Rate", data.rate ?: "-")
+                                        )
+                                    )
+                                )
+                                _isRunning.value = false
+                                emitImmediateFail(
+                                    reportClient = client,
+                                    reportProbe = probe,
+                                    reportProfile = profile,
+                                    socketName = socketName,
+                                    overallStatus = overallStatus,
+                                    notes = "Test interrotto: Link DOWN",
+                                    testResults = testResults
+                                )
+                                return@launch
+                            }
+
+                            // Verifica soglia minLinkRate
+                            val okRate = isRateOk(data.rate, client.minLinkRate)
+                            if (!okRate) {
+                                addLog("Velocità link inferiore alla soglia (${client.minLinkRate}) → FAIL")
+                                overallStatus = "FAIL"
+                            } else {
+                                addLog("Velocità link conforme alla soglia minima (${client.minLinkRate}) → PASS")
+                            }
+                            val linkPass = okRate
+                            // Aggiorna sezione Link con risultato puntuale
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.LINK,
+                                    title = "Link",
+                                    status = if (linkPass) "PASS" else "FAIL",
+                                    details = listOf(
+                                        TestDetail("Status", data.status),
+                                        TestDetail("Rate", data.rate ?: "-")
+                                    )
+                                )
+                            )
+                        }
+                        is UiState.Error -> {
+                            addLog("Stato Link: FALLITO (${linkResult.message})")
+                            overallStatus = "FAIL"
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.LINK,
+                                    title = "Link",
+                                    status = "FAIL",
+                                    details = listOf(TestDetail("Errore", linkResult.message))
+                                )
+                            )
+                            // Stop immediato su errore link
+                            _isRunning.value = false
+                            emitImmediateFail(
+                                reportClient = client,
+                                reportProbe = probe,
+                                reportProfile = profile,
+                                socketName = socketName,
+                                overallStatus = overallStatus,
+                                notes = "Test interrotto: Errore stato link (${linkResult.message})",
+                                testResults = testResults
+                            )
+                            return@launch
+                        }
+                        UiState.Idle -> {}
+                        UiState.Loading -> {}
+                    }
+                }
+
+                // 3) TDR (spostato dopo Link)
                 if (profile.runTdr) {
                     if (probe.tdrSupported) {
                         addLog("Esecuzione TDR (Cable-Test)...")
@@ -205,88 +345,6 @@ class TestViewModel @Inject constructor(
                         }
                     } else {
                         addLog("TDR: SALTATO (Sonda '${probe.modelName}' non compatibile)")
-                    }
-                }
-
-                // 3) Link Status + soglia minLinkRate
-                if (profile.runLinkStatus) {
-                    addLog("Esecuzione Test Stato Link...")
-                    // Link placeholder
-                    upsertSection(
-                        TestSection(
-                            category = TestSectionCategory.TEST,
-                            type = TestSectionType.LINK,
-                            title = "Link",
-                            status = "INFO",
-                            details = listOf(TestDetail("Stato", "In corso..."))
-                        )
-                    )
-                    when (val linkResult = repository.getLinkStatus(probe, probe.testInterface)) {
-                        is UiState.Success -> {
-                            val data = linkResult.data
-                            addLog("Stato Link: ${data.status} @ ${data.rate ?: "?"}")
-                            testResults["link"] = data
-
-                            // Se il link è down, interrompi il test
-                            val isDown = data.status.contains("down", ignoreCase = true)
-                            if (isDown) {
-                                addLog("ATTENZIONE: Link DOWN rilevato. Test interrotto.")
-                                overallStatus = "FAIL"
-                                // Aggiorna sezione Link come FAIL
-                                upsertSection(
-                                    TestSection(
-                                        category = TestSectionCategory.TEST,
-                                        type = TestSectionType.LINK,
-                                        title = "Link",
-                                        status = "FAIL",
-                                        details = listOf(
-                                            TestDetail("Status", data.status),
-                                            TestDetail("Rate", data.rate ?: "-")
-                                        )
-                                    )
-                                )
-                                finalizeAndEmit(reportClient = client, reportProbe = probe, reportProfile = profile, socketName = socketName, overallStatus = overallStatus, testResults = testResults, notes = "Test interrotto: Link DOWN")
-                                return@launch
-                            }
-
-                            // Verifica soglia minLinkRate
-                            val okRate = isRateOk(data.rate, client.minLinkRate)
-                            if (!okRate) {
-                                addLog("Velocità link inferiore alla soglia (${client.minLinkRate}) → FAIL")
-                                overallStatus = "FAIL"
-                            } else {
-                                addLog("Velocità link conforme alla soglia minima (${client.minLinkRate}) → PASS")
-                            }
-                            val linkPass = okRate
-                            // Aggiorna sezione Link con risultato puntuale
-                            upsertSection(
-                                TestSection(
-                                    category = TestSectionCategory.TEST,
-                                    type = TestSectionType.LINK,
-                                    title = "Link",
-                                    status = if (linkPass) "PASS" else "FAIL",
-                                    details = listOf(
-                                        TestDetail("Status", data.status),
-                                        TestDetail("Rate", data.rate ?: "-")
-                                    )
-                                )
-                            )
-                        }
-                        is UiState.Error -> {
-                            addLog("Stato Link: FALLITO (${linkResult.message})")
-                            overallStatus = "FAIL"
-                            upsertSection(
-                                TestSection(
-                                    category = TestSectionCategory.TEST,
-                                    type = TestSectionType.LINK,
-                                    title = "Link",
-                                    status = "FAIL",
-                                    details = listOf(TestDetail("Errore", linkResult.message))
-                                )
-                            )
-                        }
-                        UiState.Idle -> {}
-                        UiState.Loading -> {}
                     }
                 }
 
@@ -479,11 +537,86 @@ class TestViewModel @Inject constructor(
                     }
                 }
 
+                // 6) Speed Test
+                if (profile.runSpeedTest) {
+                    addLog("Esecuzione Speed Test...")
+                    upsertSection(
+                        TestSection(
+                            category = TestSectionCategory.TEST,
+                            type = TestSectionType.SPEED,
+                            title = "Speed Test",
+                            status = "INFO",
+                            details = listOf(TestDetail("Stato", "In corso..."))
+                        )
+                    )
+                    _speedTestState.value = UiState.Loading
+
+                    when (val speedResult = repository.runSpeedTest(probe, client)) {
+                        is UiState.Success -> {
+                            val data = speedResult.data
+                            addLog("Speed Test: COMPLETATO")
+                            testResults["speedTest"] = data
+                            _speedTestState.value = UiState.Success(data)
+
+                            // Estrai i valori TCP download/upload
+                            val tcpDown = data.tcpDownload ?: "-"
+                            val tcpUp = data.tcpUpload ?: "-"
+                            val udpDown = data.udpDownload ?: "-"
+                            val udpUp = data.udpUpload ?: "-"
+                            val ping = data.ping ?: "-"
+                            val jitter = data.jitter ?: "-"
+                            val loss = data.loss ?: "-"
+
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.SPEED,
+                                    title = "Speed Test",
+                                    status = "PASS",
+                                    details = listOf(
+                                        TestDetail("Server", client.speedTestServerAddress ?: "-"),
+                                        TestDetail("TCP Download", tcpDown),
+                                        TestDetail("TCP Upload", tcpUp),
+                                        TestDetail("UDP Download", udpDown),
+                                        TestDetail("UDP Upload", udpUp),
+                                        TestDetail("Ping", ping),
+                                        TestDetail("Jitter", jitter),
+                                        TestDetail("Loss", loss)
+                                    ).let { details ->
+                                        if (data.warning != null) {
+                                            details + TestDetail("Avviso", data.warning)
+                                        } else details
+                                    }
+                                )
+                            )
+                        }
+                        is UiState.Error -> {
+                            addLog("Speed Test: FALLITO (${speedResult.message})")
+                            _speedTestState.value = UiState.Error(speedResult.message)
+                            upsertSection(
+                                TestSection(
+                                    category = TestSectionCategory.TEST,
+                                    type = TestSectionType.SPEED,
+                                    title = "Speed Test",
+                                    status = "FAIL",
+                                    details = listOf(TestDetail("Errore", speedResult.message))
+                                )
+                            )
+                            // Non fail l'intero test per uno speed test fallito (opzionale)
+                            // overallStatus = "FAIL"
+                        }
+                        else -> {}
+                    }
+                }
+
 
             } catch (e: Exception) {
                 addLog("ERRORE IRREVERSIBILE: ${e.message}")
                 overallStatus = "FAIL"
             }
+
+            // Se è già stato finalizzato (es. NO LINK / errore link), non proseguire
+            if (!_isRunning.value) return@launch
 
             addLog("--- TEST COMPLETATO ---")
             _isRunning.value = false
@@ -526,9 +659,44 @@ class TestViewModel @Inject constructor(
         // sono GIÀ CORRETTE e rappresentano lo stato reale.
         // Ricostruirle causa inconsistenze tra "test in corso" e "risultati finali".
 
-        val type: Type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
-        val adapter: JsonAdapter<Map<String, Any>> = moshi.adapter(type)
-        val resultsJson = adapter.toJson(testResults)
+        // Normalizzazione schema per compatibilità con PdfGenerator/ParsedResults
+        val normalizedResults = java.util.LinkedHashMap<String, Any>(testResults)
+        try {
+            // 1) Consolidamento Ping: raccogli tutte le chiavi "ping_*" in una singola lista "ping"
+            val combinedPing = mutableListOf<com.app.miklink.data.network.PingResult>()
+            testResults.forEach { (k, v) ->
+                if (k.startsWith("ping_")) {
+                    val list = v as? List<*>
+                    list?.forEach { item ->
+                        (item as? com.app.miklink.data.network.PingResult)?.let { combinedPing.add(it) }
+                    }
+                }
+            }
+            if (combinedPing.isNotEmpty()) {
+                normalizedResults["ping"] = combinedPing
+            }
+
+            // 2) TDR: se presente come oggetto singolo, wrappa in lista
+            when (val tdrVal = testResults["tdr"]) {
+                is com.app.miklink.data.network.CableTestResult -> {
+                    normalizedResults["tdr"] = listOf(tdrVal)
+                }
+                is List<*> -> {
+                    // Già lista: niente da fare
+                }
+            }
+        } catch (e: Exception) {
+            addLog("ATTENZIONE: Normalizzazione risultati non riuscita (${e.message}).")
+        }
+
+        val resultsJson: String = try {
+            val type: Type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+            val adapter: JsonAdapter<Map<String, Any>> = moshi.adapter(type)
+            adapter.toJson(normalizedResults)
+        } catch (e: Exception) {
+            addLog("ATTENZIONE: Serializzazione risultati fallita (${e.message}). Uso JSON vuoto.")
+            "{}"
+        }
 
         val report = Report(
             clientId = reportClient.clientId,
@@ -556,5 +724,28 @@ class TestViewModel @Inject constructor(
 
     private fun addLog(message: String) {
         _log.value = _log.value + message
+    }
+
+    private fun emitImmediateFail(
+        reportClient: Client,
+        reportProbe: ProbeConfig,
+        reportProfile: TestProfile,
+        socketName: String,
+        overallStatus: String,
+        notes: String,
+        testResults: Map<String, Any>
+    ) {
+        // Emissione minimale sicura: evita serializzazione complessa in early-stop
+        val report = Report(
+            clientId = reportClient.clientId,
+            timestamp = System.currentTimeMillis(),
+            socketName = socketName,
+            notes = notes,
+            probeName = reportProbe.name,
+            profileName = reportProfile.profileName,
+            overallStatus = overallStatus,
+            resultsJson = "{}" // JSON minimale per early-stop
+        )
+        _uiState.value = UiState.Success(report)
     }
 }
