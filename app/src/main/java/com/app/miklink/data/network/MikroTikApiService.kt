@@ -85,7 +85,9 @@ data class NeighborDetail(
     @Json(name = "discovered-by") val discoveredBy: String?,
     @Json(name = "vlan-id") val vlanId: String? = null,
     @Json(name = "voice-vlan-id") val voiceVlanId: String? = null,
-    @Json(name = "poe-class") val poeClass: String? = null
+    @Json(name = "poe-class") val poeClass: String? = null,
+    @Json(name = "system-description") val systemDescription: String? = null,
+    @Json(name = "port-id") val portId: String? = null
 )
 
 
@@ -160,7 +162,7 @@ interface MikroTikApiService {
     @GET("/rest/ip/neighbor")
     suspend fun getIpNeighbors(
         @Query("interface") interfaceName: String,
-        @Query(".proplist") proplist: String = "identity,interface-name,system-caps-enabled,discovered-by,vlan-id,voice-vlan-id,poe-class"
+        @Query(".proplist") proplist: String = "identity,interface-name,system-caps-enabled,discovered-by,vlan-id,voice-vlan-id,poe-class,system-description,port-id"
     ): List<NeighborDetail>
 
     @POST("/rest/ping")

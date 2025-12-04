@@ -116,7 +116,7 @@ class PdfGenerator @Inject constructor(
             sb.append("<tr>")
             sb.append("<td>").append(presa).append("</td>")
             sb.append("<td>").append(datetime).append("</td>")
-            sb.append("<td class=\"").append(statusClass).append("\">").append(status).append("</td>")
+            sb.append("<td class=\"status-cell\"><span class=\"").append(statusClass).append("\">").append(status).append("</span></td>")
             sb.append("<td>").append(neighbor).append("</td>")
             if (flags.ping) sb.append("<td>").append(pingValue).append("</td>")
             if (flags.tdr) sb.append("<td>").append(tdrValue).append("</td>")
@@ -134,22 +134,46 @@ class PdfGenerator @Inject constructor(
         }
     }
 
-    private fun buildDashboardHtml(reports: List<Report>, client: Client?): String {
-        val template = loadAssetText("project_report_template.html")
+    private fun buildDashboardHtml(reports: List<Report>, client: Client?, reportTitle: String? = null): String {
+        var template = loadAssetText("project_report_template.html")
+        
+        // Replace title if provided for proper PDF filename
+        if (!reportTitle.isNullOrBlank()) {
+            template = template.replace("<title>Report Certificazione Rete</title>", "<title>$reportTitle</title>")
+        }
+        
         val reportsSorted = reports.sortedBy { it.timestamp }
         val flags = scanColumnsAndCpu(reportsSorted)
 
         val total = reportsSorted.size
         val passed = reportsSorted.count { it.overallStatus.equals("PASS", true) }
         val failed = total - passed
+        
+        // Extract Probe Info from first report
+        val firstReport = reportsSorted.firstOrNull()
+        val parsedFirst = firstReport?.let { parseResults(it.resultsJson) }
+        val lldpInfo = parsedFirst?.lldp?.firstOrNull()
+        val probeModel = lldpInfo?.systemDescription ?: "N/A"
+        val probeInterface = lldpInfo?.portId ?: lldpInfo?.interfaceName ?: "N/A"
 
         return template
             .replace("{{CLIENT_NAME}}", client?.companyName ?: "N/A")
+            .replace("{{CLIENT_LOCATION}}", client?.location ?: "-")
+            .replace("{{NETWORK_MODE}}", client?.networkMode ?: "Auto")
+            .replace("{{MIN_LINK_RATE}}", client?.minLinkRate ?: "-")
+            .replace("{{REPORT_ID}}", firstReport?.reportId?.toString() ?: "N/A")
+            .replace("{{REPORT_DATE}}", SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()))
+            .replace("{{PROBE_NAME}}", firstReport?.probeName ?: "MikLink Probe")
+            .replace("{{PROBE_MODEL}}", probeModel)
+            .replace("{{PROBE_INTERFACE}}", probeInterface)
+            .replace("{{TEST_PROFILE}}", firstReport?.profileName ?: "Standard")
             .replace("{{TOTAL_TESTS}}", total.toString())
             .replace("{{PASSED_TESTS}}", passed.toString())
             .replace("{{FAILED_TESTS}}", failed.toString())
             .replace("{{TABLE_HEADERS}}", buildTableHeaders(flags))
             .replace("{{TABLE_ROWS}}", buildTableRows(reportsSorted, flags))
+            .replace("{{CLIENT_NOTES}}", if (!client?.notes.isNullOrBlank()) "<div class=\"notes-section\"><div class=\"notes-title\">Note Cliente</div><div class=\"notes-content\">${client.notes}</div></div>" else "")
+            .replace("{{GENERATION_TIMESTAMP}}", SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date()))
             .replace(
                 "{{FOOTER_WARNING}}",
                 if (flags.showCpuWarning) {
@@ -159,38 +183,116 @@ class PdfGenerator @Inject constructor(
     }
 
     // TASK 1 - Funzione pubblica: genera la stringa HTML finale dal dominio
-    fun generateHtmlFromReports(reports: List<Report>, client: Client?): String {
-        return buildDashboardHtml(reports, client)
+    fun generateHtmlFromReports(reports: List<Report>, client: Client?, reportTitle: String? = null): String {
+        return buildDashboardHtml(reports, client, reportTitle)
     }
 
     // TASK 1 - Funzione pubblica: crea SOLO l'adapter di stampa
-    fun createPrintAdapter(htmlContent: String, jobName: String): PrintDocumentAdapter {
-        val webView = WebView(context)
-        webView.settings.javaScriptEnabled = false
-        // Carica subito il contenuto HTML; il WebView adapter gestirà layout/write al momento della stampa
-        webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
-        val webAdapter = webView.createPrintDocumentAdapter(jobName)
-        return object : PrintDocumentAdapter() {
-            override fun onLayout(
-                oldAttributes: android.print.PrintAttributes?,
-                newAttributes: android.print.PrintAttributes,
-                cancellationSignal: android.os.CancellationSignal?,
-                callback: android.print.PrintDocumentAdapter.LayoutResultCallback,
-                extras: android.os.Bundle?
-            ) {
-                webAdapter.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras)
+    // NOTA: usa Activity Context per garantire funzionalità di stampa
+    suspend fun createPrintAdapter(context: Context, htmlContent: String, jobName: String): PrintDocumentAdapter {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            android.util.Log.d("PdfGenerator", "Creating print adapter with jobName: $jobName")
+            
+            // Use Activity Context (critical for print functionality)
+            val webView = WebView(context)
+            
+            // CRITICAL: Disable hardware acceleration to prevent renderer crashes on some devices (Xiaomi/MIUI)
+            webView.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+            
+            webView.settings.apply {
+                javaScriptEnabled = false
+                loadWithOverviewMode = true
+                useWideViewPort = true
+                domStorageEnabled = true
             }
-            override fun onWrite(
-                pages: Array<android.print.PageRange>,
-                destination: android.os.ParcelFileDescriptor,
-                cancellationSignal: android.os.CancellationSignal?,
-                callback: android.print.PrintDocumentAdapter.WriteResultCallback
-            ) {
-                webAdapter.onWrite(pages, destination, cancellationSignal, callback)
+            
+            // Track page load completion
+            val pageLoaded = java.util.concurrent.atomic.AtomicBoolean(false)
+            webView.webViewClient = object : android.webkit.WebViewClient() {
+                override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    android.util.Log.d("PdfGenerator", "WebView page finished loading")
+                    pageLoaded.set(true)
+                }
+                
+                // Handle both deprecated and new error callbacks for compatibility
+                override fun onReceivedError(
+                    view: android.webkit.WebView?,
+                    errorCode: Int,
+                    description: String?,
+                    failingUrl: String?
+                ) {
+                    android.util.Log.e("PdfGenerator", "WebView error (legacy): $errorCode - $description")
+                    // Don't call super to avoid default error page
+                }
+                
+                override fun onReceivedError(
+                    view: android.webkit.WebView?,
+                    request: android.webkit.WebResourceRequest?,
+                    error: android.webkit.WebResourceError?
+                ) {
+                    android.util.Log.e("PdfGenerator", "WebView error: ${error?.errorCode} - ${error?.description}")
+                    // Don't call super to avoid default error page
+                }
             }
-            override fun onFinish() {
-                try { webView.destroy() } catch (_: Throwable) {}
-                super.onFinish()
+            
+            // Load HTML content
+            android.util.Log.d("PdfGenerator", "Loading HTML content (${htmlContent.length} chars)")
+            webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+            
+            // Wait for page load
+            val startTime = System.currentTimeMillis()
+            val timeout = 5000L
+            while (!pageLoaded.get() && (System.currentTimeMillis() - startTime) < timeout) {
+                kotlinx.coroutines.delay(50)
+            }
+            
+            if (!pageLoaded.get()) {
+                android.util.Log.w("PdfGenerator", "WebView load timeout after ${System.currentTimeMillis() - startTime}ms")
+            } else {
+                val loadTime = System.currentTimeMillis() - startTime
+                android.util.Log.d("PdfGenerator", "WebView loaded in ${loadTime}ms, waiting 500ms for rendering")
+                kotlinx.coroutines.delay(500) // Extra rendering delay
+            }
+            
+            // Create the base print adapter
+            val webAdapter = webView.createPrintDocumentAdapter(jobName)
+            
+            // Wrap the adapter to keep WebView alive and handle cleanup
+            object : PrintDocumentAdapter() {
+                // Keep a strong reference to WebView to prevent GC during the print process
+                private val keptWebView = webView
+                
+                override fun onLayout(
+                    oldAttributes: android.print.PrintAttributes?,
+                    newAttributes: android.print.PrintAttributes,
+                    cancellationSignal: android.os.CancellationSignal?,
+                    callback: android.print.PrintDocumentAdapter.LayoutResultCallback,
+                    extras: android.os.Bundle?
+                ) {
+                    webAdapter.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras)
+                }
+                
+                override fun onWrite(
+                    pages: Array<out android.print.PageRange>?,
+                    destination: android.os.ParcelFileDescriptor?,
+                    cancellationSignal: android.os.CancellationSignal?,
+                    callback: android.print.PrintDocumentAdapter.WriteResultCallback?
+                ) {
+                    try {
+                        webAdapter.onWrite(pages, destination, cancellationSignal, callback)
+                    } catch (e: Exception) {
+                        android.util.Log.e("PdfGenerator", "Error in onWrite", e)
+                        callback?.onWriteFailed(e.message)
+                    }
+                }
+                
+                override fun onFinish() {
+                    webAdapter.onFinish()
+                    // Clean up WebView only after printing is finished
+                    try { keptWebView.destroy() } catch (_: Throwable) {}
+                    super.onFinish()
+                }
             }
         }
     }

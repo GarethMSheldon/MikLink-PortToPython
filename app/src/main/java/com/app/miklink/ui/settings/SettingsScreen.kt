@@ -21,12 +21,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.*
+import androidx.compose.foundation.selection.selectable
+import com.app.miklink.data.repository.IdNumberingStrategy
+import com.app.miklink.data.repository.ThemeConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
+    viewModel: SettingsViewModel = hiltViewModel()  // <-- aggiungi questo parametro
 ) {
+    val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()  // <-- aggiungi
+    val idNumberingStrategy by viewModel.idNumberingStrategy.collectAsStateWithLifecycle()  // <-- aggiungi
+    var showThemeDialog by remember { mutableStateOf(false) }  // <-- aggiungi
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -154,7 +165,82 @@ fun SettingsScreen(
                     }
                 )
             }
+// Sezione Numerazione ID Test
+SettingsSection(
+    title = "Numerazione ID Test",
+    icon = Icons.Default.Tag,
+    iconColor = Color(0xFF4CAF50)
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = (idNumberingStrategy == IdNumberingStrategy.CONTINUOUS_INCREMENT),
+                        onClick = { viewModel.updateIdNumberingStrategy(IdNumberingStrategy.CONTINUOUS_INCREMENT) }
+                    )
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (idNumberingStrategy == IdNumberingStrategy.CONTINUOUS_INCREMENT),
+                    onClick = { viewModel.updateIdNumberingStrategy(IdNumberingStrategy.CONTINUOUS_INCREMENT) }
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        "Incremento Continuo",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        "Gli ID continuano sempre ad incrementare (consigliato)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = (idNumberingStrategy == IdNumberingStrategy.FILL_GAPS),
+                        onClick = { viewModel.updateIdNumberingStrategy(IdNumberingStrategy.FILL_GAPS) }
+                    )
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (idNumberingStrategy == IdNumberingStrategy.FILL_GAPS),
+                    onClick = { viewModel.updateIdNumberingStrategy(IdNumberingStrategy.FILL_GAPS) }
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        "Riempi Buchi",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        "Riutilizza gli ID dei test eliminati",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
             // Sezione Modalità di Filtraggio
             SettingsSection(
                 title = "Modalità di Filtraggio",

@@ -12,14 +12,47 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.app.miklink.data.repository.IdNumberingStrategy
+import com.app.miklink.data.repository.ThemeConfig
+import com.app.miklink.data.repository.UserPreferencesRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val backupRepository: BackupRepository,
+    private val userPreferencesRepository: UserPreferencesRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _backupStatus = MutableStateFlow("")
     val backupStatus = _backupStatus.asStateFlow()
+
+    val themeConfig = userPreferencesRepository.themeConfig
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ThemeConfig.FOLLOW_SYSTEM
+        )
+
+    val idNumberingStrategy = userPreferencesRepository.idNumberingStrategy
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = IdNumberingStrategy.CONTINUOUS_INCREMENT
+        )
+
+    fun updateTheme(config: ThemeConfig) {
+        viewModelScope.launch {
+            userPreferencesRepository.setTheme(config)
+        }
+    }
+
+    fun updateIdNumberingStrategy(strategy: IdNumberingStrategy) {
+        viewModelScope.launch {
+            userPreferencesRepository.setIdNumberingStrategy(strategy)
+        }
+    }
 
     suspend fun exportConfig(): String {
         return backupRepository.exportConfigToJson()

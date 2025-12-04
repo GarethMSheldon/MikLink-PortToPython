@@ -86,9 +86,14 @@ class HistoryViewModel @Inject constructor(
 
     // Nuove API per la stampa dalla UI
     fun generateHtmlForClientReports(clientReports: ReportsByClient): String {
-        return pdfGenerator.generateHtmlFromReports(clientReports.reports, clientReports.client)
+        // Generate a filename/title for the PDF
+        val clientName = clientReports.client?.companyName?.replace(" ", "_") ?: "Client"
+        val date = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())
+        val title = "${clientName}_Reports_${date}"
+        
+        return pdfGenerator.generateHtmlFromReports(clientReports.reports, clientReports.client, title)
     }
 
-    fun createPrintAdapter(html: String, jobName: String): PrintDocumentAdapter =
-        pdfGenerator.createPrintAdapter(html, jobName)
+    suspend fun createPrintAdapter(context: android.content.Context, html: String, jobName: String): PrintDocumentAdapter =
+        pdfGenerator.createPrintAdapter(context, html, jobName)
 }

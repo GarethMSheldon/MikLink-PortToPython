@@ -9,6 +9,8 @@ import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.ProbeConfig
 import com.app.miklink.data.db.model.TestProfile
 import com.app.miklink.data.repository.AppRepository
+import com.app.miklink.data.repository.IdNumberingStrategy
+import com.app.miklink.data.repository.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,7 +23,8 @@ class DashboardViewModel @Inject constructor(
     clientDao: ClientDao,
     testProfileDao: TestProfileDao,
     private val reportDao: ReportDao,
-    private val repository: AppRepository
+    private val repository: AppRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     // Data sources
@@ -53,25 +56,55 @@ class DashboardViewModel @Inject constructor(
         initialValue = false
     )
 
+    // Osserva la strategia di numerazione ID
+    private val idNumberingStrategy = userPreferencesRepository.idNumberingStrategy
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), IdNumberingStrategy.CONTINUOUS_INCREMENT)
+
     init {
-        // Observe selected client to auto-increment socket ID
+        // Combina selectedClient e idNumberingStrategy per calcolare socketName
         viewModelScope.launch {
-            selectedClient.collect { client ->
+            combine(selectedClient, idNumberingStrategy) { client, strategy ->
+                Pair(client, strategy)
+            }.collect { (client, strategy) ->
                 if (client != null) {
-                    val lastReport = reportDao.getLastReportForClient(client.clientId)
-                    val nextNumber = if (lastReport == null) {
-                        1
-                    } else {
-                        // Safely handle nullable socketName
-                        val lastNumber = lastReport.socketName?.removePrefix(client.socketPrefix)?.toIntOrNull() ?: 0
-                        lastNumber + 1
+                    val nextNumber = when (strategy) {
+                        IdNumberingStrategy.CONTINUOUS_INCREMENT -> {
+                            // Usa sempre nextIdNumber (auto-increment continuo)
+                            client.nextIdNumber
+                        }
+                        IdNumberingStrategy.FILL_GAPS -> {
+                            // Trova il primo gap disponibile o usa nextIdNumber
+                            findNextAvailableId(client)
+                        }
                     }
-                    // Format with 3-digit padding
                     socketName.value = "${client.socketPrefix}${String.format(Locale.US, "%03d", nextNumber)}"
                 } else {
                     socketName.value = ""
                 }
             }
         }
+    }
+
+    // Funzione helper per trovare il primo ID disponibile (gap-filling)
+    private suspend fun findNextAvailableId(client: Client): Int {
+        val existingReports = reportDao.getReportsForClient(client.clientId).firstOrNull() ?: emptyList()
+        
+        // Estrai tutti i numeri ID esistenti
+        val existingIds = existingReports.mapNotNull { report ->
+            report.socketName?.removePrefix(client.socketPrefix)?.toIntOrNull()
+        }.sorted()
+
+        // Trova il primo gap
+        var expectedId = 1
+        for (existingId in existingIds) {
+            if (existingId != expectedId) {
+                // Trovato un gap
+                return expectedId
+            }
+            expectedId++
+        }
+
+        // Nessun gap trovato, usa il prossimo numero dopo l'ultimo
+        return existingIds.lastOrNull()?.plus(1) ?: 1
     }
 }

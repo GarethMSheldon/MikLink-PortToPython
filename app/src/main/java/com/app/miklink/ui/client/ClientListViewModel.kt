@@ -37,9 +37,15 @@ class ClientListViewModel @Inject constructor(
         val reports = reportDao.getReportsForClient(clientId).firstOrNull() ?: emptyList()
         val client = clientDao.getClientById(clientId).firstOrNull()
         if (reports.isEmpty()) return null
-        return pdfGenerator.generateHtmlFromReports(reports, client)
+        
+        // Generate a filename/title for the PDF
+        val clientName = client?.companyName?.replace(" ", "_") ?: "Client"
+        val date = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())
+        val title = "${clientName}_Reports_${date}"
+        
+        return pdfGenerator.generateHtmlFromReports(reports, client, title)
     }
 
-    fun createPrintAdapter(html: String, jobName: String): PrintDocumentAdapter =
-        pdfGenerator.createPrintAdapter(html, jobName)
+    suspend fun createPrintAdapter(context: android.content.Context, html: String, jobName: String): PrintDocumentAdapter =
+        pdfGenerator.createPrintAdapter(context, html, jobName)
 }

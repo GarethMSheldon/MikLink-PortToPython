@@ -16,7 +16,7 @@ androidx-material3 = "1.3.1"
 androidx-compose-ui-test = "1.6.0"
 
 # HILT
-hilt = "2.51.1"
+hilt = "2.54"
 hilt-navigation = "1.2.0"
 
 # ROOM

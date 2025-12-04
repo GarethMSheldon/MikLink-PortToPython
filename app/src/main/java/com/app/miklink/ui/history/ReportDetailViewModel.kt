@@ -1,5 +1,6 @@
 package com.app.miklink.ui.history
 
+import android.content.Context
 import android.print.PrintDocumentAdapter
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -64,11 +65,20 @@ class ReportDetailViewModel @Inject constructor(
     suspend fun generateHtmlForCurrentReport(): String? {
         val currentReport = report.value ?: return null
         val client = currentReport.clientId?.let { id -> clientDao.getClientById(id).firstOrNull() }
-        return pdfGenerator.generateHtmlFromReports(listOf(currentReport), client)
+        val title = getProposedFilename()
+        return pdfGenerator.generateHtmlFromReports(listOf(currentReport), client, title)
     }
 
-    fun createPrintAdapter(html: String, jobName: String): PrintDocumentAdapter =
-        pdfGenerator.createPrintAdapter(html, jobName)
+    suspend fun getProposedFilename(): String {
+        val currentReport = report.value ?: return "MikLink_Report"
+        val client = currentReport.clientId?.let { id -> clientDao.getClientById(id).firstOrNull() }
+        val clientName = client?.companyName?.replace(" ", "_") ?: "Client"
+        val date = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date(currentReport.timestamp))
+        return "${clientName}-${date}-${currentReport.reportId}"
+    }
+
+    suspend fun createPrintAdapter(context: Context, html: String, jobName: String): PrintDocumentAdapter =
+        pdfGenerator.createPrintAdapter(context, html, jobName)
 
     override fun exportReportToPdf() {
         // No-op: la stampa è demandata alla UI

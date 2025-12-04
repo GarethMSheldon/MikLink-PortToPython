@@ -117,7 +117,7 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
-    
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
     // Networking
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.moshi)

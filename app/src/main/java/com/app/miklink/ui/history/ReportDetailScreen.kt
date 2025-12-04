@@ -23,8 +23,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.draw.alpha
 import com.app.miklink.ui.common.TestSectionCard
 import com.app.miklink.ui.history.model.ParsedResults
+import android.print.PrintDocumentAdapter
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +62,73 @@ fun ReportDetailScreen(
         }
     }
 
+    // State for PDF printing
+    var pdfHtmlToPrint by remember { mutableStateOf<String?>(null) }
+    var pdfJobName by remember { mutableStateOf("") }
+    
+    // Keep reference to WebView for explicit control
+    val webViewRef = remember { mutableStateOf<android.webkit.WebView?>(null) }
+
+    // Load content when pdfHtmlToPrint changes
+    LaunchedEffect(pdfHtmlToPrint) {
+        webViewRef.value?.let { webView ->
+            webView.tag = pdfJobName
+            if (pdfHtmlToPrint != null) {
+                android.util.Log.d("ReportPDF", "LaunchedEffect loading HTML, length=${pdfHtmlToPrint!!.length}")
+                webView.loadDataWithBaseURL("http://localhost/", pdfHtmlToPrint!!, "text/html", "UTF-8", null)
+            }
+        }
+    }
+
+    // Invisible WebView for printing
+    // Invisible WebView for printing - Always attached to prevent renderer crash
+    AndroidView(
+        factory = { ctx ->
+            android.webkit.WebView(ctx).apply {
+                settings.javaScriptEnabled = false
+                settings.domStorageEnabled = true
+                // Disable hardware acceleration to prevent crashes on some devices
+                setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+                
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        android.util.Log.d("ReportPDF", "onPageFinished url=$url, hasContent=${pdfHtmlToPrint != null}")
+                        // Only print if we have content and URL indicates loaded content (not blank)
+                        if (pdfHtmlToPrint != null && url?.startsWith("http") == true) {
+                            val printManager = ctx.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                            if (printManager != null) {
+                                val jobName = view?.tag as? String ?: "Report"
+                                val adapter = createPrintDocumentAdapter(jobName)
+                                
+                                val wrappedAdapter = object : PrintDocumentAdapter() {
+                                    override fun onLayout(oldAttributes: PrintAttributes?, newAttributes: PrintAttributes?, cancellationSignal: CancellationSignal?, callback: LayoutResultCallback?, extras: Bundle?) {
+                                        adapter.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras)
+                                    }
+                                    override fun onWrite(pages: Array<out PageRange>?, destination: ParcelFileDescriptor?, cancellationSignal: CancellationSignal?, callback: WriteResultCallback?) {
+                                        adapter.onWrite(pages, destination, cancellationSignal, callback)
+                                    }
+                                    override fun onFinish() {
+                                        adapter.onFinish()
+                                        // Cleanup: Clear content and reset state
+                                        pdfHtmlToPrint = null
+                                        view?.loadUrl("about:blank")
+                                    }
+                                }
+                                
+                                printManager.print(jobName, wrappedAdapter, PrintAttributes.Builder().build())
+                            }
+                        }
+                    }
+                }
+                
+                // Store reference
+                webViewRef.value = this
+            }
+        },
+        modifier = Modifier.size(1.dp).alpha(0f)
+    )
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -70,23 +146,20 @@ fun ReportDetailScreen(
                             coroutineScope.launch { snackbarHostState.showSnackbar("Errore: Activity non disponibile") }
                             return@IconButton
                         }
-                        // 1. Genera HTML
+                        
                         coroutineScope.launch {
+                            // 1. Generate HTML
                             val html = viewModel.generateHtmlForCurrentReport()
                             if (html.isNullOrBlank()) {
                                 snackbarHostState.showSnackbar("Errore: impossibile generare l'HTML")
                                 return@launch
                             }
-                            val jobName = "MikLink Report"
-                            // 2. PrintManager
-                            val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                            if (printManager == null) {
-                                snackbarHostState.showSnackbar("Errore: Servizio di stampa non trovato")
-                                return@launch
-                            }
-                            // 3. Adapter e stampa
-                            val adapter = viewModel.createPrintAdapter(html, jobName)
-                            printManager.print(jobName, adapter, PrintAttributes.Builder().build())
+                            
+                            // 2. Set state to trigger WebView loading and printing
+                            pdfJobName = viewModel.getProposedFilename()
+                            pdfHtmlToPrint = html
+                            
+                            snackbarHostState.showSnackbar("Preparazione PDF in corso...")
                         }
                     }) {
                         // Use same visual treatment as Settings top icon (primary tint, no extra bg)

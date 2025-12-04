@@ -4,6 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.print.PrintAttributes
 import android.print.PrintManager
+import android.print.PrintDocumentAdapter
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +32,8 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.draw.alpha
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +55,72 @@ fun HistoryScreen(
             snackbarHostState.showSnackbar(pdfStatus)
         }
     }
+
+    // State for PDF printing
+    var pdfHtmlToPrint by remember { mutableStateOf<String?>(null) }
+    var pdfJobName by remember { mutableStateOf("") }
+    
+    // Keep reference to WebView for explicit control
+    val webViewRef = remember { mutableStateOf<android.webkit.WebView?>(null) }
+
+    // Load content when pdfHtmlToPrint changes
+    LaunchedEffect(pdfHtmlToPrint) {
+        webViewRef.value?.let { webView ->
+            webView.tag = pdfJobName
+            if (pdfHtmlToPrint != null) {
+                android.util.Log.d("HistoryPDF", "LaunchedEffect loading HTML, length=${pdfHtmlToPrint!!.length}")
+                webView.loadDataWithBaseURL("http://localhost/", pdfHtmlToPrint!!, "text/html", "UTF-8", null)
+            }
+        }
+    }
+
+    // Invisible WebView for printing - Always attached to prevent renderer crash
+    AndroidView(
+        factory = { ctx ->
+            android.webkit.WebView(ctx).apply {
+                settings.javaScriptEnabled = false
+                settings.domStorageEnabled = true
+                // Disable hardware acceleration to prevent crashes on some devices
+                setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+                
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        android.util.Log.d("HistoryPDF", "onPageFinished url=$url, hasContent=${pdfHtmlToPrint != null}")
+                        // Only print if we have content and URL indicates loaded content (not blank)
+                        if (pdfHtmlToPrint != null && url?.startsWith("http") == true) {
+                            val printManager = ctx.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                            if (printManager != null) {
+                                val jobName = view?.tag as? String ?: "History_Report"
+                                val adapter = createPrintDocumentAdapter(jobName)
+                                
+                                val wrappedAdapter = object : PrintDocumentAdapter() {
+                                    override fun onLayout(oldAttributes: PrintAttributes?, newAttributes: PrintAttributes?, cancellationSignal: CancellationSignal?, callback: LayoutResultCallback?, extras: Bundle?) {
+                                        adapter.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras)
+                                    }
+                                    override fun onWrite(pages: Array<out PageRange>?, destination: ParcelFileDescriptor?, cancellationSignal: CancellationSignal?, callback: WriteResultCallback?) {
+                                        adapter.onWrite(pages, destination, cancellationSignal, callback)
+                                    }
+                                    override fun onFinish() {
+                                        adapter.onFinish()
+                                        // Cleanup: Clear content and reset state
+                                        pdfHtmlToPrint = null
+                                        view?.loadUrl("about:blank")
+                                    }
+                                }
+                                
+                                printManager.print(jobName, wrappedAdapter, PrintAttributes.Builder().build())
+                            }
+                        }
+                    }
+                }
+                
+                // Store reference
+                webViewRef.value = this
+            }
+        },
+        modifier = Modifier.size(1.dp).alpha(0f)
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -119,20 +192,16 @@ fun HistoryScreen(
                             // TODO: Navigate to test with pre-filled params
                         },
                         onExportAll = {
-                            val activity = context as? Activity
-                            if (activity == null) {
-                                coroutineScope.launch { snackbarHostState.showSnackbar("Errore: Activity non disponibile") }
-                                return@ClientReportsCard
+                            coroutineScope.launch {
+                                val html = viewModel.generateHtmlForClientReports(clientData)
+                                val clientName = clientData.client?.companyName?.replace(" ", "_") ?: "Client"
+                                val date = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())
+                                
+                                pdfJobName = "${clientName}_Reports_${date}"
+                                pdfHtmlToPrint = html
+                                
+                                snackbarHostState.showSnackbar("Preparazione PDF in corso...")
                             }
-                            val html = viewModel.generateHtmlForClientReports(clientData)
-                            val jobName = "${clientData.client?.companyName ?: "Client"} Reports"
-                            val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                            if (printManager == null) {
-                                coroutineScope.launch { snackbarHostState.showSnackbar("Errore: Servizio di stampa non trovato") }
-                                return@ClientReportsCard
-                            }
-                            val adapter = viewModel.createPrintAdapter(html, jobName)
-                            printManager.print(jobName, adapter, PrintAttributes.Builder().build())
                         },
                         viewModel = viewModel
                     )

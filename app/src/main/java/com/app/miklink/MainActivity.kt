@@ -5,18 +5,38 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.app.miklink.data.repository.ThemeConfig
+import com.app.miklink.data.repository.UserPreferencesRepository
 import com.app.miklink.ui.NavGraph
 import com.app.miklink.ui.theme.MikLinkTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
-            MikLinkTheme {
+            val themeConfig by userPreferencesRepository.themeConfig.collectAsStateWithLifecycle(
+                initialValue = ThemeConfig.FOLLOW_SYSTEM
+            )
+
+            val isDarkTheme = when (themeConfig) {
+                ThemeConfig.LIGHT -> false
+                ThemeConfig.DARK -> true
+                ThemeConfig.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+            }
+
+            MikLinkTheme(darkTheme = isDarkTheme) {
                 NavGraph()
             }
         }
