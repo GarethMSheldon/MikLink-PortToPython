@@ -5,11 +5,9 @@ import android.content.Context
 import android.print.PrintAttributes
 import android.print.PrintManager
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,14 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.app.miklink.ui.components.MinimalListItem
+import com.app.miklink.ui.components.ModernSearchBar
 import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,17 +41,14 @@ fun ClientListScreen(
     val clients by viewModel.clients.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-
-    val fabContent: @Composable () -> Unit = {
-        if (clients.isNotEmpty()) {
-            ExtendedFloatingActionButton(
-                onClick = { navController.navigate("client_add") },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("NUOVO CLIENTE") },
-                containerColor = Color(0xFF4CAF50)
-            )
-        } else {
-            Spacer(modifier = Modifier.size(0.dp))
+    
+    // Search State
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredClients = remember(clients, searchQuery) {
+        if (searchQuery.isBlank()) clients
+        else clients.filter { 
+            it.companyName.contains(searchQuery, ignoreCase = true) || 
+            (it.location?.contains(searchQuery, ignoreCase = true) == true)
         }
     }
 
@@ -63,14 +60,14 @@ fun ClientListScreen(
                         Icon(
                             Icons.Default.Business,
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text("Gestione Clienti", fontWeight = FontWeight.Bold)
                             Text(
-                                "${clients.size} ${if (clients.size == 1) "cliente" else "clienti"}",
+                                "${filteredClients.size} ${if (filteredClients.size == 1) "cliente" else "clienti"}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -78,43 +75,57 @@ fun ClientListScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        floatingActionButton = fabContent
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { navController.navigate("client_add") },
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("NUOVO CLIENTE") },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        }
     ) { paddingValues ->
-        if (clients.isEmpty()) {
-            // Empty state
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    modifier = Modifier.padding(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Search Bar
+            ModernSearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = "Cerca cliente..."
+            )
+
+            if (clients.isEmpty()) {
+                // Empty state (No clients at all)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        modifier = Modifier.padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(80.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.BusinessCenter,
                                 contentDescription = null,
                                 modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(Modifier.height(24.dp))
@@ -125,139 +136,72 @@ fun ClientListScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Inizia aggiungendo il tuo primo cliente\nper gestire i test di certificazione",
+                            text = "Aggiungi il tuo primo cliente per iniziare.",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(24.dp))
-                        Button(
-                            onClick = { navController.navigate("client_add") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF4CAF50)
-                            )
+                    }
+                }
+            } else if (filteredClients.isEmpty()) {
+                // Empty search results
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Nessun risultato trovato per \"$searchQuery\"",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                // Client List
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredClients, key = { it.clientId }) { client ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn() + slideInVertically()
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("AGGIUNGI CLIENTE")
+                            MinimalListItem(
+                                title = client.companyName,
+                                subtitle = client.location ?: "Nessuna sede specificata",
+                                icon = Icons.Default.Business,
+                                onClick = { navController.navigate("client_edit/${client.clientId}") },
+                                trailingContent = {
+                                    IconButton(
+                                        onClick = {
+                                            val activity = context as? Activity
+                                            if (activity != null) {
+                                                coroutineScope.launch {
+                                                    val html = viewModel.generateHtmlForClientId(client.clientId)
+                                                    if (!html.isNullOrBlank()) {
+                                                        val jobName = "project_report_${client.companyName}"
+                                                        val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                                                        val adapter = viewModel.createPrintAdapter(html, jobName)
+                                                        printManager?.print(jobName, adapter, PrintAttributes.Builder().build())
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.PictureAsPdf,
+                                            contentDescription = "Export PDF",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            )
                         }
                     }
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(clients, key = { it.clientId }) { client ->
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn() + slideInVertically()
-                    ) {
-                        ClientCard(
-                            client = client,
-                            onClick = { navController.navigate("client_edit/${client.clientId}") },
-                            onExportClick = {
-                                val activity = context as? Activity
-                                if (activity == null) return@ClientCard
-                                coroutineScope.launch {
-                                    val html = viewModel.generateHtmlForClientId(client.clientId)
-                                    if (html.isNullOrBlank()) return@launch
-                                    val jobName = "project_report_${client.companyName}"
-                                    val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                                    val adapter = viewModel.createPrintAdapter(html, jobName)
-                                    printManager?.print(jobName, adapter, PrintAttributes.Builder().build())
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ClientCard(
-    client: com.app.miklink.data.db.model.Client,
-    onClick: () -> Unit,
-    onExportClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .animateContentSize(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Icona cliente
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Business,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            Spacer(Modifier.width(16.dp))
-
-            // Info cliente
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = client.companyName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                if (!client.location.isNullOrBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = client.location,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Pulsante export PDF
-            IconButton(
-                onClick = onExportClick,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = Color(0xFFF44336).copy(alpha = 0.15f),
-                    contentColor = Color(0xFFF44336)
-                )
-            ) {
-                Icon(
-                    Icons.Default.PictureAsPdf,
-                    contentDescription = "Esporta Report PDF"
-                )
             }
         }
     }
