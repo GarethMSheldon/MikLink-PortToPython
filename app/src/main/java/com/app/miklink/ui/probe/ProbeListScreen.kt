@@ -234,7 +234,8 @@ fun ProbeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = probe.name,
+                        // Probe name no longer shown — use generic label
+                        text = "Sonda",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

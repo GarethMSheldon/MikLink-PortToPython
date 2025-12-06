@@ -144,7 +144,7 @@ class ProbeEditViewModelTest {
         coEvery { probeConfigDao.getSingleProbe() } returns flowOf(null)
         viewModel = ProbeEditViewModel(probeConfigDao, appRepository, savedStateHandle)
 
-        viewModel.name.value = "New Probe"
+        // name editing is no longer allowed; onSaveClicked will set the name to a generic value
         viewModel.ipAddress.value = "10.0.0.1"
         viewModel.username.value = "testuser"
         viewModel.password.value = "testpass"
@@ -159,7 +159,7 @@ class ProbeEditViewModelTest {
             probeConfigDao.upsertSingle(
                 match {
                     it.probeId == 1L &&
-                    it.name == "New Probe" &&
+                    it.name == "Sonda" &&
                     it.ipAddress == "10.0.0.1" &&
                     it.username == "testuser" &&
                     it.password == "testpass" &&
@@ -180,7 +180,7 @@ class ProbeEditViewModelTest {
         coEvery { probeConfigDao.getProbeById(5L) } returns flowOf(mockProbe.copy(probeId = 5L))
 
         viewModel = ProbeEditViewModel(probeConfigDao, appRepository, savedStateHandle)
-        viewModel.name.value = "Updated Probe"
+        // editing name is not allowed; probe's name will become the generic 'Sonda'
 
         // When: onSaveClicked is called
         viewModel.onSaveClicked()
@@ -188,7 +188,7 @@ class ProbeEditViewModelTest {
         // Then: upsertSingle should be called with probeId = 5
         coVerify {
             probeConfigDao.upsertSingle(
-                match { it.probeId == 5L && it.name == "Updated Probe" }
+                match { it.probeId == 5L && it.name == "Sonda" }
             )
         }
     }

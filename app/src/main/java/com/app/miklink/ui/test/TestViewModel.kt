@@ -128,7 +128,8 @@ class TestViewModel @Inject constructor(
                 )
 
                 addLog("Cliente: ${client.companyName} | Presa: $socketName")
-                addLog("Sonda '${probe.name}' selezionata.")
+                // Probe name removed; log a generic selection message
+                addLog("Sonda selezionata.")
 
                 // 1) Applica configurazione rete cliente (persistente) + eventuale override per singolo test
                 addLog("Applicazione configurazione rete (${overrideClientNetwork?.networkMode ?: client.networkMode})...")

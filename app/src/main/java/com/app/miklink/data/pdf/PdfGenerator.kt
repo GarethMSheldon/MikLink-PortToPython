@@ -163,7 +163,7 @@ class PdfGenerator @Inject constructor(
             .replace("{{MIN_LINK_RATE}}", client?.minLinkRate ?: "-")
             .replace("{{REPORT_ID}}", firstReport?.reportId?.toString() ?: "N/A")
             .replace("{{REPORT_DATE}}", SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()))
-            .replace("{{PROBE_NAME}}", firstReport?.probeName ?: "MikLink Probe")
+            .replace("{{PROBE_NAME}}", firstReport?.probeName ?: "Sonda")
             .replace("{{PROBE_MODEL}}", probeModel)
             .replace("{{PROBE_INTERFACE}}", probeInterface)
             .replace("{{TEST_PROFILE}}", firstReport?.profileName ?: "Standard")

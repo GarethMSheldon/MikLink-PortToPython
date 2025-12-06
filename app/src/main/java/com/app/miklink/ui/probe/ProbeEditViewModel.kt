@@ -131,7 +131,8 @@ class ProbeEditViewModel @Inject constructor(
         viewModelScope.launch {
             val probeToSave = ProbeConfig(
                 probeId = if (isEditing) probeId else 1, // MODIFICATO: forza ID=1 per sonda unica
-                name = name.value,
+                // Name is fixed to a generic value for single-probe setup
+                name = "Sonda",
                 ipAddress = ipAddress.value,
                 username = username.value,
                 password = password.value,

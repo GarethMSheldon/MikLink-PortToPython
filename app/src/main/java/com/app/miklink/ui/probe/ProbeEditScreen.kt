@@ -57,7 +57,7 @@ fun ProbeEditScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .navigationBarsPadding(),
-                enabled = name.isNotBlank() && ipAddress.isNotBlank() && verificationState is VerificationState.Success
+                enabled = ipAddress.isNotBlank() && verificationState is VerificationState.Success
             ) {
                 Text("Save")
             }
@@ -72,7 +72,7 @@ fun ProbeEditScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = name, onValueChange = { viewModel.name.value = it }, label = { Text("Probe Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            // NAME input removed by design: probe should be generically named "Sonda"
             OutlinedTextField(value = ipAddress, onValueChange = { viewModel.ipAddress.value = it }, label = { Text("IP Address") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = username, onValueChange = { viewModel.username.value = it }, label = { Text("Username") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(

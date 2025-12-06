@@ -135,8 +135,9 @@ fun DashboardScreen(
                                 )
                             }
                             currentProbe?.let { probe ->
+                                // Show a generic probe label instead of a specific name
                                 StatusBadge(
-                                    text = probe.name,
+                                    text = "Sonda",
                                     color = if (isProbeOnline) Color(0xFF4CAF50) else Color(0xFFF44336),
                                     icon = if (isProbeOnline) Icons.Default.CheckCircle else Icons.Default.Error
                                 )
@@ -230,30 +231,54 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // 1. Client Selection
-            SectionHeader(title = "1. Cliente", icon = Icons.Default.Business) {
-                navController.navigate("client_list")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SelectionCard(
+                    title = selectedClient?.companyName ?: "Seleziona Cliente",
+                    subtitle = selectedClient?.location ?: "Clicca per selezionare",
+                    icon = Icons.Default.Business,
+                    isSelected = selectedClient != null,
+                    onClick = { showClientSheet = true },
+                    modifier = Modifier.weight(1f)
+                )
+                
+                IconButton(onClick = { navController.navigate("client_list") }) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Gestisci Clienti",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
-            
-            SelectionCard(
-                title = selectedClient?.companyName ?: "Seleziona Cliente",
-                subtitle = selectedClient?.location ?: "Clicca per selezionare",
-                icon = Icons.Default.Business,
-                isSelected = selectedClient != null,
-                onClick = { showClientSheet = true }
-            )
 
             // 2. Profile Selection
-            SectionHeader(title = "2. Profilo Test", icon = Icons.Default.Checklist) {
-                navController.navigate("profile_list")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SelectionCard(
+                    title = selectedProfile?.profileName ?: "Seleziona Profilo",
+                    subtitle = selectedProfile?.profileDescription ?: "Clicca per selezionare",
+                    icon = Icons.Default.Speed,
+                    isSelected = selectedProfile != null,
+                    onClick = { showProfileSheet = true },
+                    modifier = Modifier.weight(1f)
+                )
+                
+                IconButton(onClick = { navController.navigate("profile_list") }) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Gestisci Profili",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
-
-            SelectionCard(
-                title = selectedProfile?.profileName ?: "Seleziona Profilo",
-                subtitle = selectedProfile?.profileDescription ?: "Clicca per selezionare",
-                icon = Icons.Default.Speed,
-                isSelected = selectedProfile != null,
-                onClick = { showProfileSheet = true }
-            )
 
             // 3. Socket ID
             SectionHeader(title = "3. Identificativo Presa", icon = Icons.Default.PowerInput)
@@ -425,10 +450,11 @@ private fun SelectionCard(
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
