@@ -5,6 +5,7 @@ import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.Report
 import com.app.miklink.data.db.model.TestProfile
 import com.app.miklink.ui.history.model.ParsedResults
+import com.app.miklink.utils.normalizeTime
 import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.colors.DeviceRgb
@@ -317,9 +318,9 @@ class PdfGeneratorIText @Inject constructor(
             if (!summary?.minRtt.isNullOrBlank() || !summary?.avgRtt.isNullOrBlank() || !summary?.maxRtt.isNullOrBlank()) {
                 table.addCell(createInfoLabelCell("RTT"))
                 val rttParts = listOfNotNull(
-                    summary?.minRtt?.let { "min $it" },
-                    summary?.avgRtt?.let { "avg $it" },
-                    summary?.maxRtt?.let { "max $it" }
+                    summary?.minRtt?.let { "min ${normalizeTime(it)}" },
+                    summary?.avgRtt?.let { "avg ${normalizeTime(it)}" },
+                    summary?.maxRtt?.let { "max ${normalizeTime(it)}" }
                 ).joinToString(" / ")
                 table.addCell(createInfoValueCell(rttParts))
             }

@@ -8,6 +8,7 @@ import com.app.miklink.data.db.model.*
 import com.app.miklink.data.network.dto.SpeedTestResult
 import com.app.miklink.data.repository.AppRepository
 import com.app.miklink.utils.UiState
+import com.app.miklink.utils.normalizeTime
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -516,7 +517,7 @@ class TestViewModel @Inject constructor(
                                     val pingResults = pingResult.data
                                     // Calcola statistiche aggregate
                                     val lastResult = pingResults.lastOrNull()
-                                    val avgRtt = lastResult?.avgRtt ?: "N/A"
+                                    val avgRtt = normalizeTime(lastResult?.avgRtt)
                                     val packetLoss = lastResult?.packetLoss ?: "N/A"
 
                                     addLog("Ping $resolvedTarget: SUCCESSO (avg: $avgRtt, loss: $packetLoss%)")
@@ -528,15 +529,15 @@ class TestViewModel @Inject constructor(
                                     pingDetailsList.add(TestDetail("Pacchetti inviati", pingResults.size.toString()))
                                     pingDetailsList.add(TestDetail("Packet Loss", "${packetLoss}%"))
                                     pingDetailsList.add(TestDetail("Avg RTT", avgRtt))
-                                    pingDetailsList.add(TestDetail("Min RTT", lastResult?.minRtt ?: "N/A"))
-                                    pingDetailsList.add(TestDetail("Max RTT", lastResult?.maxRtt ?: "N/A"))
+                                    pingDetailsList.add(TestDetail("Min RTT", normalizeTime(lastResult?.minRtt)))
+                                    pingDetailsList.add(TestDetail("Max RTT", normalizeTime(lastResult?.maxRtt)))
                                     pingDetailsList.add(TestDetail("---", "Dettaglio ping individuali:"))
 
                                     pingResults.forEach { ping ->
                                         pingDetailsList.add(
                                             TestDetail(
                                                 "Ping #${ping.seq ?: "?"}",
-                                                "time=${ping.time ?: "N/A"} ttl=${ping.ttl ?: "N/A"}"
+                                                "time=${normalizeTime(ping.time)} ttl=${ping.ttl ?: "N/A"}"
                                             )
                                         )
                                     }

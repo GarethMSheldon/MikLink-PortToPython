@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.alpha
 import com.app.miklink.ui.common.TestSectionCard
 import com.app.miklink.ui.history.model.ParsedResults
 import com.app.miklink.data.db.model.Report
+import com.app.miklink.utils.normalizeTime
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -312,7 +313,7 @@ fun HeroSection(report: Report, results: ParsedResults?) {
                 val pingResult = results?.ping?.lastOrNull()
                 QuickStatItem(
                     label = "Ping Avg",
-                    value = pingResult?.avgRtt ?: "N/A",
+                    value = normalizeTime(pingResult?.avgRtt),
                     icon = Icons.Default.Wifi
                 )
                 
@@ -436,9 +437,9 @@ fun TestResultsSection(results: ParsedResults?) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(8.dp))
-                InfoRow("Min RTT", summary?.minRtt ?: "-")
-                InfoRow("Avg RTT", summary?.avgRtt ?: "-")
-                InfoRow("Max RTT", summary?.maxRtt ?: "-")
+                InfoRow("Min RTT", normalizeTime(summary?.minRtt))
+                InfoRow("Avg RTT", normalizeTime(summary?.avgRtt))
+                InfoRow("Max RTT", normalizeTime(summary?.maxRtt))
                 InfoRow("Packet Loss", "${summary?.packetLoss ?: "0"}%")
                 Spacer(Modifier.height(16.dp))
             }
@@ -699,9 +700,9 @@ fun SummaryTab(results: ParsedResults?) {
                 detailsTestTag = "PingDetailsView"
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Text("Avg: ${last.avgRtt ?: "-"}")
-                    Text("Min: ${last.minRtt ?: "-"}")
-                    Text("Max: ${last.maxRtt ?: "-"}")
+                    Text("Avg: ${normalizeTime(last.avgRtt)}")
+                    Text("Min: ${normalizeTime(last.minRtt)}")
+                    Text("Max: ${normalizeTime(last.maxRtt)}")
                     Text("Loss: ${(last.packetLoss ?: "-")}%)")
                     Spacer(Modifier.height(12.dp))
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -712,7 +713,7 @@ fun SummaryTab(results: ParsedResults?) {
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Ping #${p.seq ?: "?"}")
                         Text(
-                            "time=${p.time ?: "N/A"} ttl=${p.ttl ?: "N/A"}",
+                            "time=${normalizeTime(p.time)} ttl=${p.ttl ?: "N/A"}",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Medium
                         )
