@@ -56,6 +56,10 @@ fun HistoryScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val filterStatus by viewModel.filterStatus.collectAsStateWithLifecycle()
     var searchText by remember { mutableStateOf("") }
+    
+    // Repeat test confirmation
+    var showRepeatDialog by remember { mutableStateOf(false) }
+    var pendingRepeatReport by remember { mutableStateOf<Report?>(null) }
 
     LaunchedEffect(pdfStatus) {
         if (pdfStatus.isNotBlank()) {
@@ -311,7 +315,8 @@ fun HistoryScreen(
                             showDeleteDialog = reportId
                         },
                         onReportRepeat = { report ->
-                            // TODO: Navigate to test with pre-filled params
+                            pendingRepeatReport = report
+                            showRepeatDialog = true
                         },
                         onExportAll = {
                             coroutineScope.launch {
@@ -383,6 +388,134 @@ fun HistoryScreen(
                 }
             )
         }
+    }
+    
+    // Repeat test confirmation dialog
+    if (showRepeatDialog && pendingRepeatReport != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showRepeatDialog = false
+                pendingRepeatReport = null
+            },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Ripetere il test?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Stai per ripetere il test per:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Presa: ${pendingRepeatReport?.socketName ?: "N/A"}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    Text(
+                        "Cosa vuoi fare?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "\u2022 Sostituisci: elimina il test precedente e crea uno nuovo",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        "\u2022 Nuovo Test: mantieni entrambi i test",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    Text(
+                        "Assicurati di riposizionarti sulla stessa presa e verificare la connessione del cavo.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Nuovo Test button (secondary choice, outlined) - LEFT
+                    OutlinedButton(
+                        onClick = {
+                            val report = pendingRepeatReport
+                            showRepeatDialog = false
+                            pendingRepeatReport = null
+                            
+                            if (report != null) {
+                                coroutineScope.launch {
+                                    val route = viewModel.getRepeatTestRoute(report)
+                                    if (route != null) {
+                                        navController.navigate(route)
+                                    } else {
+                                        snackbarHostState.showSnackbar(
+                                            "Impossibile ripetere il test: profilo o sonda non trovati"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Nuovo Test")
+                    }
+                    
+                    // Sostituisci button (preferred choice, primary color) - RIGHT
+                    Button(
+                        onClick = {
+                            val report = pendingRepeatReport
+                            showRepeatDialog = false
+                            pendingRepeatReport = null
+                            
+                            if (report != null) {
+                                coroutineScope.launch {
+                                    // Delete old report first
+                                    viewModel.deleteReport(report.reportId)
+                                    
+                                    // Then navigate to new test
+                                    val route = viewModel.getRepeatTestRoute(report)
+                                    if (route != null) {
+                                        navController.navigate(route)
+                                    } else {
+                                        snackbarHostState.showSnackbar(
+                                            "Impossibile ripetere il test: profilo o sonda non trovati"
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text("Sostituisci")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showRepeatDialog = false
+                    pendingRepeatReport = null
+                }) {
+                    Text("Annulla")
+                }
+            }
+        )
     }
 }
 

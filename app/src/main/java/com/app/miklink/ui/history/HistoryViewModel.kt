@@ -15,13 +15,16 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import android.print.PrintDocumentAdapter
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val reportDao: ReportDao,
     private val clientDao: ClientDao,
     private val pdfGenerator: PdfGenerator,
-    private val pdfGeneratorIText: PdfGeneratorIText
+    private val pdfGeneratorIText: PdfGeneratorIText,
+    private val probeDao: com.app.miklink.data.db.dao.ProbeConfigDao,
+    private val profileDao: com.app.miklink.data.db.dao.TestProfileDao
 ) : ViewModel() {
 
     val reports: StateFlow<List<Report>> = reportDao.getAllReports()
@@ -153,6 +156,33 @@ class HistoryViewModel @Inject constructor(
 
     fun updateFilterStatus(status: FilterStatus) {
         _filterStatus.value = status
+    }
+
+    /**
+     * Get navigation route for repeating a test with the same parameters.
+     * Returns null if probe or profile cannot be found.
+     * Note: ProbeConfig doesn't store a name, so we get the first available probe.
+     */
+    suspend fun getRepeatTestRoute(report: Report): String? = withContext(Dispatchers.IO) {
+        try {
+            // Get first available probe (since ProbeConfig doesn't have a name field)
+            val probe = probeDao.getAllProbes().first().firstOrNull()
+            
+            // Get profile ID by profileName
+            val profile = profileDao.getAllProfiles().first().firstOrNull {
+                it.profileName == report.profileName
+            }
+            
+            if (probe != null && profile != null && report.clientId != null) {
+                val encodedSocket = android.net.Uri.encode(report.socketName ?: "")
+                "test_execution/${report.clientId}/${probe.probeId}/${profile.profileId}/$encodedSocket"
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("HistoryViewModel", "Error getting repeat test route", e)
+            null
+        }
     }
 }
 
