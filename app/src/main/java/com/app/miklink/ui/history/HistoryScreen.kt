@@ -36,6 +36,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -656,6 +657,7 @@ fun ReportListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onEdit() }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -725,6 +727,7 @@ fun ReportListItem(
                 )
             }
             
+            
             // Overflow menu
             Box {
                 IconButton(onClick = { showMenu = true }) {
@@ -738,16 +741,6 @@ fun ReportListItem(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Visualizza Dettagli") },
-                        onClick = {
-                            onEdit()
-                            showMenu = false
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Visibility, contentDescription = null)
-                        }
-                    )
                     DropdownMenuItem(
                         text = { Text("Elimina", color = MaterialTheme.colorScheme.error) },
                         onClick = {

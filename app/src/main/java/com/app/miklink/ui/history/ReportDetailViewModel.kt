@@ -37,6 +37,9 @@ class ReportDetailViewModel @Inject constructor(
     private val _parsedResults = MutableStateFlow<ParsedResults?>(null)
     override val parsedResults: StateFlow<ParsedResults?> = _parsedResults.asStateFlow()
 
+    private val _clientName = MutableStateFlow("")
+    val clientName: StateFlow<String> = _clientName.asStateFlow()
+
     private val _pdfStatus = MutableStateFlow("")
     override val pdfStatus: StateFlow<String> = _pdfStatus.asStateFlow()
 
@@ -47,6 +50,14 @@ class ReportDetailViewModel @Inject constructor(
                     socketName.value = currentReport.socketName ?: ""
                     notes.value = currentReport.notes ?: ""
                     _parsedResults.value = parseResults(currentReport.resultsJson)
+                    
+                    // Load client name
+                    currentReport.clientId?.let { clientId ->
+                        val client = clientDao.getClientById(clientId).firstOrNull()
+                        _clientName.value = client?.companyName ?: "Unknown Client"
+                    } ?: run {
+                        _clientName.value = "Unknown Client"
+                    }
                 }
             }
         }
