@@ -27,9 +27,9 @@ fun MinimalListItem(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    modifier: Modifier = Modifier,
     isSelected: Boolean = false,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     trailingContent: @Composable (() -> Unit)? = null
 ) {
     Surface(

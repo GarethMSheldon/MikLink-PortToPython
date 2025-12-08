@@ -91,148 +91,149 @@ fun DashboardScreen(
         label = "button_alpha"
     )
 
-    Scaffold(
-        topBar = {
-            // Updated TopAppBar to be transparent to show glow
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { navController.navigateDashboard() }
-                    ) {
-                        // Logo dell'app invece dell'icona Dashboard
-                        Icon(
-                            painter = androidx.compose.ui.res.painterResource(id = com.app.miklink.R.drawable.logo),
-                            contentDescription = "MikLink Logo",
-                            modifier = Modifier.size(32.dp),
-                            tint = Color.Unspecified 
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Ambient Glow Layer
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            glowColor,
+                            Color.Transparent
                         )
-                        Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.dashboard_title), fontWeight = FontWeight.Bold)
-                    }
-                },
-                actions = {
-                    // Tasto Report più evidente
-                    FilledTonalButton(
-                        onClick = { navController.navigate("history") },
-                        modifier = Modifier.padding(end = 8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Description, 
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.dashboard_btn_report), fontWeight = FontWeight.Bold)
-                    }
-
-                    IconButton(onClick = { navController.navigate("settings") }) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.dashboard_btn_settings))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent, // Transparent for glow
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
+                    )
                 )
-            )
-        },
-        bottomBar = {
-            Surface(
-                tonalElevation = 8.dp,
-                shadowElevation = 8.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .navigationBarsPadding()
-                ) {
-                    // Status Badges (Removed Sonda Badge)
-                    AnimatedVisibility(visible = selectedClient != null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            selectedClient?.let { client ->
-                                StatusBadge(
-                                    text = client.companyName,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    icon = Icons.Default.Business
-                                )
-                            }
-                        }
-                    }
+        )
 
-                    Button(
-                        onClick = {
-                            selectedClient?.let { client ->
-                                currentProbe?.let { probe ->
-                                    selectedProfile?.let { profile ->
-                                        val encodedSocket = Uri.encode(socketName)
-                                        navController.navigate(
-                                            "test_execution/${client.clientId}/${probe.probeId}/${profile.profileId}/$encodedSocket"
-                                        )
-                                    }
-                                }
-                            }
-                        },
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                // Updated TopAppBar to be transparent to show glow
+                TopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { navController.navigateDashboard() }
+                        ) {
+                            // Logo dell'app invece dell'icona Dashboard
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.app.miklink.R.drawable.logo),
+                                contentDescription = "MikLink Logo",
+                                modifier = Modifier.size(32.dp),
+                                tint = Color.Unspecified
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(stringResource(R.string.dashboard_title), fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    actions = {
+                        // Tasto Report più evidente
+                        FilledTonalButton(
+                            onClick = { navController.navigate("history") },
+                            modifier = Modifier.padding(end = 8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.dashboard_btn_report), fontWeight = FontWeight.Bold)
+                        }
+
+                        IconButton(onClick = { navController.navigate("settings") }) {
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.dashboard_btn_settings))
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent, // Transparent for glow
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                        actionIconContentColor = MaterialTheme.colorScheme.onBackground
+                    )
+                )
+            },
+            bottomBar = {
+                Surface(
+                    tonalElevation = 8.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
-                            .alpha(if (isTestButtonEnabled) buttonAlpha else 1f),
-                        enabled = isTestButtonEnabled,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isTestButtonEnabled)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (isTestButtonEnabled)
-                                MaterialTheme.colorScheme.onPrimary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                            .padding(16.dp)
+                            .navigationBarsPadding()
                     ) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (isTestButtonEnabled) stringResource(R.string.dashboard_btn_start_test) else stringResource(R.string.dashboard_btn_configure_test),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                        // Status Badges (Removed Sonda Badge)
+                        AnimatedVisibility(visible = selectedClient != null) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                selectedClient?.let { client ->
+                                    StatusBadge(
+                                        text = client.companyName,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        icon = Icons.Default.Business
+                                    )
+                                }
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                selectedClient?.let { client ->
+                                    currentProbe?.let { probe ->
+                                        selectedProfile?.let { profile ->
+                                            val encodedSocket = Uri.encode(socketName)
+                                            navController.navigate(
+                                                "test_execution/${client.clientId}/${probe.probeId}/${profile.profileId}/$encodedSocket"
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .alpha(if (isTestButtonEnabled) buttonAlpha else 1f),
+                            enabled = isTestButtonEnabled,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isTestButtonEnabled)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (isTestButtonEnabled)
+                                    MaterialTheme.colorScheme.onPrimary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (isTestButtonEnabled) stringResource(R.string.dashboard_btn_start_test) else stringResource(R.string.dashboard_btn_configure_test),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background) // Base background
-        ) {
-            // Ambient Glow Layer
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp) // Glow covers top part
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                glowColor,
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
+        ) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()

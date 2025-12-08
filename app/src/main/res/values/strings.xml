@@ -100,7 +100,8 @@
     <string name="settings_category_info">Information</string>
     <string name="settings_version">Version</string>
     <string name="settings_build">Build</string>
-    <string name="settings_developer">Developed by Shitworks mostly with Vibe Coding</string>
+    <string name="settings_developed_by">Developed by</string>
+    <string name="settings_developer">Shitworks</string>
 
     <!-- History -->
     <string name="history_title">Test History</string>

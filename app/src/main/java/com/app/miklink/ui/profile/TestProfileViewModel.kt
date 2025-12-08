@@ -81,9 +81,30 @@ class TestProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Auto-fills the last available ping target slot with the provided value.
+     * Used by quick-fill toggle buttons (DHCP Gateway, Google DNS, Cloudflare DNS).
+     */
+    fun fillLastAvailableTarget(value: String) {
+        when {
+            pingTarget1.value.isBlank() -> pingTarget1.value = value
+            pingTarget2.value.isBlank() -> pingTarget2.value = value
+            pingTarget3.value.isBlank() -> pingTarget3.value = value
+            // All slots filled, do nothing or replace last one
+        }
+    }
+
+    /**
+     * Returns the number of available (empty) ping target slots.
+     */
+    val availableSlots: StateFlow<Int> = combine(pingTarget1, pingTarget2, pingTarget3) { t1, t2, t3 ->
+        listOf(t1, t2, t3).count { it.isBlank() }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
+
     fun deleteProfile(profile: TestProfile) {
         viewModelScope.launch {
             testProfileDao.delete(profile)
         }
     }
 }
+

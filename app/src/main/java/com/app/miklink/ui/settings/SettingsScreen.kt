@@ -141,14 +141,12 @@ fun SettingsScreen(
             // Sezione Sonda
             SettingsSection(
                 title = stringResource(R.string.settings_category_probe),
-                icon = Icons.Default.Router,
-                iconColor = MaterialTheme.colorScheme.primary
+                icon = Icons.Default.Router
             ) {
                 SettingsCard(
                     headline = stringResource(R.string.settings_configure_probe),
                     subtitle = stringResource(R.string.settings_configure_probe_desc),
                     leadingIcon = Icons.Default.Router,
-                    iconColor = MaterialTheme.colorScheme.primary,
                     onClick = { navController.navigate("probe_edit/-1") }
                 )
 
@@ -252,8 +250,7 @@ fun SettingsScreen(
             // Sezione Aspetto
             SettingsSection(
                 title = stringResource(R.string.settings_category_appearance),
-                icon = Icons.Default.Palette,
-                iconColor = MaterialTheme.colorScheme.primary
+                icon = Icons.Default.Palette
             ) {
                 SettingsCard(
                     headline = stringResource(R.string.settings_theme),
@@ -280,8 +277,7 @@ fun SettingsScreen(
             // Sezione Report PDF
             SettingsSection(
                 title = stringResource(R.string.settings_category_pdf),
-                icon = Icons.Default.PictureAsPdf,
-                iconColor = MaterialTheme.colorScheme.primary
+                icon = Icons.Default.PictureAsPdf
             ) {
                 SettingsCard(
                     headline = stringResource(R.string.settings_pdf_preferences),
@@ -295,8 +291,7 @@ fun SettingsScreen(
             // Sezione Numerazione ID
             SettingsSection(
                 title = stringResource(R.string.settings_id_numbering),
-                icon = Icons.Default.Tag,
-                iconColor = MaterialTheme.colorScheme.primary
+                icon = Icons.Default.Tag
             ) {
                 SettingsCard(
                     headline = stringResource(R.string.settings_id_strategy),
@@ -348,8 +343,7 @@ fun SettingsScreen(
             // Sezione Info
             SettingsSection(
                 title = stringResource(R.string.settings_category_info),
-                icon = Icons.Default.Info,
-                iconColor = MaterialTheme.colorScheme.secondary
+                icon = Icons.Default.Info
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -363,7 +357,7 @@ fun SettingsScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         InfoRow(stringResource(R.string.settings_build), "Debug")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        InfoRow("Developed by", stringResource(R.string.settings_developer))
+                        InfoRow(stringResource(R.string.settings_developed_by), stringResource(R.string.settings_developer))
                     }
                 }
             }
@@ -446,7 +440,6 @@ fun SettingsScreen(
 fun SettingsSection(
     title: String,
     icon: ImageVector,
-    iconColor: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column {
@@ -457,15 +450,13 @@ fun SettingsSection(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = iconColor,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = title.uppercase(),
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = iconColor
+                fontWeight = FontWeight.Bold
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

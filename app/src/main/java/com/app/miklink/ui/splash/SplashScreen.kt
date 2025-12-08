@@ -99,74 +99,100 @@ fun SplashScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // ... (Column content remains same)
+        // Main Content - MikLink Logo at Center
         androidx.compose.foundation.layout.Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
+                .align(Alignment.Center)
                 .scale(scale.value)
                 .alpha(alpha.value)
         ) {
-            // App Logo
+            // MikLink Logo (Large)
             androidx.compose.foundation.Image(
                 painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo),
-                contentDescription = "App Logo",
-                modifier = Modifier.size(80.dp)
+                contentDescription = "MikLink Logo",
+                modifier = Modifier.size(140.dp)
             )
 
-            androidx.compose.foundation.layout.Spacer(Modifier.height(32.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.height(24.dp))
 
+            // MikLink App Name
+            androidx.compose.material3.Text(
+                text = "MikLink",
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 2.sp
+            )
+        }
+
+        // Footer - Featured By Section
+        androidx.compose.foundation.layout.Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 100.dp)
+                .alpha(alpha.value)
+        ) {
             // "Featured By"
             androidx.compose.material3.Text(
                 text = "Featured By",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                 letterSpacing = 2.sp
             )
 
-            androidx.compose.foundation.layout.Spacer(Modifier.height(16.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
 
-            // Logo (GIF capable)
-            androidx.compose.foundation.Image(
-                painter = coil.compose.rememberAsyncImagePainter(
-                    model = coil.request.ImageRequest.Builder(context)
-                        .data(R.drawable.splash_logo)
-                        .build(),
-                    imageLoader = imageLoader
-                ),
-                contentDescription = "Shitworks Logo",
-                modifier = Modifier.size(180.dp)
-            )
+            // GIF + SHITWORKS on same line
+            androidx.compose.foundation.layout.Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                // Logo GIF (Small)
+                androidx.compose.foundation.Image(
+                    painter = coil.compose.rememberAsyncImagePainter(
+                        model = coil.request.ImageRequest.Builder(context)
+                            .data(R.drawable.splash_logo)
+                            .build(),
+                        imageLoader = imageLoader
+                    ),
+                    contentDescription = "Shitworks Logo",
+                    modifier = Modifier.size(50.dp)
+                )
 
-            androidx.compose.foundation.layout.Spacer(Modifier.height(16.dp))
+                androidx.compose.foundation.layout.Spacer(Modifier.width(12.dp))
 
-            // "SHITWORKS"
-            androidx.compose.material3.Text(
-                text = "SHITWORKS",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp
-            )
+                // "SHITWORKS" text
+                androidx.compose.material3.Text(
+                    text = "SHITWORKS",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp
+                )
+            }
+
+            androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
 
             // Tagline
             androidx.compose.material3.Text(
                 text = "'cause shit always works",
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodySmall,
                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
         }
         
-        // Fake Loading Bar
+        // Loading Bar (just above footer)
         androidx.compose.material3.LinearProgressIndicator(
             progress = { progress.value },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 64.dp)
+                .padding(bottom = 40.dp)
                 .width(200.dp)
                 .alpha(alpha.value),
             color = MaterialTheme.colorScheme.primary,

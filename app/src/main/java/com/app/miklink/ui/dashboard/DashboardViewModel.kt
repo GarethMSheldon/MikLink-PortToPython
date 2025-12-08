@@ -84,7 +84,9 @@ class DashboardViewModel @Inject constructor(
                             findNextAvailableId(client)
                         }
                     }
-                    socketName.value = "${client.socketPrefix}${String.format(Locale.US, "%03d", nextNumber)}"
+                    // Format: prefix + separator + paddedNumber + separator + suffix
+                    val paddedNumber = String.format(Locale.US, "%0${client.socketNumberPadding}d", nextNumber)
+                    socketName.value = "${client.socketPrefix}${client.socketSeparator}${paddedNumber}${client.socketSeparator}${client.socketSuffix}"
                 } else {
                     socketName.value = ""
                 }

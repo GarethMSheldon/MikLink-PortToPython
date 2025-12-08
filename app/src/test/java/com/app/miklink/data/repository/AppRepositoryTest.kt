@@ -45,6 +45,7 @@ class AppRepositoryTest {
     private lateinit var mockProbeConfigDao: ProbeConfigDao
     private lateinit var mockTestProfileDao: TestProfileDao
     private lateinit var mockReportDao: ReportDao
+    private lateinit var mockUserPreferencesRepository: UserPreferencesRepository
 
     // Mock dell'API Service
     private lateinit var mockApiService: MikroTikApiService
@@ -65,6 +66,7 @@ class AppRepositoryTest {
         mockProbeConfigDao = mockk(relaxed = true)
         mockTestProfileDao = mockk(relaxed = true)
         mockReportDao = mockk(relaxed = true)
+        mockUserPreferencesRepository = mockk(relaxed = true)
 
         // Mock API Service
         mockApiService = mockk(relaxed = true)
@@ -107,7 +109,8 @@ class AppRepositoryTest {
             testProfileDao = mockTestProfileDao,
             reportDao = mockReportDao,
             retrofitBuilder = mockRetrofitBuilder,
-            baseOkHttpClient = mockOkHttpClient
+            baseOkHttpClient = mockOkHttpClient,
+            userPreferencesRepository = mockUserPreferencesRepository
         )
     }
 
