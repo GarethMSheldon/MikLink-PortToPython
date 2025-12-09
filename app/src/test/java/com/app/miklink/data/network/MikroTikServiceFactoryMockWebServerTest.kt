@@ -43,7 +43,7 @@ class MikroTikServiceFactoryMockWebServerTest {
 
     @Test
     fun `service uses http scheme and sends none-auth header when credentials blank`() = runBlocking {
-        val probe = ProbeConfig(1, "p", "${mockServer.hostName}:${mockServer.port}", "", "", "eth0", true, null, true, false)
+        val probe = ProbeConfig(1, "${mockServer.hostName}:${mockServer.port}", "", "", "eth0", true, null, true, false)
 
         // enqueue a valid JSON array response for GET /rest/interface/ethernet
         mockServer.enqueue(MockResponse().setBody("[{\"name\":\"eth0\"}]").setHeader("Content-Type", "application/json"))
@@ -65,7 +65,7 @@ class MikroTikServiceFactoryMockWebServerTest {
 
     @Test
     fun `service adds Authorization header when credentials supplied`() = runBlocking {
-        val probe = ProbeConfig(1, "p", "${mockServer.hostName}:${mockServer.port}", "admin", "secret", "eth0", true, null, true, false)
+        val probe = ProbeConfig(1, "${mockServer.hostName}:${mockServer.port}", "admin", "secret", "eth0", true, null, true, false)
 
         mockServer.enqueue(MockResponse().setBody("[{\"name\":\"eth0\"}]").setHeader("Content-Type", "application/json"))
 
@@ -112,7 +112,7 @@ class MikroTikServiceFactoryMockWebServerTest {
         val retrofitBuilder = Retrofit.Builder().addConverterFactory(MoshiConverterFactory.create(moshi))
         val httpsFactory = MikroTikServiceFactory(retrofitBuilder, client)
 
-        val probe = ProbeConfig(1, "p", "${mockServer.hostName}:${mockServer.port}", "admin", "secret", "eth0", true, null, true, true)
+        val probe = ProbeConfig(1, "${mockServer.hostName}:${mockServer.port}", "admin", "secret", "eth0", true, null, true, true)
 
         mockServer.enqueue(MockResponse().setBody("[{\"name\":\"eth0\"}]").setHeader("Content-Type", "application/json"))
 
@@ -130,7 +130,7 @@ class MikroTikServiceFactoryMockWebServerTest {
 
     @Test
     fun `server error responses cause exception`() = runBlocking {
-        val probe = ProbeConfig(1, "p", "${mockServer.hostName}:${mockServer.port}", "", "", "eth0", true, null, true, false)
+        val probe = ProbeConfig(1, "${mockServer.hostName}:${mockServer.port}", "", "", "eth0", true, null, true, false)
 
         // server returns 500
         mockServer.enqueue(MockResponse().setResponseCode(500).setBody("Internal error"))
@@ -154,7 +154,7 @@ class MikroTikServiceFactoryMockWebServerTest {
         val retrofitBuilder = Retrofit.Builder().addConverterFactory(MoshiConverterFactory.create(moshi))
         val timeoutFactory = MikroTikServiceFactory(retrofitBuilder, timedClient)
 
-        val probe = ProbeConfig(1, "p", "${mockServer.hostName}:${mockServer.port}", "", "", "eth0", true, null, true, false)
+        val probe = ProbeConfig(1, "${mockServer.hostName}:${mockServer.port}", "", "", "eth0", true, null, true, false)
 
         // add a response that delays body delivery to trigger a timeout
         mockServer.enqueue(MockResponse().setBody("[{\"name\":\"eth0\"}]").setBodyDelay(2, TimeUnit.SECONDS))

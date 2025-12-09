@@ -32,7 +32,7 @@ class MikroTikServiceFactoryTest {
 
     @Test
     fun `createService builds base url correctly with http`() {
-        val probe = ProbeConfig(1, "p", "10.0.0.1", "", "", "eth0", true, null, true, false)
+        val probe = ProbeConfig(1, "10.0.0.1", "", "", "eth0", true, null, true, false)
         val service = factory.createService(probe)
         // Service instance should be created successfully (retrofit dynamic proxy)
         assertNotNull(service)
