@@ -1,7 +1,7 @@
 package com.app.miklink.ui.client
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
+import com.app.miklink.ui.common.BaseEditViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.ClientDao
 import com.app.miklink.data.db.model.Client
@@ -17,10 +17,9 @@ import javax.inject.Inject
 class ClientEditViewModel @Inject constructor(
     private val clientDao: ClientDao,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseEditViewModel(savedStateHandle, "clientId") {
 
-    private val clientId: Long = savedStateHandle.get<Long>("clientId") ?: -1L
-    val isEditing = clientId != -1L
+    // entityId and isEditing provided by BaseEditViewModel
 
     // Form fields
     val companyName = MutableStateFlow("")
@@ -44,40 +43,41 @@ class ClientEditViewModel @Inject constructor(
     val speedTestServerUser = MutableStateFlow("")
     val speedTestServerPassword = MutableStateFlow("")
 
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved = _isSaved.asStateFlow()
+    // _isSaved and isSaved provided by BaseEditViewModel
+
+    // BaseEditViewModel will call loadEntity(entityId) automatically when editing
+
+    override suspend fun loadEntity(id: Long) {
+        clientDao.getClientById(id).firstOrNull()?.let { client ->
+            companyName.value = client.companyName
+            location.value = client.location ?: ""
+            notes.value = client.notes ?: ""
+            networkMode.value = NetworkMode.fromDbValue(client.networkMode)
+            staticIp.value = client.staticIp ?: ""
+            staticSubnet.value = client.staticSubnet ?: ""
+            staticGateway.value = client.staticGateway ?: ""
+            staticCidr.value = client.staticCidr ?: ""
+            minLinkRate.value = client.minLinkRate
+            socketPrefix.value = client.socketPrefix
+            lastFloor.value = client.lastFloor ?: ""
+            lastRoom.value = client.lastRoom ?: ""
+            // Speed Test
+            speedTestServerAddress.value = client.speedTestServerAddress ?: ""
+            speedTestServerUser.value = client.speedTestServerUser ?: ""
+            speedTestServerPassword.value = client.speedTestServerPassword ?: ""
+        }
+    }
 
     init {
-        if (isEditing) {
-            viewModelScope.launch {
-                clientDao.getClientById(clientId).firstOrNull()?.let { client ->
-                    companyName.value = client.companyName
-                    location.value = client.location ?: ""
-                    notes.value = client.notes ?: ""
-                    networkMode.value = NetworkMode.fromDbValue(client.networkMode)
-                    staticIp.value = client.staticIp ?: ""
-                    staticSubnet.value = client.staticSubnet ?: ""
-                    staticGateway.value = client.staticGateway ?: ""
-                    staticCidr.value = client.staticCidr ?: ""
-                    minLinkRate.value = client.minLinkRate
-                    socketPrefix.value = client.socketPrefix
-                    lastFloor.value = client.lastFloor ?: ""
-                    lastRoom.value = client.lastRoom ?: ""
-                    // Speed Test
-                    speedTestServerAddress.value = client.speedTestServerAddress ?: ""
-                    speedTestServerUser.value = client.speedTestServerUser ?: ""
-                    speedTestServerPassword.value = client.speedTestServerPassword ?: ""
-                }
-            }
-        }
+        loadIfEditing()
     }
 
     fun saveClient() {
         viewModelScope.launch {
-            val originalClient = if(isEditing) clientDao.getClientById(clientId).firstOrNull() else null
+            val originalClient = if(isEditing) clientDao.getClientById(entityId).firstOrNull() else null
 
             val client = Client(
-                clientId = if (isEditing) clientId else 0,
+                clientId = if (isEditing) entityId else 0,
                 companyName = companyName.value,
                 location = location.value.takeIf { it.isNotBlank() },
                 notes = notes.value.takeIf { it.isNotBlank() },
@@ -94,7 +94,7 @@ class ClientEditViewModel @Inject constructor(
                 speedTestServerPassword = speedTestServerPassword.value.takeIf { it.isNotBlank() }
             )
             clientDao.insert(client)
-            _isSaved.value = true
+            markSaved()
         }
     }
 }

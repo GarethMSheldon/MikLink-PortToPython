@@ -1,7 +1,7 @@
 package com.app.miklink.ui.profile
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
+import com.app.miklink.ui.common.BaseEditViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.TestProfile
@@ -14,15 +14,14 @@ import javax.inject.Inject
 class TestProfileViewModel @Inject constructor(
     private val testProfileDao: TestProfileDao,
     private val savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseEditViewModel(savedStateHandle, "profileId") {
 
     // For the list screen
     val profiles: StateFlow<List<TestProfile>> = testProfileDao.getAllProfiles()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // --- For the edit screen ---
-    private val profileId: Long = savedStateHandle.get<Long>("profileId") ?: -1L
-    val isEditing = profileId != -1L
+    // entityId and isEditing provided by BaseEditViewModel
 
     // Form fields
     val profileName = MutableStateFlow("")
@@ -37,33 +36,34 @@ class TestProfileViewModel @Inject constructor(
     val pingCount = MutableStateFlow("4") // count ping (1-20)
     val runSpeedTest = MutableStateFlow(false)
 
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved = _isSaved.asStateFlow()
+    // isSaved provided by BaseEditViewModel
+
+    // BaseEditViewModel will call loadEntity(entityId) automatically when editing
+
+    override suspend fun loadEntity(id: Long) {
+        testProfileDao.getProfileById(id).firstOrNull()?.let { profile ->
+            profileName.value = profile.profileName
+            profileDescription.value = profile.profileDescription ?: ""
+            runTdr.value = profile.runTdr
+            runLinkStatus.value = profile.runLinkStatus
+            runLldp.value = profile.runLldp
+            runPing.value = profile.runPing
+            pingTarget1.value = profile.pingTarget1 ?: ""
+            pingTarget2.value = profile.pingTarget2 ?: ""
+            pingTarget3.value = profile.pingTarget3 ?: ""
+            pingCount.value = profile.pingCount.toString()
+            runSpeedTest.value = profile.runSpeedTest
+        }
+    }
 
     init {
-        if (isEditing) {
-            viewModelScope.launch {
-                testProfileDao.getProfileById(profileId).firstOrNull()?.let { profile ->
-                    profileName.value = profile.profileName
-                    profileDescription.value = profile.profileDescription ?: ""
-                    runTdr.value = profile.runTdr
-                    runLinkStatus.value = profile.runLinkStatus
-                    runLldp.value = profile.runLldp
-                    runPing.value = profile.runPing
-                    pingTarget1.value = profile.pingTarget1 ?: ""
-                    pingTarget2.value = profile.pingTarget2 ?: ""
-                    pingTarget3.value = profile.pingTarget3 ?: ""
-                    pingCount.value = profile.pingCount.toString()
-                    runSpeedTest.value = profile.runSpeedTest
-                }
-            }
-        }
+        loadIfEditing()
     }
 
     fun saveProfile() {
         viewModelScope.launch {
             val profile = TestProfile(
-                profileId = if (isEditing) profileId else 0,
+                profileId = if (isEditing) entityId else 0,
                 profileName = profileName.value,
                 profileDescription = profileDescription.value,
                 runTdr = runTdr.value,
@@ -77,7 +77,7 @@ class TestProfileViewModel @Inject constructor(
                 runSpeedTest = runSpeedTest.value
             )
             testProfileDao.insert(profile)
-            _isSaved.value = true
+            markSaved()
         }
     }
 
