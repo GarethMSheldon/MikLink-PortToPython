@@ -135,6 +135,10 @@ dependencies {
     // Use version catalog entries for test dependencies
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
+    // MockWebServer for integration-style unit tests that simulate MikroTik REST API
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    // TLS helper to create trust relationships for MockWebServer HTTPS tests
+    testImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.androidx.test.core)
