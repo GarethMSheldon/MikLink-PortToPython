@@ -6,14 +6,14 @@
 
 ## 📁 PROJECT STRUCTURE OVERVIEW
 
-### Statistics
+-### Statistics
 - **Total Kotlin Files**: ~67 files
 - **ViewModels**: 10
 - **Screens**: 11
 - **Database Entities**: 5
 - **DAOs**: 4
 - **Repositories**: 2
-- **Network Services**: 1
+- **Network Services**: 2
 - **Utilities**: 4
 
 ### Module Organization
@@ -37,6 +37,22 @@ app/src/main/java/com/app/miklink/
 │   └── theme/
 └── utils/ (4 utility files)
 ```
+
+---
+
+## 🔁 RECENT CHANGES (2025-12-09)
+
+Small, safe refactors and test improvements were landed on branch `pr/parser-and-viewmodel-fixes`.
+
+- Extracted PDF parsing into a dedicated and testable `ParsedResultsParser` class (moved logic out of `PdfGeneratorIText`). This improves unit testability and reduces the complexity of the PDF generator.
+- Added `MikroTikServiceFactory` — a small, testable factory that configures Retrofit + OkHttp per `ProbeConfig` (baseUrl, HTTP/HTTPS and optional Basic auth header).
+- Added `NetworkValidator` utilities and extra validation for probe targets (hostname/IP/DHCP_GATEWAY handling).
+- Added `NetworkValidator` utilities and extra validation for probe targets (hostname/IP/DHCP_GATEWAY handling).
+- Implemented a small `ConnectivityProvider` utility providing tested HTTP and TCP reachability checks. This is intended for repositories and ViewModels to perform lightweight probe reachability checks without blocking the main thread. Tests include MockWebServer HTTP/HTTPS and quick TCP verification.
+- Added a set of robust MockWebServer integration-style unit tests for network code (http/https/timeout/error cases) and unit tests for the parser. Tests were written to illustrate best-practices for TLS handling in tests (HandshakeCertificates / HeldCertificate).
+- Added test dependencies: `mockwebserver` and `okhttp-tls` to support integration-style tests.
+
+These changes are small, additive, and covered by unit tests — CI remains green locally.
 
 ---
 
