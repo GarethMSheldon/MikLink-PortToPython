@@ -1,7 +1,7 @@
 package com.app.miklink.ui.probe
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
+import com.app.miklink.ui.common.BaseEditViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.ProbeConfigDao
 import com.app.miklink.data.db.model.ProbeConfig
@@ -17,7 +17,7 @@ class ProbeEditViewModel @Inject constructor(
     private val probeConfigDao: ProbeConfigDao,
     private val repository: AppRepository,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseEditViewModel(savedStateHandle, "probeId") {
 
     private val probeId: Long = savedStateHandle.get<Long>("probeId") ?: -1L
 
@@ -36,10 +36,7 @@ class ProbeEditViewModel @Inject constructor(
 
     val verificationState = _verificationState.asStateFlow()
 
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved = _isSaved.asStateFlow()
-
-    val isEditing = probeId != -1L
+    // isSaved & isEditing handled by BaseEditViewModel
 
     // Combine connection-related fields into a single flow
     private val connectionDetailsFlow = combine(
@@ -61,20 +58,9 @@ class ProbeEditViewModel @Inject constructor(
         )
     }
     init {
+        // NUOVO: Carica sonda unica se esiste (navigazione da settings)
         viewModelScope.launch {
-            if (isEditing) {
-                // Editing existing probe (legacy multi-probe mode)
-                probeConfigDao.getProbeById(probeId).firstOrNull()?.let { probe ->
-                    // name was removed from ProbeConfig — not tracked in UI
-                    ipAddress.value = probe.ipAddress
-                    username.value = probe.username
-                    password.value = probe.password
-                    isHttps.value = probe.isHttps
-                    testInterface.value = probe.testInterface
-                    _verificationState.value = VerificationState.Idle
-                }
-            } else {
-                // NUOVO: Carica sonda unica se esiste (navigazione da settings)
+            if (!isEditing) {
                 probeConfigDao.getSingleProbe().firstOrNull()?.let { probe ->
                     // name was removed from ProbeConfig — not tracked in UI
                     ipAddress.value = probe.ipAddress
@@ -101,6 +87,22 @@ class ProbeEditViewModel @Inject constructor(
                         _verificationState.value = VerificationState.Error("Probe details changed. Please verify again.")
                     }
                 }
+        }
+    }
+
+    init {
+        // Trigger loading when editing
+        loadIfEditing()
+    }
+
+    override suspend fun loadEntity(id: Long) {
+        probeConfigDao.getProbeById(id).firstOrNull()?.let { probe ->
+            ipAddress.value = probe.ipAddress
+            username.value = probe.username
+            password.value = probe.password
+            isHttps.value = probe.isHttps
+            testInterface.value = probe.testInterface
+            _verificationState.value = VerificationState.Idle
         }
     }
 
@@ -138,7 +140,7 @@ class ProbeEditViewModel @Inject constructor(
             )
             // MODIFICATO: usa upsertSingle per sonda unica
             probeConfigDao.upsertSingle(probeToSave)
-            _isSaved.value = true
+            markSaved()
         }
     }
 }
