@@ -1,5 +1,7 @@
 package com.app.miklink.data.network
 
+import com.app.miklink.data.network.dto.NeighborDetail
+
 import com.squareup.moshi.FromJson
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter

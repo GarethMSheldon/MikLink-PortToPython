@@ -24,99 +24,45 @@
 **Design System completo (stile Ubiquiti)**
 
 - Palette colori (primari, semantici, light/dark theme)
-- Typography scale (Material 3)
-- Design principles: chiarezza, coerenza, feedback
-- Target audience: tecnici certificatori, installatori, manager IT
+**MikLink** è l'app Android per il testing e la certificazione di infrastrutture di rete basate su MikroTik. È pensata per tecnici di campo e team di installazione: esegue test (TDR, Link Status, LLDP, Ping, Traceroute), produce report certificati (PDF) e mantiene uno storico dei test.
 
-**Target**: Designer, sviluppatori frontend
+Questo repository contiene codice sorgente, test e documentazione tecnica. I contenuti della documentazione sono stati consolidati sotto `docs/` (README, ROADMAP, ARCHITECTURE, IMPLEMENTATION_SUMMARY).
 
----
-
-## 🔬 Testing e Validazione
-
-### [API_VALIDATION.md](API_VALIDATION.md)
-**Checklist operativa per validazione API REST MikroTik**
-
-- Pre-requisiti hardware/software
-- Script PowerShell/Bash per test manuale API
-- Endpoint da testare con expected response JSON
-- Allineamento DTO Retrofit con sintassi RouterOS
-
-**Target**: QA Engineer, sviluppatori backend
-
-**Uso**: Eseguire prima di ogni release per validare integrazione API MikroTik
+**Struttura principale della documentazione (ora canonica in `docs/`):**
+- `docs/README.md` - Overview e guida rapida (questo file)
+- `docs/ROADMAP.md` - Roadmap, priorità e azioni raccomandate
+- `docs/ARCHITECTURE.md` - Documentazione tecnica approfondita
+- `docs/IMPLEMENTATION_SUMMARY.md` - Riepilogo delle modifiche, audit e report
 
 ---
 
-### [testing/](testing/)
-**Storico report di testing e validazione**
+## Quick Start
 
-#### [testing/API_TESTING_2025-11-15.md](TESTING/API/API_TESTING_2025-11-15.md)
-- Report finale testing API REST con dispositivo MikroTik (IP 192.168.0.251)
-- Riepilogo 6 fix critici (conversione POST→GET, parametri mancanti, timeout)
-- Tabella completa 16 endpoint con status test
-- Modifiche ai file: `MikroTikApiService.kt`, DTO aggiornati
+Prerequisiti:
 
-#### [testing/VALIDATION_REPORT_v2.0.md](testing/VALIDATION_REPORT_v2.0.md)
-- Report validazione post-implementazione refactor v2.0
-- Executive summary: 6 problemi rilevati e risolti
-- Fix critici: Migrazione DB v7→v8, route `probe_list` deprecata
-- Build status: ⚠️ BLOCCATO — la build è attualmente bloccata da errori KSP/COMPILAZIONE (vedi `docs/ISSUES/ISSUES.md` - ISSUE-001)
+Build and run (PowerShell):
+```
+.\gradlew clean build
+.\gradlew installDebug
+```
+PDF generation: the project now uses a SOLID design for PDF output — a `PdfGenerator` interface with an iText implementation (`PdfGeneratorIText`) bound via Hilt. Legacy HTML/WebView templates were removed and replaced by the iText flow.
 
----
-
-## 📦 Changelog e Implementazione
-
-### [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
-**Riepilogo completo modifiche refactor v2.0**
-
-- Checklist modifiche per layer: Database, Repository, ViewModel, UI
-- File modificati con snippet codice
-- Cleanup file obsoleti
-- Warning e azioni post-implementazione
-
-**Target**: Sviluppatori, tech lead
-
-**Uso**: Reference per rollback, debugging, onboarding su refactor v2.0
+If you hit build issues related to PDF generation, check `app/src/main/java/com/app/miklink/data/pdf/PdfGeneratorIText.kt` and ensure CI reflects the latest changes. Local builds and unit tests are currently green.
+Se la build fallisce nella fase KSP/compilazione (errori legati a `PdfGeneratorIText.kt`), risolvere il file indicato o usare la branch di emergenza che ripristina un wrapper `PdfGenerator`.
 
 ---
 
-## 🗂️ Archivio
-
-### [archive/](archive/)
-**Documentazione storica e piani superati**
-
-#### [archive/MASTER_PLAN_v2.0.md](archive/MASTER_PLAN_v2.0.md)
-- Piano originale refactor v2.0 (sonda unica, parametri test, PDF HTML)
-- Roadmap feature con specifiche modifiche DB/UI/ViewModel
-- **Status**: Parzialmente obsoleto (molte feature già implementate)
-- **Uso**: Reference storico decisioni architetturali
-
-#### [archive/DUPLICATES_CLEANUP.md](archive/DUPLICATES_CLEANUP.md)
-- Inventory duplicati e file obsoleti da eliminare
-- **Status**: Parzialmente obsoleto (cleanup già eseguito)
-- **Uso**: Reference per pattern anti-duplicazione
+## Dove cercare le informazioni tecniche
+- Architettura e database: `docs/ARCHITECTURE.md`
+- Roadmap e azioni: `docs/ROADMAP.md`
+- Audit / Implementation summary: `docs/IMPLEMENTATION_SUMMARY.md`
 
 ---
 
-## 🔗 Quick Links
+## Note sulla migrazione della documentazione
+I contenuti dalle vecchie note, report e piani (es. `CODEBASE_ANALYSIS_REPORT.md`, `MASTER_PLAN_v2.0.md`, `API_VALIDATION.md`, `VALIDATION_REPORT_v2.0.md`, `DUPLICATES_CLEANUP.md`) sono stati consolidati in questi file in `docs/`. I file originali nella root e in `docs/archive/` sono stati rimossi per evitare duplicazione, dopo verifica che le informazioni siano state migrate.
 
-| Documento | Quando Usarlo |
-|-----------|---------------|
-| **ARCHITECTURE.md** | Setup progetto, onboarding, migrazioni DB |
-| **UX_UI_SPEC.md** | Sviluppo nuove UI, design review |
-| **API_VALIDATION.md** | Pre-release testing, debug API MikroTik |
-| **IMPLEMENTATION_SUMMARY.md** | Review changelog, debug refactor v2.0 |
-| **testing/** | Troubleshooting errori API, reference fix storici |
-
+Se qualcosa sembra mancare o desideri che includa o preservi specifiche sezioni dettagliate in appendice, dimmi quali e lo inserisco esplicitamente.
 ---
 
-## 📚 Documentazione Correlata
-
-- **[../README.md](../README.md)** - README principale del progetto (overview alto livello)
-- **[../PROJECT_STATE_DOCUMENTATION.md](../PROJECT_STATE_DOCUMENTATION.md)** - Stato completo del progetto
-
----
-
-**Manutenzione**: Aggiornare questo index ad ogni aggiunta di nuova documentazione.
 

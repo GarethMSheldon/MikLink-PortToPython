@@ -17,7 +17,10 @@ class MikroTikServiceFactory @Inject constructor(
      * The factory uses the probe ipAddress and isHttps flag to build the baseUrl,
      * and applies a basic-auth header if credentials are present.
      */
-    fun createService(probe: ProbeConfig): MikroTikApiService {
+    fun createService(
+        probe: ProbeConfig,
+        socketFactory: javax.net.SocketFactory? = null
+    ): MikroTikApiService {
         val scheme = if (probe.isHttps) "https" else "http"
         val baseUrl = "$scheme://${probe.ipAddress}/"
 
@@ -30,6 +33,9 @@ class MikroTikServiceFactory @Inject constructor(
                         .build()
                     chain.proceed(req)
                 }
+            }
+            if (socketFactory != null) {
+                socketFactory(socketFactory)
             }
         }.build()
 

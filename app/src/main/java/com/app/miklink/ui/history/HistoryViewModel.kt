@@ -6,7 +6,7 @@ import com.app.miklink.data.db.dao.ClientDao
 import com.app.miklink.data.db.dao.ReportDao
 import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.Report
-import com.app.miklink.data.pdf.PdfGeneratorIText
+import com.app.miklink.data.pdf.PdfGenerator
 import com.app.miklink.ui.history.model.ReportsByClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 class HistoryViewModel @Inject constructor(
     private val reportDao: ReportDao,
     private val clientDao: ClientDao,
-    private val pdfGeneratorIText: PdfGeneratorIText,
+    private val pdfGenerator: PdfGenerator,
     private val probeDao: com.app.miklink.data.db.dao.ProbeConfigDao,
     private val profileDao: com.app.miklink.data.db.dao.TestProfileDao,
     private val userPreferencesRepository: com.app.miklink.data.repository.UserPreferencesRepository
@@ -142,7 +142,7 @@ class HistoryViewModel @Inject constructor(
         config: com.app.miklink.data.pdf.PdfExportConfig
     ): java.io.File? {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            pdfGeneratorIText.generatePdfReport(clientReports.reports, clientReports.client, config)
+            pdfGenerator.generatePdfReport(clientReports.reports, clientReports.client, config)
         }
     }
 
@@ -159,7 +159,7 @@ class HistoryViewModel @Inject constructor(
         }
         
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            pdfGeneratorIText.generatePdfReport(listOf(report), client, config)
+            pdfGenerator.generatePdfReport(listOf(report), client, config)
         }
     }
 

@@ -709,12 +709,12 @@ class TestViewModel @Inject constructor(
         val normalizedResults = java.util.LinkedHashMap<String, Any>(testResults)
         try {
             // 1) Consolidamento Ping: raccogli tutte le chiavi "ping_*" in una singola lista "ping"
-            val combinedPing = mutableListOf<com.app.miklink.data.network.PingResult>()
+            val combinedPing = mutableListOf<com.app.miklink.data.network.dto.PingResult>()
             testResults.forEach { (k, v) ->
                 if (k.startsWith("ping_")) {
                     val list = v as? List<*>
                     list?.forEach { item ->
-                        (item as? com.app.miklink.data.network.PingResult)?.let { combinedPing.add(it) }
+                        (item as? com.app.miklink.data.network.dto.PingResult)?.let { combinedPing.add(it) }
                     }
                 }
             }
@@ -724,7 +724,7 @@ class TestViewModel @Inject constructor(
 
             // 2) TDR: se presente come oggetto singolo, wrappa in lista
             when (val tdrVal = testResults["tdr"]) {
-                is com.app.miklink.data.network.CableTestResult -> {
+                is com.app.miklink.data.network.dto.CableTestResult -> {
                     normalizedResults["tdr"] = listOf(tdrVal)
                 }
                 is List<*> -> {

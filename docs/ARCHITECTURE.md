@@ -7,205 +7,6 @@
 ## 📐 ARCHITETTURA OVERVIEW
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     PRESENTATION LAYER                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │  Composables │  │  ViewModels  │  │  Navigation  │         │
-│  │  (Screens)   │  │  (@HiltVM)   │  │  (NavGraph)  │         │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
-│         │                  │                  │                  │
-└─────────┼──────────────────┼──────────────────┼─────────────────┘
-          │                  │                  │
-┌─────────▼──────────────────▼──────────────────▼─────────────────┐
-│                      DOMAIN LAYER                               │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │             AppRepository (Singleton)                   │    │
-│  │  • Business Logic (Network Config, Test Execution)      │    │
-│  │  • State Management (ProbeStatus, Test Results)         │    │
-│  │  • Coordination (DAO + API calls)                       │    │
-│  └────────┬───────────────────────────┬────────────────────┘    │
-│           │                           │                          │
-└───────────┼───────────────────────────┼──────────────────────────┘
-            │                           │
-    ┌───────▼────────┐         ┌───────▼─────────┐
-    │  DATA LAYER    │         │   DATA LAYER    │
-    │  (Local)       │         │   (Remote)      │
-    │                │         │                 │
-    │  Room DB       │         │  Retrofit API   │
-    │  • DAOs        │         │  • MikroTik     │
-    │  • Entities    │         │  • DTOs         │
-    └────────────────┘         └─────────────────┘
-```
-
----
-
-## 🗄️ DATABASE LAYER (Room)
-
-### Schema v8 (Post-Refactor)
-
-#### **Client** (clients)
-Configurazione cliente/sede per test di certificazione
-
-| Campo | Tipo | Constraint | Descrizione |
-|-------|------|-----------|-------------|
-| `clientId` | Long | PK, AUTO | ID univoco cliente |
-| `companyName` | String | NOT NULL | Nome azienda |
-| `location` | String? | NULL | Sede (default "Sede") |
-| `notes` | String? | NULL | Note libere |
-| `networkMode` | String | NOT NULL | "DHCP" o "STATIC" |
-| `staticIp` | String? | NULL | IP statico (se STATIC) |
-| `staticSubnet` | String? | NULL | Subnet mask (legacy) |
-| `staticGateway` | String? | NULL | Gateway (se STATIC) |
-| `staticCidr` | String? | NULL | CIDR completo (preferito) |
-| `minLinkRate` | String | DEFAULT "1G" | Soglia min per PASS ("10M","100M","1G","10G") |
-| `socketPrefix` | String | DEFAULT "" | Prefisso ID presa (es. "PRT-") |
-| `nextIdNumber` | Int | DEFAULT 1 | Contatore auto-incremento |
-
-**Business Rules**:
-- `socketPrefix` + `nextIdNumber` generano ID univoci (es. "PRT-001")
-- `nextIdNumber` incrementato automaticamente dopo ogni test salvato
-- `minLinkRate` usato in `TestViewModel.isRateOk()` per validazione link
-
----
-
-#### **ProbeConfig** (probe_config)
-Configurazione sonda MikroTik (SINGLE ROW dopo refactor)
-
-| Campo | Tipo | Constraint | Descrizione |
-|-------|------|-----------|-------------|
-| `probeId` | Long | PK, AUTO | ID sonda (sempre 1 post-refactor) |
-| `name` | String | NOT NULL | Nome identificativo |
-| `ipAddress` | String | NOT NULL | IP della sonda |
-| `username` | String | NOT NULL | Username API RouterOS |
-| `password` | String | NOT NULL | Password API |
-| `testInterface` | String | NOT NULL | Interfaccia test (es. "ether2") |
-| `isOnline` | Boolean | DEFAULT false | Cache stato (aggiornato da polling) |
-| `modelName` | String? | NULL | Board name (es. "RB4011iGS+RM") |
-| `tdrSupported` | Boolean | DEFAULT false | Se supporta Cable-Test |
-| `isHttps` | Boolean | DEFAULT false | Usa HTTPS invece di HTTP |
-
-**Business Rules**:
-- Post-refactor: solo prima riga usata; `ProbeConfigDao.getSingleProbe()` ritorna `LIMIT 1`
-- `isOnline` aggiornato da `AppRepository.observeProbeStatus()` ogni 15s
-- `tdrSupported` calcolato da `Compatibility.isTdrSupported(modelName)` durante verifica
-
----
-
-#### **TestProfile** (test_profiles)
-Template di test configurabili
-
-| Campo | Tipo | Constraint | Descrizione |
-|-------|------|-----------|-------------|
-| `profileId` | Long | PK, AUTO | ID profilo |
-| `profileName` | String | NOT NULL | Nome profilo |
-| `profileDescription` | String? | NULL | Descrizione |
-| `runTdr` | Boolean | DEFAULT false | Esegui Cable-Test (TDR) |
-| `runLinkStatus` | Boolean | DEFAULT true | Verifica stato link |
-| `runLldp` | Boolean | DEFAULT false | Discovery LLDP/CDP |
-| `runPing` | Boolean | DEFAULT false | Test ping |
-| `pingTarget1` | String? | NULL | Target ping 1 (IP o "DHCP_GATEWAY") |
-| `pingTarget2` | String? | NULL | Target ping 2 |
-| `pingTarget3` | String? | NULL | Target ping 3 |
-| `pingCount` | Int | DEFAULT 4 | **NUOVO** Numero ping per target |
-| `runTraceroute` | Boolean | DEFAULT false | Esegui traceroute |
-| `tracerouteTarget` | String? | NULL | Target traceroute |
-| `tracerouteMaxHops` | Int | DEFAULT 30 | Max hop traceroute |
-| `tracerouteTimeoutMs` | Int | DEFAULT 3000 | Timeout per hop (ms) |
-
-**Business Rules**:
-- `pingCount` range valido: 1-20 (validato in UI)
-- `pingTarget*` supporta "DHCP_GATEWAY" (risolto runtime da `AppRepository.resolveTargetIp()`)
-- Profili default creati in `DatabaseModule.onCreate()`: "Full Test", "Quick Test"
-
----
-
-#### **Report** (test_reports)
-Risultati test salvati
-
-| Campo | Tipo | Constraint | Descrizione |
-|-------|------|-----------|-------------|
-| `reportId` | Long | PK, AUTO | ID report |
-| `clientId` | Long? | FK → clients | Cliente associato |
-| `timestamp` | Long | NOT NULL | Timestamp Unix (ms) |
-| `socketName` | String? | NULL | ID presa testata |
-| `notes` | String? | NULL | Note tecniche |
-| `probeName` | String? | NULL | Nome sonda usata (cache) |
-| `profileName` | String? | NULL | Nome profilo usato (cache) |
-| `overallStatus` | String | NOT NULL | "PASS" o "FAIL" |
-| `resultsJson` | String | NOT NULL | JSON completo risultati |
-
-**JSON Structure** (`resultsJson`):
-```json
-{
-  "network": {
-    "mode": "DHCP",
-    "interfaceName": "ether2",
-    "address": "192.168.1.100/24",
-    "gateway": "192.168.1.1",
-    "dns": "8.8.8.8",
-    "message": "DHCP lease acquisita"
-  },
-  "link": {
-    "status": "link-ok",
-    "rate": "1Gbps"
-  },
-  "lldp": {
-    "identity": "SW-Core-01",
-    "interfaceName": "ge-0/0/24",
-    "systemCaps": "bridge,router",
-    "discoveredBy": "lldp"
-  },
-  "ping_8.8.8.8": {
-    "avgRtt": "12ms"
-  },
-  "ping_DHCP_GATEWAY": {
-    "avgRtt": "2ms"
-  },
-  "traceroute": [
-    {"hop": "1", "host": "192.168.1.1", "avgRtt": "1ms"},
-    {"hop": "2", "host": "10.0.0.1", "avgRtt": "5ms"}
-  ],
-  "tdr": {
-    "status": "open",
-    "cablePairs": [
-      {"pair": "1-2", "status": "open", "length": "45m"},
-      {"pair": "3-6", "status": "short", "length": "12m"}
-    ]
-  }
-}
-## 📌 Problemi correnti (audit 2025-12-09) e azioni raccomandate
-
-Questo documento riflette lo stato dell'applicazione dopo un audit completo eseguito il 09/12/2025. Di seguito i problemi che richiedono attenzione immediata e le azioni consigliate:
-
-1) Errore KSP / compilazione in PdfGeneratorIText
-    - Sintomo: `PdfGeneratorIText.kt` causa errori di compilazione (es. "expecting '->'" e "missing '}'") durante il build (vedi `build_log_utf8.txt`).
-    - Impatto: impedisce task `:app:kspDebugKotlin` / compilazione completa → build CI fallisce.
-    - Azione consigliata (immediata): correggere la sintassi in `PdfGeneratorIText.kt` oppure introdurre temporaneamente un wrapper `PdfGenerator` compatibile che delega a `PdfGeneratorIText` per ripristinare la stabilità CI.
-
-2) Discrepanza tra test e build (PdfGenerator legacy vs iText)
-    - Stato: i test unitari più recenti sono stati aggiornati per usare `PdfGeneratorIText` (vedi `app/src/test/.../PdfGeneratorTest.kt`) e alcuni snapshot di test risultano verdi. Tuttavia, ci sono riferimenti/artefatti legacy (`PdfGenerator`) che possono creare incoerenze e fallimenti in ambienti diversi.
-    - Azione consigliata: scegliere una strategia (ad es. rimuovere definitivamente legacy e consolidare su `PdfGeneratorIText`, o creare un adapter `PdfGenerator`→`PdfGeneratorIText`) e applicare la scelta a test e codice di produzione in modo coerente.
-
-3) File sensibili e artefatti nella VCS
-    - Esempi: file `key` presente alla radice del repo; numerosi file `.class`/`.dex` nel progetto elencati in `project_structure.txt`.
-    - Impatto: rischio sicurezza, repository gonfio.
-    - Azione consigliata: rimuovere file sensibili, aggiornare `.gitignore`, e pianificare pulizia della storia Git (BFG/git-filter-repo) con approvazione del team.
-
-4) Altri punti da verificare
-    - Controllare riferimenti non risolti e coerenza tipale (es. `runSpeedTest` in `TestViewModel` — alcune snapshot indicano test OK, altre mostrano errori di compilazione). Rivedere i log (`unit_test_compile.log`, `compile_errors.txt`) per ricostruire una diagnosi completa.
-
-Questa sezione va mantenuta aggiornata — aggiungere qui gli esiti dopo ogni fix-commit e il riferimento agli issue/PR che risolvono i problemi.
-```
-
----
-
-### DAOs
-
-#### **ProbeConfigDao**
-```kotlin
-@Dao
-interface ProbeConfigDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(probe: ProbeConfig)
     
     @Update
@@ -228,6 +29,28 @@ interface ProbeConfigDao {
     suspend fun upsertSingle(probe: ProbeConfig)
 }
 ```
+
+---
+
+## 🧭 Legacy Code Policy
+
+Nel processo di refactor (EPICs di refactor), il codice legacy verrà gestito con le seguenti regole:
+
+- Classi candidate a essere marcatte legacy: `AppRepository` e porzioni di `ViewModel` che contengono logica di dominio.
+- Non rinominare né spostare file esistenti in `_legacy` all'inizio della EPIC: la migrazione sarà incrementale e pianificata.
+- Quando una parte di codice viene sostituita completamente da una nuova implementazione SOLID, la vecchia classe potrà essere rinominata in `NomeClasse_legacy` o spostata sotto `com.app.miklink.legacy/`.
+- Marcare le classi legacy con commenti chiari o `@Deprecated` quando appropriato.
+- Non aggiungere nuova logica nelle classi annotate come legacy; ogni cambiamento funzionale va nella nuova implementazione.
+- Tutte le decisioni circa il rinvio o rimozione di codice legacy devono essere documentate con Issue/PR e approvate.
+
+### Database e Schema
+
+- Il nuovo schema target e le decisioni su campi legacy (es. `lastFloor`, `lastRoom`) sono descritti nel file `docs/DATABASE_V2.md`.
+
+### Cleanup & Secrets
+
+Le linee guida per la rimozione sicura di file locali o sensibili presenti nel repository sono in `docs/CLEANUP_GUIDE.md`. Si consiglia di seguire il procedimento descritto prima di eseguire merge/PR che tolgano o modifichino file contenenti credenziali.
+
 
 #### **ClientDao**
 ```kotlin
@@ -496,6 +319,33 @@ Tutti i ViewModel seguono il pattern:
 2. **Expose StateFlows** per UI reattiva
 3. **Business logic** delegata a Repository
 4. **viewModelScope.launch(Dispatchers.IO)** per chiamate async
+
+---
+
+## 📄 PDF GENERATION (iText + SOLID)
+
+Responsabilità:
+- Generazione di report PDF certificati per singoli test o report di progetto.
+- Esportazione e condivisione file (salvataggio su storage locale, azioni di share/open dal UI).
+
+Design e implementazione attuale:
+- Interfaccia: `app/src/main/java/com/app/miklink/data/pdf/PdfGenerator.kt` — definisce il contratto pubblico per generare report (`generatePdfReport(...)`, `generateSingleTestPdf(...)`).
+- Implementazione: `app/src/main/java/com/app/miklink/data/pdf/PdfGeneratorIText.kt` — implementa `PdfGenerator` usando iText 7 (moduli kernel/layout/io). L'implementazione si occupa di creare PdfDocument, layout, paginazione e metadata.
+- DI / Binding: `app/src/main/java/com/app/miklink/di/PdfModule.kt` — fornisce `PdfGenerator` come binding Hilt verso `PdfGeneratorIText`.
+
+Rimozione legacy (migration):
+- I vecchi template HTML e il flusso basato su `WebView` sono stati rimossi. File asset rimossi: `app/src/main/assets/report_template.html` e `project_report_template.html`.
+- Le UI consumer (es. `ClientListScreen`) sono state aggiornate per delegare l'azione di export a `PdfGenerator` via ViewModel (es. `ClientListViewModel`).
+
+Testing e stato build:
+- I test unitari esistenti relativi al parsing/report PDF sono stati adattati (es. `PdfGeneratorTest`), è stato aggiunto un test che verifica che `PdfGeneratorIText` implementi `PdfGenerator`.
+- Dopo le correzioni, la build locale e i unit tests risultano passati (BUILD SUCCESSFUL).
+
+Follow-up consigliati:
+1. ✅ Tutte le dipendenze residue che iniettavano `PdfGeneratorIText` direttamente sono state aggiornate per iniettare `PdfGenerator` (es. `HistoryViewModel`, `ReportDetailViewModel`).
+2. Eseguire test manuali sui device (export/share/open across Android targets) per assicurare compatibilità e permessi file.
+3. Se necessario, aggiungere ulteriori test di integrazione per verificare il contenuto dei PDF prodotti (regressioni sui layout/metadata).
+4. ✅ DTO consolidation: tutte le DTO del layer network (PingRequest/PingResult, CableTestRequest/CableTestResult, NeighborDetail, ProplistRequest, ecc.) sono state centralizzate in `app/src/main/java/com/app/miklink/data/network/dto` (es. `MikroTikDto.kt`) e i riferimenti nel codice aggiornati.
 
 #### **DashboardViewModel** (Post-Refactor)
 ```kotlin
@@ -832,6 +682,8 @@ class TestViewModel @Inject constructor(
             finalizeAndEmit(client, probe, profile, socketName, overallStatus, testResults, null)
         }
     }
+
+<!-- Note: `probe.tdrSupported` is cached for quick checks. The authoritative logic for TDR support is provided by the domain `TdrCapabilities` component which should be consulted for decision-making. -->
     
     private fun isRateOk(rate: String?, min: String): Boolean {
         val actual = RateParser.parseToMbps(rate)

@@ -36,7 +36,9 @@ object DatabaseModule {
             "miklink-db"
         )
         .addMigrations(*Migrations.ALL_MIGRATIONS)
-        .fallbackToDestructiveMigration()
+        // Avoid full destructive fallback on all version mismatches to prevent data loss.
+        // Keep fallback only for very old versions where we cannot reasonably support migration.
+        .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)

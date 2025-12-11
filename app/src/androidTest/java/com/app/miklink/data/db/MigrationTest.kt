@@ -136,6 +136,74 @@ class MigrationTest {
         db.close()
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun migrate_to13_creates_indexes() {
+        // Create DB at version 12 (just before index migration)
+        var db = helper.createDatabase(TEST_DB, 12)
+
+        // insert minimal rows so the DB contains tables we expect
+        db.execSQL("INSERT INTO clients (clientId, companyName, networkMode) VALUES (1, 'IdxCo', 'DHCP')")
+        db.execSQL("INSERT INTO test_reports (reportId, clientId, timestamp, overallStatus, resultsJson) VALUES (1, 1, 1, 'PASS', '{}')")
+        db.close()
+
+        // Apply migration 12 -> 13 which should create indices
+        db = helper.runMigrationsAndValidate(TEST_DB, 13, true, Migrations.MIGRATION_12_13)
+
+        // Ensure indexes exist on test_reports
+        val idxCursor = db.query("PRAGMA index_list('test_reports')")
+        val idxNames = mutableSetOf<String>()
+        idxCursor.use {
+            while (it.moveToNext()) {
+                idxNames.add(it.getString(it.getColumnIndexOrThrow("name")))
+            }
+        }
+
+        assert(idxNames.contains("index_test_reports_clientId"))
+        assert(idxNames.contains("index_test_reports_timestamp"))
+        assert(idxNames.contains("index_test_reports_clientId_timestamp"))
+
+        // Ensure clients index exists
+        val clientIdxCursor = db.query("PRAGMA index_list('clients')")
+        val clientIdxNames = mutableSetOf<String>()
+        clientIdxCursor.use {
+            while (it.moveToNext()) {
+                clientIdxNames.add(it.getString(it.getColumnIndexOrThrow("name")))
+            }
+        }
+
+        assert(clientIdxNames.contains("index_clients_companyName"))
+
+        db.close()
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate_11_to_12_adds_socket_fields() {
+        // Create DB at version 11
+        var db = helper.createDatabase(TEST_DB, 11)
+
+        // Insert minimal client row
+        db.execSQL("INSERT INTO clients (clientId, companyName, networkMode) VALUES (1, 'SrvCo', 'DHCP')")
+        db.close()
+
+        // Apply migration 11 -> 12 which should add columns socketSuffix, socketSeparator, socketNumberPadding
+        db = helper.runMigrationsAndValidate(TEST_DB, 12, true, Migrations.MIGRATION_11_12)
+
+        val cursor = db.query("SELECT clientId, companyName, socketSuffix, socketSeparator, socketNumberPadding FROM clients WHERE clientId = 1")
+        cursor.use {
+            assert(it.moveToFirst())
+            assertEquals(1, it.getLong(it.getColumnIndexOrThrow("clientId")))
+            assertEquals("SrvCo", it.getString(it.getColumnIndexOrThrow("companyName")))
+            // Verify default values
+            assertEquals("", it.getString(it.getColumnIndexOrThrow("socketSuffix")))
+            assertEquals("-", it.getString(it.getColumnIndexOrThrow("socketSeparator")))
+            assertEquals(1, it.getInt(it.getColumnIndexOrThrow("socketNumberPadding")))
+        }
+
+        db.close()
+    }
+
     /**
      * Test che verifica la migrazione "diretta" dalla v7 alla v10
      * applicando tutte le migrazioni in un'unica operazione.

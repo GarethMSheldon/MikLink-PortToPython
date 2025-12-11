@@ -1,8 +1,8 @@
 package com.app.miklink.ui.history.model
 
-import com.app.miklink.data.network.CableTestResult
-import com.app.miklink.data.network.NeighborDetail
-import com.app.miklink.data.network.PingResult
+import com.app.miklink.data.network.dto.CableTestResult
+import com.app.miklink.data.network.dto.NeighborDetail
+import com.app.miklink.data.network.dto.PingResult
 import com.app.miklink.data.network.dto.SpeedTestResult
 
 /**

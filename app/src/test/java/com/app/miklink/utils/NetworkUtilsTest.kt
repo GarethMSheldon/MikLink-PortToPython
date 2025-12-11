@@ -1,6 +1,6 @@
 package com.app.miklink.utils
 
-import com.app.miklink.data.network.NeighborDetail
+import com.app.miklink.data.network.dto.NeighborDetail
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

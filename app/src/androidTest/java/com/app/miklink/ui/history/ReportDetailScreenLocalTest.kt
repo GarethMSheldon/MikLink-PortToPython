@@ -34,7 +34,7 @@ class ReportDetailScreenLocalTest {
         private val _results = MutableStateFlow(
             ParsedResults(
                 ping = listOf(
-                    com.app.miklink.data.network.PingResult(
+                    com.app.miklink.data.network.dto.PingResult(
                         avgRtt = "10ms", host = "8.8.8.8", maxRtt = "15ms", minRtt = "8ms", packetLoss = "0", received = "4", sent = "4", seq = "4", size = "64", time = "10ms", ttl = "64"
                     )
                 )

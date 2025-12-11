@@ -1,14 +1,6 @@
 package com.app.miklink.ui.client
 
-import android.app.Activity
 import android.content.Context
-import android.print.PrintAttributes
-import android.print.PrintManager
-import android.print.PrintDocumentAdapter
-import android.os.Bundle
-import android.os.CancellationSignal
-import android.os.ParcelFileDescriptor
-import android.print.PageRange
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -37,8 +29,7 @@ import com.app.miklink.ui.components.MinimalListItem
 import com.app.miklink.ui.components.ModernSearchBar
 import kotlinx.coroutines.launch
 
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.draw.alpha
+// Removed legacy WebView-based printing imports
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,72 +52,7 @@ fun ClientListScreen(
         }
     }
 
-    // State for PDF printing
-    var pdfHtmlToPrint by remember { mutableStateOf<String?>(null) }
-    var pdfJobName by remember { mutableStateOf("") }
-    
-    // Keep reference to WebView for explicit control
-    val webViewRef = remember { mutableStateOf<android.webkit.WebView?>(null) }
-
-    // Load content when pdfHtmlToPrint changes
-    LaunchedEffect(pdfHtmlToPrint) {
-        webViewRef.value?.let { webView ->
-            webView.tag = pdfJobName
-            if (pdfHtmlToPrint != null) {
-                android.util.Log.d("ClientPDF", "LaunchedEffect loading HTML, length=${pdfHtmlToPrint!!.length}")
-                webView.loadDataWithBaseURL("http://localhost/", pdfHtmlToPrint!!, "text/html", "UTF-8", null)
-            }
-        }
-    }
-
-    // Invisible WebView for printing
-    // Invisible WebView for printing - Always attached to prevent renderer crash
-    AndroidView(
-        factory = { ctx ->
-            android.webkit.WebView(ctx).apply {
-                settings.javaScriptEnabled = false
-                settings.domStorageEnabled = true
-                // Disable hardware acceleration to prevent crashes on some devices
-                setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
-                
-                webViewClient = object : android.webkit.WebViewClient() {
-                    override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        android.util.Log.d("ClientPDF", "onPageFinished url=$url, hasContent=${pdfHtmlToPrint != null}")
-                        // Only print if we have content and URL indicates loaded content (not blank)
-                        if (pdfHtmlToPrint != null && url?.startsWith("http") == true) {
-                            val printManager = ctx.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                            if (printManager != null) {
-                                val jobName = view?.tag as? String ?: "Client_Report"
-                                val adapter = createPrintDocumentAdapter(jobName)
-                                
-                                val wrappedAdapter = object : PrintDocumentAdapter() {
-                                    override fun onLayout(oldAttributes: PrintAttributes?, newAttributes: PrintAttributes?, cancellationSignal: CancellationSignal?, callback: LayoutResultCallback?, extras: Bundle?) {
-                                        adapter.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras)
-                                    }
-                                    override fun onWrite(pages: Array<out PageRange>?, destination: ParcelFileDescriptor?, cancellationSignal: CancellationSignal?, callback: WriteResultCallback?) {
-                                        adapter.onWrite(pages, destination, cancellationSignal, callback)
-                                    }
-                                    override fun onFinish() {
-                                        adapter.onFinish()
-                                        // Cleanup: Clear content and reset state
-                                        pdfHtmlToPrint = null
-                                        view?.loadUrl("about:blank")
-                                    }
-                                }
-                                
-                                printManager.print(jobName, wrappedAdapter, PrintAttributes.Builder().build())
-                            }
-                        }
-                    }
-                }
-                
-                // Store reference
-                webViewRef.value = this
-            }
-        },
-        modifier = Modifier.size(1.dp).alpha(0f)
-    )
+    // PDF generation is now handled by PdfGenerator (iText). The old HTML/WebView pipeline was removed
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -250,7 +176,49 @@ fun ClientListScreen(
                                 title = client.companyName,
                                 subtitle = client.location ?: "Nessuna sede specificata",
                                 icon = Icons.Default.Business,
-                                onClick = { navController.navigate("client_edit/${client.clientId}") }
+                                onClick = { navController.navigate("client_edit/${client.clientId}") },
+                                trailingContent = {
+                                    IconButton(onClick = {
+                                        coroutineScope.launch {
+                                            try {
+                                                snackbarHostState.showSnackbar("Generazione PDF...")
+                                                val pdfFile = viewModel.generatePdfWithIText(client.clientId)
+                                                if (pdfFile != null && pdfFile.exists() && pdfFile.length() > 0) {
+                                                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                        context,
+                                                        "${context.packageName}.fileprovider",
+                                                        pdfFile
+                                                    )
+                                                    // Open viewer or share
+                                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(uri, "application/pdf")
+                                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    }
+                                                    try {
+                                                        context.startActivity(intent)
+                                                        snackbarHostState.showSnackbar("PDF generato con successo")
+                                                    } catch (e: android.content.ActivityNotFoundException) {
+                                                        // No viewer, fallback to share
+                                                        val share = android.content.Intent.createChooser(
+                                                            android.content.Intent().apply {
+                                                                action = android.content.Intent.ACTION_SEND
+                                                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                                                type = "application/pdf"
+                                                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                            }, null
+                                                        )
+                                                        context.startActivity(share)
+                                                    }
+                                                } else {
+                                                    snackbarHostState.showSnackbar("Errore generazione PDF")
+                                                }
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("ClientPDF", "Export error", e)
+                                                snackbarHostState.showSnackbar("Errore export: ${e.message}")
+                                            }
+                                        }
+                                    }) { Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF") }
+                                }
                             )
                         }
                     }

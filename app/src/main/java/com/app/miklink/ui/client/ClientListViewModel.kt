@@ -8,7 +8,7 @@ import com.app.miklink.data.db.dao.ReportDao
 import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.pdf.ExportColumn
 import com.app.miklink.data.pdf.PdfExportConfig
-import com.app.miklink.data.pdf.PdfGeneratorIText
+import com.app.miklink.data.pdf.PdfGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -20,7 +20,7 @@ class ClientListViewModel @Inject constructor(
     private val clientDao: ClientDao,
     private val reportDao: ReportDao,
 
-    private val pdfGeneratorIText: PdfGeneratorIText
+    private val pdfGenerator: PdfGenerator
 ) : ViewModel() {
 
     val clients: StateFlow<List<Client>> = clientDao.getAllClients()
@@ -59,7 +59,7 @@ class ClientListViewModel @Inject constructor(
                 signatureLeftLabel = "",
                 signatureRightLabel = ""
             )
-            pdfGeneratorIText.generatePdfReport(reports, client, config)
+            pdfGenerator.generatePdfReport(reports, client, config)
         }
     }
 }

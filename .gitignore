@@ -5,8 +5,9 @@
 /.idea/libraries/
 .DS_Store
 
-# Risultati di Build e output
 /build
+# Ignore all build/ folders recursively
+**/build/
 /captures
 /out
 
@@ -21,3 +22,17 @@
 # Files generati dal Debug
 # * Se hai un problema con .idea, potresti doverlo aggiungere e rimuovere l'intera cartella
 /.idea/
+
+# Additional local IDE and build output folders to ignore (EPIC A1)
+.kotlin/
+.run/
+/.vscode/
+
+# Android App build outputs (redundant but explicit)
+# Already excluded by **/build/, but keep explicit entry
+/app/build/
+
+# Local SDK / Credentials files
+/local.properties
+/key
+

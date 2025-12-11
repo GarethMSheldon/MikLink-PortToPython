@@ -10,7 +10,7 @@ import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.Report
 import com.app.miklink.data.db.model.TestProfile
 
-import com.app.miklink.data.pdf.PdfGeneratorIText
+import com.app.miklink.data.pdf.PdfGenerator
 import com.app.miklink.ui.history.model.ParsedResults
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +25,7 @@ class ReportDetailViewModel @Inject constructor(
     private val clientDao: ClientDao,
     private val profileDao: TestProfileDao,
 
-    private val pdfGeneratorIText: PdfGeneratorIText, // For new single-test PDF
+    private val pdfGenerator: PdfGenerator,
     private val moshi: Moshi,
     private val userPreferencesRepository: com.app.miklink.data.repository.UserPreferencesRepository,
     savedStateHandle: SavedStateHandle
@@ -115,7 +115,7 @@ class ReportDetailViewModel @Inject constructor(
         val client = currentReport.clientId?.let { it -> clientDao.getClientById(it).firstOrNull() }
         
         return try {
-            pdfGeneratorIText.generatePdfReport(
+            pdfGenerator.generatePdfReport(
                 rawReports = listOf(currentReport),
                 client = client,
                 config = config

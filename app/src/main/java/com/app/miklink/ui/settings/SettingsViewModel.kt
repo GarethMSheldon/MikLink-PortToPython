@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.repository.BackupRepository
+import com.app.miklink.data.io.FileReader
+import com.app.miklink.domain.usecase.backup.ImportBackupUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +23,9 @@ import kotlinx.coroutines.flow.stateIn
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val backupRepository: BackupRepository,
+    private val importBackupUseCase: ImportBackupUseCase,
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val fileReader: FileReader,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -150,18 +154,25 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun importConfig(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                val json = context.contentResolver.openInputStream(uri)?.bufferedReader().use { it?.readText() }
-                if (!json.isNullOrBlank()) {
-                    backupRepository.importConfigFromJson(json)
+        viewModelScope.launch { importConfigSuspend(uri) }
+    }
+
+    // Made suspend for better testability — tests can call this directly instead of relying on viewModelScope
+    suspend fun importConfigSuspend(uri: Uri) {
+        try {
+            val json = fileReader.read(uri)
+            if (!json.isNullOrBlank()) {
+                val result = importBackupUseCase.execute(json)
+                if (result.isSuccess) {
                     _backupStatus.value = "Configuration restored successfully."
                 } else {
-                    _backupStatus.value = "Error: Selected file is empty."
+                    _backupStatus.value = "Error restoring configuration: ${result.exceptionOrNull()?.message}"
                 }
-            } catch (e: Exception) {
-                _backupStatus.value = "Error restoring configuration: ${e.message}"
+            } else {
+                _backupStatus.value = "Error: Selected file is empty."
             }
+        } catch (e: Exception) {
+            _backupStatus.value = "Error restoring configuration: ${e.message}"
         }
     }
 }

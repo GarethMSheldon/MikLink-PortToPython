@@ -41,7 +41,7 @@ import javax.inject.Singleton
 class PdfGeneratorIText @Inject constructor(
     @ApplicationContext private val context: Context,
     private val moshi: Moshi
-) {
+) : PdfGenerator {
 
     // instantiate a parser helper internally to avoid changing constructor signature that
     // annotation processors (KSP/Hilt) may attempt to resolve during processing.
@@ -57,30 +57,7 @@ class PdfGeneratorIText @Inject constructor(
         val showCpuWarning: Boolean
     )
     
-    /**
-     * Event handler for adding page numbers to each page
-     */
-    private class PageNumberEventHandler : com.itextpdf.kernel.events.IEventHandler {
-        override fun handleEvent(event: com.itextpdf.kernel.events.Event) {
-            val docEvent = event as com.itextpdf.kernel.events.PdfDocumentEvent
-            val pdfDoc = docEvent.document
-            val page = docEvent.page
-            val pageNumber = pdfDoc.getPageNumber(page)
-            val pageSize = page.pageSize
-            
-            val canvas = com.itextpdf.kernel.pdf.canvas.PdfCanvas(page)
-            canvas.beginText()
-            try {
-                canvas.setFontAndSize(PdfFontFactory.createFont(StandardFonts.HELVETICA), 9f)
-                canvas.setColor(DeviceRgb(153, 153, 153), true)
-                canvas.moveText((pageSize.right - 60).toDouble(), (pageSize.bottom + 20).toDouble())
-                canvas.showText("Pag. $pageNumber")
-            } finally {
-                canvas.endText()
-                canvas.release()
-            }
-        }
-    }
+    // Page number event handler is provided by PdfDocumentHelper.PageNumberEventHandler to avoid duplication
 
     /**
      * Generate PDF report from list of reports and client data.
@@ -92,7 +69,7 @@ class PdfGeneratorIText @Inject constructor(
      * Generate PDF report from list of reports and client data.
      * Returns a File object pointing to the generated PDF in cache directory.
      */
-    fun generatePdfReport(
+    override fun generatePdfReport(
         rawReports: List<Report>,
         client: Client?,
         config: PdfExportConfig
@@ -176,7 +153,7 @@ class PdfGeneratorIText @Inject constructor(
      * Generate a PDF for a single test report.
      * Delegates to generatePdfReport with a default configuration.
      */
-    fun generateSingleTestPdf(
+    override fun generateSingleTestPdf(
         report: Report,
         client: Client?,
         profile: TestProfile?,
@@ -198,7 +175,8 @@ class PdfGeneratorIText @Inject constructor(
 
     private fun addResultsTable(document: Document, reports: List<Report>, config: PdfExportConfig) {
         // Section title
-        document.add(Paragraph("📋 Dettaglio Test")
+        // Note: replaced non-ASCII emoji with ASCII text to ensure consistent iText rendering and avoid font issues
+        document.add(Paragraph("Dettaglio Test")
             .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD))
             .setFontSize(10f)
             .setFontColor(DeviceRgb(102, 102, 102))

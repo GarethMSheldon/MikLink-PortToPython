@@ -10,7 +10,9 @@ import com.app.miklink.data.db.dao.ReportDao
 import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.ProbeConfig
-import com.app.miklink.data.network.*
+import com.app.miklink.data.network.MikroTikApiService
+import com.app.miklink.data.network.MikroTikServiceFactory
+import com.app.miklink.data.network.dto.*
 import com.app.miklink.data.network.dto.SpeedTestRequest
 import com.app.miklink.data.network.dto.SpeedTestResult
 import com.app.miklink.utils.UiState
@@ -20,10 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
-import okhttp3.Credentials
-import okhttp3.OkHttpClient
 import retrofit2.HttpException
-import retrofit2.Retrofit
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import javax.inject.Inject
@@ -42,8 +41,8 @@ class AppRepository @Inject constructor(
     val probeConfigDao: ProbeConfigDao,
     val testProfileDao: TestProfileDao,
     val reportDao: ReportDao,
-    private val retrofitBuilder: Retrofit.Builder,
-    private val baseOkHttpClient: OkHttpClient,
+    private val serviceFactory: MikroTikServiceFactory,
+    private val routeManager: com.app.miklink.data.repository.RouteManager,
     private val userPreferencesRepository: UserPreferencesRepository
 ) {
     val currentProbe: Flow<ProbeConfig?> = probeConfigDao.getSingleProbe()
@@ -59,33 +58,8 @@ class AppRepository @Inject constructor(
     }
 
     private fun buildServiceFor(probe: ProbeConfig): MikroTikApiService {
-        val baseUrl = "http://${probe.ipAddress}/rest/"
         val wifiNetwork = findWifiNetwork()
-
-        val authInterceptor = okhttp3.Interceptor { chain ->
-            val original = chain.request()
-            val req = original.newBuilder()
-                .header("Authorization", Credentials.basic(probe.username, probe.password))
-                .build()
-            chain.proceed(req)
-        }
-
-        val clientBuilder = baseOkHttpClient.newBuilder()
-            .addInterceptor(authInterceptor)
-
-        // Note: loggingInterceptor già presente in baseOkHttpClient, non duplicare
-
-        if (wifiNetwork != null) {
-            clientBuilder.socketFactory(wifiNetwork.socketFactory)
-        }
-
-        val client = clientBuilder.build()
-
-        return retrofitBuilder
-            .baseUrl(baseUrl)
-            .client(client)
-            .build()
-            .create(MikroTikApiService::class.java)
+        return serviceFactory.createService(probe, wifiNetwork?.socketFactory)
     }
 
     suspend fun resolveTargetIp(probe: ProbeConfig, target: String, interfaceName: String): String {
@@ -178,11 +152,7 @@ class AppRepository @Inject constructor(
                 entry.id?.let { api.removeIpAddress(NumbersRequest(it)) }
             }
         }
-        // Helper: rimuovi default route duplicate
-        suspend fun removeDefaultRoutes() {
-            val routes = api.getRoutes()
-            routes.filter { it.dstAddress == "0.0.0.0/0" }.forEach { r -> r.id?.let { api.removeRoute(NumbersRequest(it)) } }
-        }
+        // Moved removeDefaultRoutes logic to `RouteManager` implementation
 
 
         if (effective.networkMode.equals("DHCP", true)) {
@@ -259,7 +229,9 @@ class AppRepository @Inject constructor(
             val dhcpId = api.getDhcpClientStatus(iface).firstOrNull()?.id
             if (dhcpId != null) api.disableDhcpClient(NumbersRequest(dhcpId))
             removeStaticAddressesOnInterface()
-            removeDefaultRoutes()
+            // Ensure we have gateway value for a better match
+            val expectedGateway = effective.staticGateway
+            routeManager.removeDefaultRoutes(api, expectedGateway)
 
             val cidr = effective.staticCidr ?: buildString {
                 val ip = effective.staticIp ?: ""
@@ -270,7 +242,7 @@ class AppRepository @Inject constructor(
 
             api.addIpAddress(IpAddressAdd(address = cidr, `interface` = iface))
             val gw = effective.staticGateway ?: error(context.getString(R.string.error_static_gateway_missing))
-            api.addRoute(RouteAdd(dstAddress = "0.0.0.0/0", gateway = gw))
+            api.addRoute(RouteAdd(dstAddress = "0.0.0.0/0", gateway = gw, comment = "MikLink_Auto"))
 
             NetworkConfigFeedback(
                 mode = "STATIC",

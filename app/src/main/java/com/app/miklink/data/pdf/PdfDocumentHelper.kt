@@ -88,8 +88,9 @@ class PdfDocumentHelper {
             .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
         
         // CPU Warning
+        // Note: replace emoji with ASCII text to avoid font issues in iText
         if (showCpuWarning) {
-            val warning = Paragraph("⚠️ Rilevato carico CPU 100% (locale/remota). Valori possibilmente sottostimati.")
+            val warning = Paragraph("Attenzione: carico CPU 100% (locale/remota). Valori possibilmente sottostimati.")
                 .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA))
                 .setFontSize(10f)
                 .setFontColor(DeviceRgb(230, 81, 0)) // Orange

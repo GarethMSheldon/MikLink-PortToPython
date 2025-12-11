@@ -8,7 +8,7 @@ import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.ProbeConfig
 import com.app.miklink.data.db.model.TestProfile
-import com.app.miklink.data.network.MonitorResponse
+import com.app.miklink.data.network.dto.MonitorResponse
 import com.app.miklink.data.repository.AppRepository
 import com.app.miklink.data.repository.AppRepository.NetworkConfigFeedback
 import com.app.miklink.utils.UiState

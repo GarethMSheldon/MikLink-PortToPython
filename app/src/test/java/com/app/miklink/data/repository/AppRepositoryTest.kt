@@ -9,10 +9,10 @@ import com.app.miklink.data.db.dao.ReportDao
 import com.app.miklink.data.db.dao.TestProfileDao
 import com.app.miklink.data.db.model.ProbeConfig
 import com.app.miklink.data.network.MikroTikApiService
-import com.app.miklink.data.network.PingRequest
-import com.app.miklink.data.network.PingResult
-import com.app.miklink.data.network.ProplistRequest
-import com.app.miklink.data.network.SystemResource
+import com.app.miklink.data.network.dto.PingRequest
+import com.app.miklink.data.network.dto.PingResult
+import com.app.miklink.data.network.dto.ProplistRequest
+import com.app.miklink.data.network.dto.SystemResource
 import com.app.miklink.utils.UiState
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,6 +57,7 @@ class AppRepositoryTest {
     private lateinit var mockOkHttpClient: OkHttpClient
     private lateinit var mockRetrofit: Retrofit
     private lateinit var mockOkHttpBuilder: OkHttpClient.Builder
+    private lateinit var mockRouteManager: com.app.miklink.data.repository.RouteManager
 
 
     @Before
@@ -102,14 +103,16 @@ class AppRepositoryTest {
     }
 
     private fun createRepository(): AppRepository {
+        val mockFactory = com.app.miklink.data.network.MikroTikServiceFactory(mockRetrofitBuilder, mockOkHttpClient)
+        mockRouteManager = mockk(relaxed = true)
         return AppRepository(
             context = mockContext,
             clientDao = mockClientDao,
             probeConfigDao = mockProbeConfigDao,
             testProfileDao = mockTestProfileDao,
             reportDao = mockReportDao,
-            retrofitBuilder = mockRetrofitBuilder,
-            baseOkHttpClient = mockOkHttpClient,
+            serviceFactory = mockFactory,
+            routeManager = mockRouteManager,
             userPreferencesRepository = mockUserPreferencesRepository
         )
     }
@@ -426,6 +429,57 @@ class AppRepositoryTest {
         // Verifica che entrambe le API siano state chiamate
         coVerify { mockApiService.getSystemResource(ProplistRequest(listOf("board-name"))) }
         coVerify { mockApiService.getEthernetInterfaces() }
+    }
+
+    /**
+     * Test: removeDefaultRoutes only removes routes with 'MikLink_Auto' comment or matching gateway
+     */
+    @Test
+    fun `test removeDefaultRoutes removes_only_tagged_or_gateway_matched_routes`() = runTest {
+        // Arrange
+        val testProbe = ProbeConfig(
+            probeId = 1L,
+            ipAddress = "192.168.1.1",
+            username = "admin",
+            password = "password",
+            testInterface = "ether1",
+            isOnline = true,
+            modelName = "RB750",
+            tdrSupported = true,
+            isHttps = false
+        )
+
+        val client = com.app.miklink.data.db.model.Client(
+            clientId = 1L,
+            companyName = "TestCompany",
+            location = null,
+            notes = null,
+            networkMode = "STATIC",
+            staticIp = "192.168.1.10",
+            staticSubnet = "24",
+            staticGateway = "192.168.1.254"
+        )
+
+        coEvery { mockApiService.getIpAddresses() } returns emptyList()
+
+        val r1 = com.app.miklink.data.network.dto.RouteEntry(id = "*1", dstAddress = "0.0.0.0/0", gateway = "192.168.1.254", comment = null)
+        val r2 = com.app.miklink.data.network.dto.RouteEntry(id = "*2", dstAddress = "0.0.0.0/0", gateway = "10.0.0.1", comment = "MikLink_Auto")
+        val r3 = com.app.miklink.data.network.dto.RouteEntry(id = "*3", dstAddress = "0.0.0.0/0", gateway = "8.8.8.8", comment = null)
+
+        coEvery { mockApiService.getRoutes() } returns listOf(r1, r2, r3)
+        coEvery { mockApiService.removeRoute(any()) } returns Unit
+        coEvery { mockApiService.addRoute(any()) } returns Unit
+        coEvery { mockApiService.addIpAddress(any()) } returns Unit
+
+        repository = createRepository()
+
+        // Act
+        val result = repository.applyClientNetworkConfig(probe = testProbe, client = client)
+
+        // Assert - we expect Success since we added IP/route
+        assertTrue(result is UiState.Success)
+
+        coVerify(exactly = 1) { mockRouteManager.removeDefaultRoutes(mockApiService, "192.168.1.254", false) }
     }
 
     /**
