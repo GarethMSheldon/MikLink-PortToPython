@@ -4,11 +4,11 @@ import com.app.miklink.data.db.model.Client
 import com.app.miklink.data.db.model.ProbeConfig
 import com.app.miklink.data.db.model.Report
 import com.app.miklink.data.db.model.TestProfile
-import com.app.miklink.data.network.dto.CableTestResult
-import com.app.miklink.data.network.dto.MonitorResponse
-import com.app.miklink.data.network.dto.NeighborDetail
-import com.app.miklink.data.network.dto.PingResult
-import com.app.miklink.data.network.dto.SpeedTestResult
+import com.app.miklink.core.data.remote.mikrotik.dto.CableTestResult
+import com.app.miklink.core.data.remote.mikrotik.dto.MonitorResponse
+import com.app.miklink.core.data.remote.mikrotik.dto.NeighborDetail
+import com.app.miklink.core.data.remote.mikrotik.dto.PingResult
+import com.app.miklink.core.data.remote.mikrotik.dto.SpeedTestResult
 import com.app.miklink.utils.UiState
 import kotlinx.coroutines.flow.Flow
 

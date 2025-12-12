@@ -1,4 +1,4 @@
-package com.app.miklink.data.network
+package com.app.miklink.core.data.remote.mikrotik.infra
 
 import okhttp3.Interceptor
 import okhttp3.Response

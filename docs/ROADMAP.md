@@ -210,6 +210,289 @@ Solo quando tutti questi punti sono soddisfatti, l’epic può essere considerat
 
 
 
+EPIC S2 — Migrazione Networking MikroTik in core/data/remote/mikrotik (NO refactor funzionale)
+Obiettivo
+
+Spostare tutto il networking MikroTik da:
+
+app/src/main/java/com/app/miklink/data/network/**
+
+a:
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/**
+
+mantenendo:
+
+stessi nomi classi
+
+stessi endpoint
+
+stessa configurazione Moshi/OkHttp/Retrofit
+
+build verde (KSP + assemble + unit test)
+
+Vincoli (anti-drift)
+
+❌ Vietato cambiare logica (endpoint, request/response, parsing, timeout, retry, headers).
+
+❌ Vietato creare “bridge” o nuove classi per tappare buchi (solo move + update package/import).
+
+❌ Vietato “logical move”: package deve corrispondere al path.
+
+✅ Consentito: spostare file, aggiornare package ..., aggiornare import, aggiornare DI module.
+
+✅ Dopo ogni micro-step: eseguire ./gradlew :app:kspDebugKotlin. Se fallisce → fix solo import/package e STOP al checkpoint finché non passa.
+
+S2.0 — Preflight
+S2.0.1 Baseline build (obbligatorio)
+
+Eseguire e salvare output (anche solo “BUILD SUCCESSFUL” o errore):
+
+./gradlew :app:kspDebugKotlin
+
+./gradlew assembleDebug
+
+./gradlew testDebugUnitTest
+
+Stop condition: se una di queste fallisce prima di iniziare, fermarsi e riportare l’errore (non “fixare” ora).
+
+S2.1 — Inventario file da migrare (senza modifiche)
+S2.1.1 Lista file networking esistenti
+
+Confermare che esistono tutti questi file (path):
+
+app/src/main/java/com/app/miklink/data/network/MikroTikApiService.kt
+
+app/src/main/java/com/app/miklink/data/network/MikroTikServiceFactory.kt
+
+app/src/main/java/com/app/miklink/data/network/AuthInterceptor.kt
+
+app/src/main/java/com/app/miklink/data/network/NeighborDetailListAdapter.kt
+
+app/src/main/java/com/app/miklink/data/network/dto/* (tutti i DTO esistenti)
+
+Se alcuni non esistono o hanno nomi diversi: STOP e riportare l’elenco reale.
+
+S2.2 — Creare struttura target (solo cartelle)
+
+Creare (se mancanti):
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/service/
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/dto/
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/infra/
+
+Checkpoint: ./gradlew :app:kspDebugKotlin
+(Non dovrebbe cambiare nulla; se fallisce, STOP e riportare.)
+
+S2.3 — Migrazione DTO (meccanica)
+S2.3.1 Spostare TUTTI i DTO
+
+Spostare fisicamente tutti i file sotto:
+
+app/src/main/java/com/app/miklink/data/network/dto/
+→ in:
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/dto/
+
+S2.3.2 Aggiornare package dei DTO
+
+In ogni DTO spostato:
+
+aggiornare package coerente col nuovo path:
+package com.app.miklink.core.data.remote.mikrotik.dto
+
+S2.3.3 Fix import (solo dove necessario)
+
+Aggiornare import in:
+
+MikroTikApiService.kt
+
+MikroTikServiceFactory.kt
+
+qualsiasi file che importava com.app.miklink.data.network.dto.*
+
+Checkpoint: ./gradlew :app:kspDebugKotlin
+Stop condition: se fallisce, sistemare solo import/package e riprovare finché passa.
+
+S2.4 — Migrazione Retrofit Service
+S2.4.1 Spostare service interface
+
+Spostare:
+
+app/src/main/java/com/app/miklink/data/network/MikroTikApiService.kt
+→
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/service/MikroTikApiService.kt
+
+S2.4.2 Aggiornare package
+
+Aggiornare package a:
+
+package com.app.miklink.core.data.remote.mikrotik.service
+
+S2.4.3 Fix import DTO nel service
+
+Verificare che importi i DTO dal nuovo package:
+
+com.app.miklink.core.data.remote.mikrotik.dto.*
+
+Checkpoint: ./gradlew :app:kspDebugKotlin
+Stop condition: se fallisce, correggere import/package e riprovare.
+
+S2.5 — Migrazione Infra (Factory + Interceptor + Moshi adapter)
+S2.5.1 Spostare infra files
+
+Spostare:
+
+app/src/main/java/com/app/miklink/data/network/MikroTikServiceFactory.kt
+→ app/src/main/java/com/app/miklink/core/data/remote/mikrotik/infra/MikroTikServiceFactory.kt
+
+app/src/main/java/com/app/miklink/data/network/AuthInterceptor.kt
+→ app/src/main/java/com/app/miklink/core/data/remote/mikrotik/infra/AuthInterceptor.kt
+
+app/src/main/java/com/app/miklink/data/network/NeighborDetailListAdapter.kt
+→ app/src/main/java/com/app/miklink/core/data/remote/mikrotik/infra/NeighborDetailListAdapter.kt
+
+S2.5.2 Aggiornare package dei tre file
+
+package com.app.miklink.core.data.remote.mikrotik.infra
+
+S2.5.3 Fix import verso MikroTikApiService
+
+Aggiornare riferimenti a:
+
+com.app.miklink.core.data.remote.mikrotik.service.MikroTikApiService
+
+S2.5.4 Fix import DTO
+
+Aggiornare eventuali import DTO a:
+
+com.app.miklink.core.data.remote.mikrotik.dto.*
+
+Checkpoint: ./gradlew :app:kspDebugKotlin
+Stop condition: se fallisce, correggere import/package e riprovare.
+
+S2.6 — Aggiornare DI (NetworkModule)
+
+File noto: app/src/main/java/com/app/miklink/di/NetworkModule.kt
+
+S2.6.1 Aggiornare import nel module
+
+Aggiornare import per puntare ai nuovi path:
+
+MikroTikServiceFactory → com.app.miklink.core.data.remote.mikrotik.infra.MikroTikServiceFactory
+
+AuthInterceptor → com.app.miklink.core.data.remote.mikrotik.infra.AuthInterceptor
+
+NeighborDetailListAdapter → com.app.miklink.core.data.remote.mikrotik.infra.NeighborDetailListAdapter
+
+MikroTikApiService → com.app.miklink.core.data.remote.mikrotik.service.MikroTikApiService
+
+DTO import se presenti → nuovo package
+
+S2.6.2 Verifica Moshi config
+
+Senza cambiare logica:
+
+verificare che la configurazione Moshi in NetworkModule.kt continui a registrare NeighborDetailListAdapter (o equivalente) esattamente come prima, solo cambiando import/package.
+
+Checkpoint: ./gradlew :app:kspDebugKotlin
+Stop condition: se fallisce, correggere import e provider signatures.
+
+S2.7 — Aggiornare riferimenti nel codice applicativo
+S2.7.1 Ricerca riferimenti al vecchio package
+
+Cercare e correggere import (solo import) per:
+
+com.app.miklink.data.network.*
+
+com.app.miklink.data.network.dto.*
+
+Aggiornare a:
+
+com.app.miklink.core.data.remote.mikrotik.*
+
+S2.7.2 File tipici impattati
+
+Controllare almeno:
+
+data/repository/AppRepository.kt (se usa service/factory/dto)
+
+ViewModel che chiamano repository (se importavano DTO direttamente)
+
+qualsiasi utility che usa MikroTikServiceFactory
+
+Checkpoint: ./gradlew :app:kspDebugKotlin
+Stop condition: se fallisce, fix import/package e riprovare.
+
+S2.8 — Rimozione cartelle vuote e checkpoint finale
+S2.8.1 Eliminare cartelle networking rimaste vuote
+
+Se ora vuote, eliminare:
+
+app/src/main/java/com/app/miklink/data/network/
+
+app/src/main/java/com/app/miklink/data/network/dto/
+
+(Se contengono ancora file, STOP e riportare cosa resta.)
+
+S2.8.2 Build finale (obbligatoria)
+
+Eseguire in quest’ordine:
+
+./gradlew :app:kspDebugKotlin
+
+./gradlew assembleDebug
+
+./gradlew testDebugUnitTest
+
+Output richiesto a fine EPIC (obbligatorio)
+
+Lista file sotto:
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/ (tutti i file e subfolder)
+
+Conferma che non esiste più:
+
+com.app.miklink.data.network (nessun file rimasto)
+
+Conferma risultati comandi:
+
+:app:kspDebugKotlin PASS
+
+assembleDebug PASS
+
+testDebugUnitTest PASS
+
+Criteri di accettazione
+
+Tutti i file data/network/** sono stati migrati in core/data/remote/mikrotik/**.
+
+Nessun package com.app.miklink.data.network... rimasto nel repo.
+
+Nessun cambiamento funzionale: solo move + import/package + DI import.
+
+Build e unit test passano.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 EPIC S1 — Migrazione “Data Layer” verso struttura SOLID + Legacy tagging (senza cambi logici)
 Obiettivo
 

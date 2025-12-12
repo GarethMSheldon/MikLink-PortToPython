@@ -1,10 +1,11 @@
-package com.app.miklink.data.network
+package com.app.miklink.core.data.remote.mikrotik.infra
 
 import com.app.miklink.data.db.model.ProbeConfig
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.app.miklink.core.data.remote.mikrotik.service.MikroTikApiService
 
 @Singleton
 class MikroTikServiceFactory @Inject constructor(

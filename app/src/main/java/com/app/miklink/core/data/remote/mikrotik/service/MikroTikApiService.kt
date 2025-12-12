@@ -1,6 +1,6 @@
-package com.app.miklink.data.network
+package com.app.miklink.core.data.remote.mikrotik.service
 
-import com.app.miklink.data.network.dto.*
+import com.app.miklink.core.data.remote.mikrotik.dto.*
 import com.squareup.moshi.Json
 import retrofit2.Response
 import retrofit2.http.Body
@@ -8,7 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
 
-// DTOs are consolidated in com.app.miklink.data.network.dto
+// DTOs are consolidated in com.app.miklink.core.data.remote.mikrotik.dto
 
 
 interface MikroTikApiService {

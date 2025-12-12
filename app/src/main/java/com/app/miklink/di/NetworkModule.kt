@@ -28,7 +28,7 @@ object NetworkModule {
     @Singleton
     fun provideMoshi(): Moshi {
         return Moshi.Builder()
-            .add(com.app.miklink.data.network.NeighborDetailListAdapter())
+            .add(com.app.miklink.core.data.remote.mikrotik.infra.NeighborDetailListAdapter())
             .add(object {
                 @FromJson
                 fun fromJson(reader: com.squareup.moshi.JsonReader): Boolean {

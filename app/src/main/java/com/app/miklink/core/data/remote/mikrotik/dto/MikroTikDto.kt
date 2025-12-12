@@ -1,4 +1,4 @@
-package com.app.miklink.data.network.dto
+package com.app.miklink.core.data.remote.mikrotik.dto
 
 import com.squareup.moshi.Json
 

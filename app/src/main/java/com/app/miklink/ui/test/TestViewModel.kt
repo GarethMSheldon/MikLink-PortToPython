@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.data.db.dao.*
 import com.app.miklink.data.db.model.*
-import com.app.miklink.data.network.dto.SpeedTestResult
+import com.app.miklink.core.data.remote.mikrotik.dto.SpeedTestResult
 import com.app.miklink.core.data.repository.AppRepository
 import com.app.miklink.utils.UiState
 import com.app.miklink.utils.normalizeTime
@@ -709,12 +709,12 @@ class TestViewModel @Inject constructor(
         val normalizedResults = java.util.LinkedHashMap<String, Any>(testResults)
         try {
             // 1) Consolidamento Ping: raccogli tutte le chiavi "ping_*" in una singola lista "ping"
-            val combinedPing = mutableListOf<com.app.miklink.data.network.dto.PingResult>()
+            val combinedPing = mutableListOf<com.app.miklink.core.data.remote.mikrotik.dto.PingResult>()
             testResults.forEach { (k, v) ->
                 if (k.startsWith("ping_")) {
                     val list = v as? List<*>
                     list?.forEach { item ->
-                        (item as? com.app.miklink.data.network.dto.PingResult)?.let { combinedPing.add(it) }
+                        (item as? com.app.miklink.core.data.remote.mikrotik.dto.PingResult)?.let { combinedPing.add(it) }
                     }
                 }
             }
@@ -724,7 +724,7 @@ class TestViewModel @Inject constructor(
 
             // 2) TDR: se presente come oggetto singolo, wrappa in lista
             when (val tdrVal = testResults["tdr"]) {
-                is com.app.miklink.data.network.dto.CableTestResult -> {
+                is com.app.miklink.core.data.remote.mikrotik.dto.CableTestResult -> {
                     normalizedResults["tdr"] = listOf(tdrVal)
                 }
                 is List<*> -> {

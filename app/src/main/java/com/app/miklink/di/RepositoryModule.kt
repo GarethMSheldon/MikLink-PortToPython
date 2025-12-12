@@ -48,7 +48,7 @@ abstract class RepositoryModule {
             probeConfigDao: com.app.miklink.data.db.dao.ProbeConfigDao,
             testProfileDao: com.app.miklink.data.db.dao.TestProfileDao,
             reportDao: com.app.miklink.data.db.dao.ReportDao,
-            serviceFactory: com.app.miklink.data.network.MikroTikServiceFactory,
+            serviceFactory: com.app.miklink.core.data.remote.mikrotik.infra.MikroTikServiceFactory,
             routeManager: RouteManager,
             userPreferencesRepository: com.app.miklink.data.repository.UserPreferencesRepository
         ): com.app.miklink.data.repository.AppRepository_legacy {

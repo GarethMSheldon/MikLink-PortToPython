@@ -1,9 +1,9 @@
 package com.app.miklink.ui.history.model
 
-import com.app.miklink.data.network.dto.CableTestResult
-import com.app.miklink.data.network.dto.NeighborDetail
-import com.app.miklink.data.network.dto.PingResult
-import com.app.miklink.data.network.dto.SpeedTestResult
+import com.app.miklink.core.data.remote.mikrotik.dto.CableTestResult
+import com.app.miklink.core.data.remote.mikrotik.dto.NeighborDetail
+import com.app.miklink.core.data.remote.mikrotik.dto.PingResult
+import com.app.miklink.core.data.remote.mikrotik.dto.SpeedTestResult
 
 /**
  * A data class to hold the results of a test after being parsed from JSON.

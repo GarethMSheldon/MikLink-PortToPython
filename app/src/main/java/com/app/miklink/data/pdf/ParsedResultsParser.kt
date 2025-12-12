@@ -1,7 +1,7 @@
 package com.app.miklink.data.pdf
 
-import com.app.miklink.data.network.dto.CableTestResult
-import com.app.miklink.data.network.dto.PingResult
+import com.app.miklink.core.data.remote.mikrotik.dto.CableTestResult
+import com.app.miklink.core.data.remote.mikrotik.dto.PingResult
 import com.app.miklink.ui.history.model.ParsedResults
 import com.squareup.moshi.Moshi
 import javax.inject.Inject
