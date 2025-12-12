@@ -1,0 +1,39 @@
+﻿
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+BridgeHostGoldenParsingTest > parse bridge host and assert mac and on-interface present PASSED
+BridgePortGoldenParsingTest > parse bridge ports assert bridge and pvid PASSED
+BridgeVlanGoldenParsingTest > parse bridge vlan empty returns empty list PASSED
+CableTestGoldenParsingTest > parse cable test no link with cable pairs PASSED
+CableTestGoldenParsingTest > parse cable test link ok no measurement PASSED
+EthernetMonitorGoldenParsingTest > parse ethernet monitor link ok 1gbps PASSED
+EthernetMonitorGoldenParsingTest > parse ethernet monitor no link rate absent becomes null PASSED
+LogGoldenParsingTest > parse log proplist and assert topics present PASSED
+NeighborGoldenParsingTest > parse neighbor golden fixture PASSED
+SystemResourceGoldenParsingTest > parse system resource golden fixture PASSED
+ProbeConnectivityRepositoryContractTest > checkProbeConnection returns Success with boardName and interfaces PASSED
+ProbeConnectivityRepositoryContractTest > checkProbeConnection returns Error when connection fails PASSED
+ProbeConnectivityRepositoryContractTest > checkProbeConnection returns Success with Unknown Board when boardName is 
+missing PASSED
+ProbeStatusRepositoryContractTest > observeProbeStatus returns false when probe is offline PASSED
+ProbeStatusRepositoryContractTest > observeProbeStatus returns true when probe is online PASSED
+ProbeStatusRepositoryContractTest > observeAllProbesWithStatus returns empty list when no probes exist PASSED
+ProbeStatusRepositoryContractTest > observeAllProbesWithStatus returns list with online status PASSED
+DhcpGatewayRepositoryContractTest > getGatewayForInterface returns null when DHCP client has no gateway PASSED
+DhcpGatewayRepositoryContractTest > getGatewayForInterface returns gateway when DHCP client is bound PASSED
+DhcpGatewayRepositoryContractTest > getGatewayForInterface returns null when no DHCP client exists PASSED
+DhcpGatewayRepositoryContractTest > getGatewayForInterface returns null when API call fails PASSED
+PingTargetResolverContractTest > resolve returns input when not DHCP_GATEWAY PASSED
+PingTargetResolverContractTest > resolve is case insensitive for DHCP_GATEWAY PASSED
+PingTargetResolverContractTest > resolve returns input when DHCP_GATEWAY cannot be resolved PASSED
+PingTargetResolverContractTest > resolve returns gateway when DHCP_GATEWAY is resolved PASSED
+[Incubating] Problems report is available at: 
+file:///C:/Users/dot/AndroidStudioProjects/MikLink/build/reports/problems/problems-report.html
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+BUILD SUCCESSFUL in 12s
+Consider enabling configuration cache to speed up this build: 
+https://docs.gradle.org/9.1.0/userguide/configuration_cache_enabling.html
+
+

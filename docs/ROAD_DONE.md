@@ -1,3 +1,364 @@
+
+
+EPIC S6 — Eliminare i bridge verso AppRepository nel percorso “Run Test” (NetworkConfig + DHCP/Gateway)
+
+Copia/incolla in ROADMAP. Super-dettagliata, con stop condition anti-drift.
+
+Obiettivo
+
+Rendere il percorso di esecuzione test (RunTestUseCase → Steps → Repositories → MikroTik REST) indipendente da AppRepository / legacy, eliminando:
+
+il bridge di NetworkConfigRepository verso AppRepository
+
+il bridge “service build + DHCP gateway” dentro PingTargetResolverImpl (oggi basato su buildServiceFor(probe) + api.getDhcpClientStatus(interfaceName))
+
+Nota: questa EPIC riguarda solo il percorso “Run Test”. AppRepository può restare per feature non ancora migrate.
+
+S6.0 — Baseline (obbligatorio)
+
+Eseguire e salvare output:
+
+./gradlew :app:kspDebugKotlin → salvare in docs/migration/S6_ksp_baseline.txt
+
+./gradlew assembleDebug → salvare in docs/migration/S6_assemble_baseline.txt
+
+./gradlew testDebugUnitTest → salvare in docs/migration/S6_tests_baseline.txt
+
+Stop condition: se uno fallisce, NON procedere con S6.
+
+S6.1 — Inventario dipendenze residue da AppRepository nel path “Run Test”
+Target
+
+core/domain/usecase/test/RunTestUseCaseImpl.kt
+
+data/teststeps/*StepImpl.kt
+
+data/repositoryimpl/* (in particolare NetworkConfigRepositoryImpl, PingTargetResolverImpl)
+
+di/TestRunnerModule.kt, di/RepositoryModule.kt
+
+Azione
+
+Cercare nel codice (PowerShell o IDE) riferimenti a:
+
+AppRepository / AppRepository_legacy
+
+package com.app.miklink.legacy.*
+
+Produrre lista (solo testo) in docs/migration/S6_dependency_audit.md con:
+
+file path
+
+simbolo usato (es. tipo, metodo)
+
+motivo (es. “applyClientNetworkConfig”, “buildServiceFor”)
+
+Stop condition: se il path Run Test usa ancora legacy in più punti oltre quelli già noti, segnalarli nel file e includerli negli step successivi (non inventare fix).
+
+Checkpoint: ./gradlew :app:kspDebugKotlin PASS
+
+S6.2 — Centralizzare la creazione del service MikroTik in una dipendenza DI (no factory sparsa)
+Problema attuale (dato)
+
+PingTargetResolverImpl richiede probe per chiamare buildServiceFor(probe) e poi api.getDhcpClientStatus(interfaceName).
+
+Target nuovo (SOLID)
+
+Creare un’astrazione unica (in core) per ottenere il service REST:
+
+File da creare
+
+app/src/main/java/com/app/miklink/core/data/remote/mikrotik/service/MikroTikServiceProvider.kt
+
+package com.app.miklink.core.data.remote.mikrotik.service
+
+import com.app.miklink.core.data.local.room.v1.model.ProbeConfig
+
+interface MikroTikServiceProvider {
+    fun build(probe: ProbeConfig): MikroTikApiService
+}
+
+
+Implementazione (in data):
+app/src/main/java/com/app/miklink/data/remote/mikrotik/MikroTikServiceProviderImpl.kt
+
+Deve usare l’infrastruttura già esistente (MikroTikServiceFactory o equivalente) senza cambiare logica.
+
+Se oggi esiste già una factory DI-friendly, usarla.
+
+Se la factory è statica/companion, wrappare.
+
+DI
+
+Aggiornare di/NetworkModule.kt (o modulo corretto) per bindare:
+
+MikroTikServiceProvider → MikroTikServiceProviderImpl
+
+Refactor immediato
+
+Aggiornare:
+
+PingTargetResolverImpl per dipendere da MikroTikServiceProvider (non chiamare factory direttamente)
+
+Qualsiasi altro componente “Run Test path” che costruisce il service direttamente
+
+Checkpoint:
+
+./gradlew :app:kspDebugKotlin PASS
+
+S6.3 — Estrarre “DHCP Gateway resolution” in un repository dedicato (rimuovere conoscenza DHCP da PingTargetResolver)
+Target nuovo
+
+PingTargetResolver deve risolvere target “logici”, ma la logica DHCP (API, parsing DTO, fallback) deve stare in data layer dedicato.
+
+File da creare
+
+app/src/main/java/com/app/miklink/core/data/repository/test/DhcpGatewayRepository.kt
+
+package com.app.miklink.core.data.repository.test
+
+import com.app.miklink.core.data.local.room.v1.model.ProbeConfig
+
+interface DhcpGatewayRepository {
+    suspend fun getGatewayForInterface(
+        probe: ProbeConfig,
+        interfaceName: String
+    ): String?
+}
+
+
+Implementazione:
+app/src/main/java/com/app/miklink/data/repositoryimpl/mikrotik/DhcpGatewayRepositoryImpl.kt
+
+Deve usare:
+
+MikroTikServiceProvider.build(probe)
+
+MikroTikApiService.getDhcpClientStatus(interfaceName) (esattamente come oggi)
+
+Deve gestire:
+
+risposta senza gateway → ritorna null
+
+errori rete/API → ritorna null oppure propaga eccezione (scegliere 1 comportamento e documentarlo in KDoc; NON inventare “magie”)
+
+Nessun testo localizzato qui.
+
+Aggiornare PingTargetResolverImpl
+
+Dipendenze:
+
+DhcpGatewayRepository
+
+eventuale altra logica già presente
+
+Rimuovere chiamate dirette a api.getDhcpClientStatus(...)
+
+DI
+
+Aggiornare di/RepositoryModule.kt:
+
+bind DhcpGatewayRepository → DhcpGatewayRepositoryImpl
+
+Checkpoint:
+
+./gradlew :app:kspDebugKotlin PASS
+
+./gradlew testDebugUnitTest PASS
+
+Stop condition (dati mancanti):
+Se il DTO/response di getDhcpClientStatus non è chiaramente determinabile dal codice esistente, fermarsi e chiedere output di un curl “dhcp-client print/monitor” (NO assunzioni).
+
+S6.4 — Eliminare il bridge NetworkConfigRepository -> AppRepository (core feature di S6)
+Obiettivo
+
+NetworkConfigRepositoryImpl deve eseguire direttamente le stesse operazioni che oggi fa AppRepository.applyClientNetworkConfig(...), ma senza chiamarlo.
+
+Step 1 — Congelare comportamento attuale (anti-regressione)
+
+Identificare nel codice AppRepository.applyClientNetworkConfig(...):
+
+file path esatto
+
+firma esatta
+
+sequenza chiamate MikroTik (endpoint/metodi MikroTikApiService)
+
+eventuali scritture DB/Report
+
+Scrivere in docs/migration/S6_network_config_behavior.md:
+
+elenco chiamate in ordine (nome metodo service)
+
+condizioni (es. DHCP vs Static, override etc.)
+
+side effects (scritture DB)
+
+Stop condition: se la logica è troppo “incollata” alla UI o dipende da state globale non riproducibile, fermarsi e chiedere istruzioni (non inventare).
+
+Checkpoint: ./gradlew :app:kspDebugKotlin PASS
+
+Step 2 — Implementazione deterministica in NetworkConfigRepositoryImpl
+Target
+
+app/src/main/java/com/app/miklink/data/repositoryimpl/NetworkConfigRepositoryImpl.kt
+
+Azione
+
+Rimuovere qualsiasi dipendenza da AppRepository.
+
+Dipendenze consentite:
+
+MikroTikServiceProvider
+
+repository Room v1 (ClientRepository / ProbeRepository se necessari)
+
+eventuale RouteManager solo se già esiste e non è legacy (altrimenti implementare le chiamate route direttamente come fa AppRepository, senza creare nuovi layer “a caso”)
+
+Replicare la sequenza chiamate documentata nello step precedente.
+
+Pulizia contratto
+
+Rimuovere @Deprecated da:
+
+core/data/repository/test/NetworkConfigRepository.kt
+
+NetworkConfigRepositoryImpl.kt
+
+Aggiornare KDoc: ora è implementazione reale, non bridge.
+
+Checkpoint:
+
+./gradlew :app:kspDebugKotlin PASS
+
+./gradlew assembleDebug PASS
+
+./gradlew testDebugUnitTest PASS
+
+S6.5 — “Run Test path” deve essere legacy-free (verifica automatica)
+Verifica
+
+Ricerca testuale (PowerShell) in soli file coinvolti nel run test:
+
+RunTestUseCaseImpl
+
+data/teststeps/*
+
+NetworkConfigRepositoryImpl
+
+PingTargetResolverImpl
+
+DhcpGatewayRepositoryImpl
+per:
+
+AppRepository
+
+legacy.
+
+Salvare output in:
+
+docs/migration/S6_legacy_free_audit.txt
+
+Acceptance: nessuna occorrenza nel path Run Test.
+
+Checkpoint: ./gradlew :app:kspDebugKotlin PASS
+
+S6.6 — Test minimi (senza UI automation)
+Obiettivo
+
+Aggiungere test focalizzati sulla nuova architettura senza introdurre UI test complessi.
+
+A) Unit test (mock-driven) per PingTargetResolver + DhcpGatewayRepository
+
+Creare test in:
+
+app/src/test/java/com/app/miklink/core/data/repository/test/DhcpGatewayRepositoryContractTest.kt
+
+app/src/test/java/com/app/miklink/core/data/repository/test/PingTargetResolverContractTest.kt
+
+Linee guida:
+
+mock di MikroTikServiceProvider e MikroTikApiService
+
+verificare:
+
+se gateway mancante → null
+
+se PING_NO_TARGETS generato correttamente già coperto dai test del runner (se presenti)
+
+B) Golden parsing (solo se serve)
+
+Se in S6.3 si è dovuto introdurre/aggiornare DTO per getDhcpClientStatus:
+
+aggiungere fixture reale in:
+
+app/src/test/resources/mikrotik/7.20.5/<nome_fixture_dhcp_status>.json
+
+aggiungere golden test in:
+
+app/src/test/java/com/app/miklink/core/data/remote/mikrotik/golden/DhcpStatusGoldenParsingTest.kt
+
+Stop condition (dati mancanti): se non c’è payload reale, fermarsi e chiedere al maintainer di fornire output curl.
+
+Checkpoint finale: ./gradlew testDebugUnitTest PASS
+
+S6.7 — Documentazione finale + log
+
+Creare/aggiornare:
+
+docs/migration/S6_BASELINE.md
+
+docs/migration/S6_RESULT.md
+
+In S6_RESULT.md includere:
+
+elenco file creati/modificati (path completi)
+
+conferma rimozione @Deprecated su NetworkConfigRepository
+
+conferma: Run Test path legacy-free
+
+esito comandi finali:
+
+:app:kspDebugKotlin
+
+assembleDebug
+
+testDebugUnitTest
+
+Acceptance Criteria EPIC S6
+
+✅ NetworkConfigRepositoryImpl non dipende da AppRepository e NetworkConfigRepository non è più deprecato.
+
+✅ PingTargetResolverImpl non costruisce direttamente il service e non chiama direttamente DHCP API: usa MikroTikServiceProvider + DhcpGatewayRepository.
+
+✅ Nessun riferimento a AppRepository / legacy.* nel path Run Test.
+
+✅ Build + unit test PASS con log salvati in docs/migration/.
+
+---
+
+## EPIC S7 — Rimozione dipendenza da AppRepository dalle feature rimanenti (Dashboard / Probe) + Repository SOLID dedicati
+
+**STATO:** ✅ **COMPLETATA**
+
+**Obiettivo:** Rendere le feature Dashboard e Probe indipendenti da AppRepository, creando repository SOLID dedicati.
+
+**Risultato:** 
+- ✅ Creati `ProbeStatusRepository` e `ProbeConnectivityRepository`
+- ✅ Migrati `DashboardViewModel`, `ProbeEditViewModel`, `ProbeListViewModel`
+- ✅ Rimossa dipendenza non utilizzata da `TestViewModel`
+- ✅ Tutti i metodi AppRepository utilizzati da Dashboard/Probe sono stati deprecati
+- ✅ Build e test PASS (7 test S7, tutti PASSED)
+
+**Documentazione:** 
+- `docs/migration/S7_RESULT.md` - Report completo
+- `docs/migration/S7_AUDIT_FINAL.md` - Audit finale di verifica
+- `docs/migration/S7_viewmodel_dependency_matrix.md` - Matrice dipendenze ViewModel
+- `docs/migration/S7_repository_inventory.md` - Inventario repository
+- `docs/migration/S7_tests_inventory.md` - Inventario test
+
+
 EPIC S5.1 — Hardening S5 (cleanup + rimozione commenti + riduzione dipendenze legacy)
 
 Copia/incolla in roadmap.

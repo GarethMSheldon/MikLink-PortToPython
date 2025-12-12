@@ -36,7 +36,7 @@
 
 Nel processo di refactor (EPICs di refactor), il codice legacy verrà gestito con le seguenti regole:
 
-- Classi candidate a essere marcatte legacy: `AppRepository` e porzioni di `ViewModel` che contengono logica di dominio.
+- Classi candidate a essere marcatte legacy: porzioni di `ViewModel` che contengono logica di dominio (AppRepository rimosso in S8).
 - Non rinominare né spostare file esistenti in `_legacy` all'inizio della EPIC: la migrazione sarà incrementale e pianificata.
 - Quando una parte di codice viene sostituita completamente da una nuova implementazione SOLID, la vecchia classe potrà essere rinominata in `NomeClasse_legacy` o spostata sotto `com.app.miklink.legacy/`.
 - Marcare le classi legacy con commenti chiari o `@Deprecated` quando appropriato.
@@ -67,10 +67,11 @@ Questa sezione descrive lo stato della codebase dopo la fase di stabilizzazione 
 
 - **Bridge/core repository**: i bridge introdotti per stabilizzare il DI sono:
 
-    - `com.app.miklink.core.data.repository.AppRepository` (interfaccia bridge)
     - `com.app.miklink.core.data.repository.BackupRepository` (interfaccia bridge)
 
     Le implementazioni concrete legacy continuano a esistere, ma sono fornite tramite `RepositoryModule` con provider espliciti per evitare fragilità nell'annotation processing (KSP/Hilt).
+
+    **Nota:** `AppRepository` è stato completamente rimosso in EPIC S8. Vedi `docs/migration/S8_RESULT.md`.
 
 Questa sezione serve come punto di riferimento per reviewer e per i successivi step di refactor (migrazione completa verso `core/*` potrà essere pianificata in piccoli step seguendo la stessa strategia di verifica: compilazione + KSP + assemble + test dopo ogni modifica).
 
@@ -133,8 +134,9 @@ fun provideRetrofitBuilder(moshi: Moshi): Retrofit.Builder {
 }
 ```
 
-#### **Per-Probe Service** (AppRepository)
+#### **Per-Probe Service** (MikroTikServiceProvider - S6)
 ```kotlin
+// Usa MikroTikServiceProvider per costruire il service con WiFi network binding
 private suspend fun buildServiceFor(probe: ProbeConfig): MikroTikApiService {
     val protocol = if (probe.isHttps) "https://" else "http://"
     val baseUrl = "$protocol${probe.ipAddress}/"
@@ -278,11 +280,11 @@ data class TracerouteHop(
 
 ---
 
-## 💼 BUSINESS LOGIC LAYER (AppRepository → Repository SOLID)
+## 💼 BUSINESS LOGIC LAYER (Repository SOLID)
 
-### Repository Boundaries (Post-S7)
+### Repository Boundaries (Post-S8)
 
-Con l'EPIC S7, AppRepository è stato sostituito da repository SOLID dedicati seguendo i principi di Clean Architecture:
+Con le EPIC S5-S8, AppRepository è stato completamente rimosso e sostituito da repository SOLID dedicati seguendo i principi di Clean Architecture:
 
 #### **Repository per Test Execution** (S5/S6)
 - **MikroTikTestRepository**: Operazioni di test (cable test, link status, neighbors, ping, speed test)
@@ -306,53 +308,18 @@ Con l'EPIC S7, AppRepository è stato sostituito da repository SOLID dedicati se
 #### **Service Provider** (S6)
 - **MikroTikServiceProvider**: Centralizza creazione MikroTikApiService con WiFi network binding
 
-### AppRepository (Legacy - Deprecato)
+### AppRepository (Rimosso - EPIC S8)
 
-**Stato:** I metodi utilizzati da Dashboard/Probe sono stati deprecati e migrati a repository dedicati.
+**Stato:** ✅ **RIMOSSO COMPLETAMENTE** - EPIC S8 completata
 
-**Metodi Deprecati:**
-- `currentProbe` → Usa `ProbeConfigDao.getSingleProbe()`
-- `observeProbeStatus()` → Usa `ProbeStatusRepository.observeProbeStatus()`
-- `observeAllProbesWithStatus()` → Usa `ProbeStatusRepository.observeAllProbesWithStatus()`
-- `checkProbeConnection()` → Usa `ProbeConnectivityRepository.checkProbeConnection()`
-- `applyClientNetworkConfig()` → Usa `NetworkConfigRepository.applyClientNetworkConfig()`
-- Metodi test → Usa `RunTestUseCase + Step implementations`
+**Nota Storica:** AppRepository è stato completamente rimosso dalla codebase in EPIC S8. Tutti i metodi sono stati migrati a repository SOLID dedicati nelle EPIC S5-S7:
 
-**Core Responsibilities (Legacy - per riferimento)**
+- **Network Configuration** → `NetworkConfigRepository` (S6)
+- **Test Execution** → `RunTestUseCase + Step implementations` (S5)
+- **Probe Management** → `ProbeStatusRepository`, `ProbeConnectivityRepository` (S7)
+- **Data Access** → Repository dedicati (`ClientRepository`, `ProbeRepository`, ecc.) (S3-S5)
 
-1. **Network Configuration** (Migrato a NetworkConfigRepository - S6)
-   - `applyClientNetworkConfig()`: configura DHCP o Static su interfaccia test
-   - `getCurrentInterfaceIpConfig()`: legge config attuale
-   - `resolveTargetIp()`: risolve "DHCP_GATEWAY" in IP effettivo
-
-2. **Test Execution** (Migrato a RunTestUseCase + Steps - S5)
-   - `runCableTest()`: TDR cable test
-   - `getLinkStatus()`: stato e velocità link
-   - `getNeighborsForInterface()`: LLDP/CDP discovery
-   - `runPing()`: ping con count configurabile
-   - `runTraceroute()`: traceroute con max-hops e timeout
-
-3. **Probe Management** (Migrato a ProbeStatusRepository/ProbeConnectivityRepository - S7)
-   - `checkProbeConnection()`: verifica raggiungibilità e board-name
-   - `observeProbeStatus()`: polling stato online/offline (15s interval)
-   - `observeAllProbesWithStatus()`: polling multi-sonda
-
-### Key Methods (Post-Refactor)
-
-```kotlin
-@Singleton
-class AppRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
-    val clientDao: ClientDao,
-    val probeConfigDao: ProbeConfigDao,
-    val testProfileDao: TestProfileDao,
-    val reportDao: ReportDao,
-    private val retrofitBuilder: Retrofit.Builder,
-    private val baseOkHttpClient: OkHttpClient
-) {
-    
-    // NUOVO: sonda unica
-    val currentProbe: Flow<ProbeConfig?> = probeConfigDao.getSingleProbe()
+Per dettagli sulla migrazione, vedere `docs/migration/S8_RESULT.md`.
     
     // MODIFICATO: accept count parameter
     suspend fun runPing(
@@ -472,7 +439,7 @@ class TestViewModel @Inject constructor(
     private val probeDao: ProbeConfigDao,
     private val profileDao: TestProfileDao,
     private val reportDao: ReportDao,
-    private val repository: AppRepository,
+    private val runTestUseCase: RunTestUseCase,
     private val moshi: Moshi
 ) : ViewModel() {
     

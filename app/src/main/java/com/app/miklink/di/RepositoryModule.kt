@@ -110,34 +110,6 @@ abstract class RepositoryModule {
 
         @Provides
         fun provideContentResolverFileReader(@ApplicationContext context: Context): FileReader = ContentResolverFileReader(context)
-
-        @Provides
-        @Singleton
-        fun provideAppRepositoryLegacy(
-            @ApplicationContext context: Context,
-            clientDao: ClientDao,
-            probeConfigDao: ProbeConfigDao,
-            testProfileDao: TestProfileDao,
-            reportDao: ReportDao,
-            serviceFactory: com.app.miklink.core.data.remote.mikrotik.infra.MikroTikServiceFactory,
-            routeManager: RouteManager,
-            userPreferencesRepository: com.app.miklink.data.repository.UserPreferencesRepository
-        ): com.app.miklink.data.repository.AppRepository_legacy {
-            return com.app.miklink.data.repository.AppRepository_legacy(
-                context,
-                clientDao,
-                probeConfigDao,
-                testProfileDao,
-                reportDao,
-                serviceFactory,
-                routeManager,
-                userPreferencesRepository
-            )
-        }
-
-        @Provides
-        @Singleton
-        fun provideAppRepositoryBridge(legacy: com.app.miklink.data.repository.AppRepository_legacy): com.app.miklink.core.data.repository.AppRepository = legacy
         
         @Provides
         @Singleton

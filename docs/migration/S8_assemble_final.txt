@@ -1,0 +1,341 @@
+﻿> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+
+> Task :app:compileDebugKotlin
+.\gradlew : exception: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+In C:\Users\dot\AppData\Local\Temp\ps-script-24c1649c-cc2e-482a-8d23-05434a225151.ps1:77 car:48
++ ... t\AndroidStudioProjects\MikLink; .\gradlew assembleDebug 2>&1 | Out-F ...
++                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (exception: WARN...has been called:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+exception: WARNING: sun.misc.Unsafe::objectFieldOffset has been called by 
+org.jetbrains.kotlin.com.intellij.util.containers.Unsafe (file:/C:/Users/dot/.gradle/caches/modules-2/files-2.1/org.jet
+brains.kotlin/kotlin-compiler-embeddable/2.1.0/988bf980588bbbcfa1ba19c1ffd7aa869b335a31/kotlin-compiler-embeddable-2.1.
+0.jar)
+exception: WARNING: Please consider reporting this to the maintainers of class 
+org.jetbrains.kotlin.com.intellij.util.containers.Unsafe
+exception: WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+exception: app\src\main\java\com\app\miklink\core\data\repository\probe\ProbeConnectivityRepository.kt:4:45: error: 
+unresolved reference 'ProbeCheckResult'.
+exception: import com.app.miklink.core.data.repository.ProbeCheckResult
+exception:                                             ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\data\repository\probe\ProbeConnectivityRepository.kt:30:59: error: 
+unresolved reference 'ProbeCheckResult'.
+exception:     suspend fun checkProbeConnection(probe: ProbeConfig): ProbeCheckResult
+exception:                                                           ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\data\repository\probe\ProbeStatusRepository.kt:4:45: error: 
+unresolved reference 'ProbeStatusInfo'.
+exception: import com.app.miklink.core.data.repository.ProbeStatusInfo
+exception:                                             ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\data\repository\probe\ProbeStatusRepository.kt:39:49: error: 
+unresolved reference 'ProbeStatusInfo'.
+exception:     fun observeAllProbesWithStatus(): Flow<List<ProbeStatusInfo>>
+exception:                                                 ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\data\repository\test\NetworkConfigRepository.kt:5:45: error: 
+unresolved reference 'NetworkConfigFeedback'.
+exception: import com.app.miklink.core.data.repository.NetworkConfigFeedback
+exception:                                             ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\data\repository\test\NetworkConfigRepository.kt:27:8: error: 
+unresolved reference 'NetworkConfigFeedback'.
+exception:     ): NetworkConfigFeedback
+exception:        ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:7:45: error: unresolved 
+reference 'NetworkConfigFeedback'.
+exception: import com.app.miklink.core.data.repository.NetworkConfigFeedback
+exception:                                             ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:103:58: error: unresolved 
+reference 'NetworkConfigFeedback'.
+exception:                     val feedback = networkResult.data as NetworkConfigFeedback
+exception:                                                          ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:438:42: error: unresolved 
+reference 'NetworkConfigFeedback'.
+exception:     private fun networkDetails(feedback: NetworkConfigFeedback): Map<String, String> =
+exception:                                          ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:440:32: error: unresolved 
+reference 'mode'.
+exception:             "mode" to feedback.mode,
+exception:                                ^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:441:37: error: unresolved 
+reference 'interfaceName'.
+exception:             "interface" to feedback.interfaceName,
+exception:                                     ^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:442:36: error: unresolved 
+reference 'address'.
+exception:             "address" to (feedback.address ?: "-"),
+exception:                                    ^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:443:36: error: unresolved 
+reference 'gateway'.
+exception:             "gateway" to (feedback.gateway ?: "-"),
+exception:                                    ^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:444:32: error: unresolved 
+reference 'dns'.
+exception:             "dns" to (feedback.dns ?: "-"),
+exception:                                ^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:445:35: error: unresolved 
+reference 'message'.
+exception:             "message" to feedback.message
+exception:                                   ^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:448:38: error: unresolved 
+reference 'NetworkConfigFeedback'.
+exception:     private fun networkRaw(feedback: NetworkConfigFeedback): Map<String, Any?> =
+exception:                                      ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:450:32: error: unresolved 
+reference 'mode'.
+exception:             "mode" to feedback.mode,
+exception:                                ^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:451:37: error: unresolved 
+reference 'interfaceName'.
+exception:             "interface" to feedback.interfaceName,
+exception:                                     ^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:452:35: error: unresolved 
+reference 'address'.
+exception:             "address" to feedback.address,
+exception:                                   ^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:453:35: error: unresolved 
+reference 'gateway'.
+exception:             "gateway" to feedback.gateway,
+exception:                                   ^^^^^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:454:31: error: unresolved 
+reference 'dns'.
+exception:             "dns" to feedback.dns,
+exception:                               ^^^
+exception: app\src\main\java\com\app\miklink\core\domain\usecase\test\RunTestUseCaseImpl.kt:455:35: error: unresolved 
+reference 'message'.
+exception:             "message" to feedback.message
+exception:                                   ^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\NetworkConfigRepositoryImpl.kt:8:45: error: 
+unresolved reference 'NetworkConfigFeedback'.
+exception: import com.app.miklink.core.data.repository.NetworkConfigFeedback
+exception:                                             ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\NetworkConfigRepositoryImpl.kt:32:8: error: 
+unresolved reference 'NetworkConfigFeedback'.
+exception:     ): NetworkConfigFeedback {
+exception:        ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\NetworkConfigRepositoryImpl.kt:54:24: error: 
+unresolved reference 'NetworkConfigFeedback'.
+exception:                 return NetworkConfigFeedback(
+exception:                        ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\NetworkConfigRepositoryImpl.kt:108:20: error: 
+unresolved reference 'NetworkConfigFeedback'.
+exception:             return NetworkConfigFeedback(
+exception:                    ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\NetworkConfigRepositoryImpl.kt:146:20: error: 
+unresolved reference 'NetworkConfigFeedback'.
+exception:             return NetworkConfigFeedback(
+exception:                    ^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeConnectivityRepositoryImpl.kt:6:45: 
+error: unresolved reference 'ProbeCheckResult'.
+exception: import com.app.miklink.core.data.repository.ProbeCheckResult
+exception:                                             ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeConnectivityRepositoryImpl.kt:25:68: 
+error: unresolved reference 'ProbeCheckResult'.
+exception:     override suspend fun checkProbeConnection(probe: ProbeConfig): ProbeCheckResult =
+exception:                                                                    ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeConnectivityRepositoryImpl.kt:26:9: 
+error: cannot infer type for this parameter. Please specify it explicitly.
+exception:         withContext(Dispatchers.IO) {
+exception:         ^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeConnectivityRepositoryImpl.kt:26:9: 
+error: not enough information to infer type argument for 'T'.
+exception:         withContext(Dispatchers.IO) {
+exception:         ^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeConnectivityRepositoryImpl.kt:27:13: 
+error: not enough information to infer type argument for 'K'.
+exception:             try {
+exception:             ^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeConnectivityRepositoryImpl.kt:38:17: 
+error: unresolved reference 'ProbeCheckResult'.
+exception:                 ProbeCheckResult.Success(boardName, interfaces)
+exception:                 ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeConnectivityRepositoryImpl.kt:41:17: 
+error: unresolved reference 'ProbeCheckResult'.
+exception:                 ProbeCheckResult.Error(e.message ?: 
+context.getString(R.string.error_probe_connection_unknown))
+exception:                 ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:7:45: error: 
+unresolved reference 'ProbeStatusInfo'.
+exception: import com.app.miklink.core.data.repository.ProbeStatusInfo
+exception:                                             ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:49:48: error: 
+return type of 'observeAllProbesWithStatus' is not a subtype of the return type of the overridden member 'fun 
+observeAllProbesWithStatus(): Flow<List<ERROR CLASS: Symbol not found for ProbeStatusInfo>>' defined in 
+'com/app/miklink/core/data/repository/probe/ProbeStatusRepository'.
+exception:     override fun observeAllProbesWithStatus(): Flow<List<ProbeStatusInfo>> =
+exception:                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:49:58: error: 
+unresolved reference 'ProbeStatusInfo'.
+exception:     override fun observeAllProbesWithStatus(): Flow<List<ProbeStatusInfo>> =
+exception:                                                          ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:53:56: error: 
+cannot infer type for this parameter. Please specify it explicitly.
+exception:             if (probes.isEmpty()) return@flatMapLatest flowOf(emptyList())
+exception:                                                        ^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:53:56: error: 
+argument type mismatch: actual type is 'kotlinx.coroutines.flow.Flow<T>', but 'kotlinx.coroutines.flow.Flow<R>' was 
+expected.
+exception:             if (probes.isEmpty()) return@flatMapLatest flowOf(emptyList())
+exception:                                                        ^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:53:63: error: 
+cannot infer type for this parameter. Please specify it explicitly.
+exception:             if (probes.isEmpty()) return@flatMapLatest flowOf(emptyList())
+exception:                                                               ^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:54:13: error: 
+argument type mismatch: actual type is 'kotlinx.coroutines.flow.Flow<R#2 (type parameter of fun <T, R> 
+Flow<T>.map(crossinline transform: suspend (@ParameterName(...) T) -> R): Flow<R>)>', but 
+'kotlinx.coroutines.flow.Flow<R#1 (type parameter of fun <T, R> Flow<T>.flatMapLatest(crossinline transform: suspend 
+(@ParameterName(...) T) -> Flow<R>): Flow<R>)>' was expected.
+exception:             tickerFlow(interval).map {
+exception:             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:54:34: error: 
+cannot infer type for this parameter. Please specify it explicitly.
+exception:             tickerFlow(interval).map {
+exception:                                  ^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:55:17: error: 
+cannot infer type for this parameter. Please specify it explicitly.
+exception:                 withContext(Dispatchers.IO) {
+exception:                 ^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:56:28: error: 
+cannot infer type for this parameter. Please specify it explicitly.
+exception:                     probes.map { probe ->
+exception:                            ^^^
+exception: app\src\main\java\com\app\miklink\data\repositoryimpl\mikrotik\ProbeStatusRepositoryImpl.kt:65:25: error: 
+unresolved reference 'ProbeStatusInfo'.
+exception:                         ProbeStatusInfo(probe, isOnline)
+exception:                         ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditUiState.kt:3:45: error: unresolved reference 
+'ProbeCheckResult'.
+exception: import com.app.miklink.core.data.repository.ProbeCheckResult
+exception:                                             ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditUiState.kt:13:27: error: unresolved reference 
+'ProbeCheckResult'.
+exception:     val probeCheckResult: ProbeCheckResult? = null
+exception:                           ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditViewModel.kt:8:45: error: unresolved reference 
+'ProbeCheckResult'.
+exception: import com.app.miklink.core.data.repository.ProbeCheckResult
+exception:                                             ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditViewModel.kt:115:20: error: unresolved reference 
+'ProbeCheckResult'.
+exception:                 is ProbeCheckResult.Success -> {
+exception:                    ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditViewModel.kt:117:50: error: unresolved reference 
+'interfaces'.
+exception:                     testInterface.value = result.interfaces.firstOrNull() ?: ""
+exception:                                                  ^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditViewModel.kt:118:81: error: unresolved reference 
+'boardName'.
+exception:                     _verificationState.value = VerificationState.Success(result.boardName, 
+result.interfaces)
+exception:                                                                                 ^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditViewModel.kt:118:99: error: unresolved reference 
+'interfaces'.
+exception:                     _verificationState.value = VerificationState.Success(result.boardName, 
+result.interfaces)
+exception:                                                                                                   ^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditViewModel.kt:120:20: error: unresolved reference 
+'ProbeCheckResult'.
+exception:                 is ProbeCheckResult.Error -> {
+exception:                    ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeEditViewModel.kt:122:79: error: unresolved reference 
+'message'.
+exception:                     _verificationState.value = VerificationState.Error(result.message)
+exception:                                                                               ^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListScreen.kt:142:23: error: argument type mismatch: actual 
+type is 'kotlin.collections.List<ERROR CLASS: Symbol not found for ProbeStatusInfo>', but 'kotlin.Int' was expected.
+exception:                 items(probesWithStatus, key = { it.probe.probeId }) { probeInfo ->
+exception:                       ^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListScreen.kt:142:52: error: unresolved reference 'probe'.
+exception:                 items(probesWithStatus, key = { it.probe.probeId }) { probeInfo ->
+exception:                                                    ^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListScreen.kt:143:21: error: @Composable invocations can 
+only happen from the context of a @Composable function
+exception:                     AnimatedVisibility(
+exception:                     ^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListScreen.kt:149:88: error: unresolved reference 'probe'.
+exception:                             onClick = { navController.navigate("probe_edit/${probeInfo.probe.probeId}") }
+exception:                                                                                        ^^^^^
+
+> Task :app:compileDebugKotlin FAILED
+
+[Incubating] Problems report is available at: file:///C:/Users/dot/AndroidStudioProjects/MikLink/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.1.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+31 actionable tasks: 1 executed, 30 up-to-date
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListScreen.kt:160:53: error: unresolved reference 
+'ProbeStatusInfo'.
+exception:     probeInfo: com.app.miklink.core.data.repository.ProbeStatusInfo,
+exception:                                                     ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListScreen.kt:163:27: error: unresolved reference 'probe'.
+exception:     val probe = probeInfo.probe
+exception:                           ^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListScreen.kt:164:30: error: unresolved reference 
+'isOnline'.
+exception:     val isOnline = probeInfo.isOnline
+exception:                              ^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListViewModel.kt:5:45: error: unresolved reference 
+'ProbeStatusInfo'.
+exception: import com.app.miklink.core.data.repository.ProbeStatusInfo
+exception:                                             ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListViewModel.kt:18:32: error: unresolved reference 
+'ProbeStatusInfo'.
+exception:     val probes: StateFlow<List<ProbeStatusInfo>> = probeStatusRepository.observeAllProbesWithStatus()
+exception:                                ^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\app\miklink\ui\probe\ProbeListViewModel.kt:22:28: error: cannot infer type for this 
+parameter. Please specify it explicitly.
+exception:             initialValue = emptyList()
+exception:                            ^^^^^^^^^
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing 
+org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to generate a Build Scan (Powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 8s
