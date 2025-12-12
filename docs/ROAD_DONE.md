@@ -1,3 +1,149 @@
+EPIC S5.1 — Hardening S5 (cleanup + rimozione commenti + riduzione dipendenze legacy)
+
+Copia/incolla in roadmap.
+
+Obiettivo
+
+Eliminare drift post-S5: niente blocchi commentati, ridurre dipendenze residue da AppRepository, rendere deterministico l’output del runner (sections + rawResultsJson) senza cambiare UI/UX.
+
+Vincoli
+
+❌ Nessun cambiamento UI/UX (progress + pass/fail invariati).
+
+❌ Nessun cambiamento a endpoint/payload MikroTik.
+
+✅ Solo cleanup strutturale e mapping deterministico.
+
+S5.1.0 — Preflight
+
+./gradlew :app:kspDebugKotlin
+
+./gradlew assembleDebug
+
+./gradlew testDebugUnitTest
+
+Scrivere docs/migration/S5_1_BASELINE.md con esito.
+
+S5.1.1 — Rimozione “commented legacy code” da TestViewModel
+
+Target: ui/test/TestViewModel.kt
+
+Eliminare completamente i blocchi commentati “legacy orchestration”.
+
+Se serve conservazione storica:
+
+creare file TestViewModel_legacy.kt in percorso legacy concordato oppure usare suffisso _legacy (in base alla policy del progetto),
+
+ma mai tenere 600+ linee commentate nel file attivo.
+
+Checkpoint: 3 comandi build PASS.
+
+S5.1.2 — NetworkConfigRepository bridge: renderlo esplicito e tracciabile
+
+Target:
+
+core/data/repository/test/NetworkConfigRepository.kt
+
+data/repositoryimpl/NetworkConfigRepositoryImpl.kt
+
+Aggiungere KDoc chiaro:
+
+“Temporary bridge to AppRepository; will be removed in EPIC S6 (or next).”
+
+Marcare metodi bridge con @Deprecated("Temporary bridge: replace with dedicated implementation").
+
+Se l’impl dipende da AppRepository, documentare esattamente quali metodi usa.
+
+Checkpoint: build PASS.
+
+S5.1.3 — Estrarre resolveTargetIp fuori da AppRepository
+
+Target attuale (da S5 Result):
+
+PingStep “temporaneamente” usa resolveTargetIp.
+
+Nuovo contratto
+
+Creare:
+
+core/data/repository/test/PingTargetResolver.kt
+
+suspend fun resolve(client: Client, profile: TestProfile, input: String): String
+
+Implementazione
+
+Creare:
+
+data/repositoryimpl/PingTargetResolverImpl.kt
+
+Implementazione deve replicare la logica corrente (senza ottimizzare).
+
+Aggiornare:
+
+PingStepImpl per usare PingTargetResolver invece di AppRepository.
+
+Checkpoint: build PASS.
+
+S5.1.4 — Rendere deterministico rawResultsJson
+
+Target: RunTestUseCaseImpl.kt
+
+Definire una struttura JSON minima e stabile (anche “v1”), ad esempio:
+
+timestamp
+
+plan (clientId/probeId/profileId/socketId)
+
+steps array con: name, status, data (se presente), error (se presente)
+
+⚠️ Vincolo: non inventare campi “di rete” non disponibili. Usa solo ciò che già hai in StepResult/DTO.
+
+Serializzare con Moshi o altro già presente in progetto (senza introdurre nuove librerie).
+
+Popolare TestOutcome.rawResultsJson sempre (anche in fail: almeno con steps eseguiti).
+
+Checkpoint: build PASS.
+
+S5.1.5 — Mapping minimo StepResult → TestSectionResult coerente
+
+Target:
+
+core/domain/test/model/TestSectionResult.kt
+
+RunTestUseCaseImpl.kt (costruzione outcome)
+
+Definire regole minime:
+
+ogni Step produce 1 TestSectionResult con title, status, details.
+
+NON cambiare UI: adattare l’output a ciò che la UI già si aspetta oggi (se servono campi, aggiungerli al model in modo compatibile).
+
+Checkpoint: build PASS.
+
+S5.1.6 — Documentazione finale
+
+Creare:
+
+docs/migration/S5_1_RESULT.md con:
+
+file modificati/creati (path completi),
+
+cosa è stato rimosso (commenti legacy),
+
+conferma che PingStep non dipende più da AppRepository,
+
+comandi finali PASS.
+
+Criteri di accettazione S5.1
+
+Nessun blocco legacy commentato nei file attivi.
+
+PingStep non usa più AppRepository.
+
+rawResultsJson è sempre popolato in modo deterministico.
+
+Build PASS (KSP/assemble/unit).
+
 
 
 EPIC S5 — Decomposizione AppRepository + UseCase “Run Test” (SOLID, no quick-fix)

@@ -31,6 +31,10 @@ import com.app.miklink.core.data.repository.test.TestProfileRepository
 import com.app.miklink.core.data.repository.test.MikroTikTestRepository
 import com.app.miklink.core.data.repository.test.NetworkConfigRepository
 import com.app.miklink.core.data.repository.test.PingTargetResolver
+import com.app.miklink.core.data.repository.test.DhcpGatewayRepository
+import com.app.miklink.core.data.remote.mikrotik.service.MikroTikServiceProvider
+import com.app.miklink.data.remote.mikrotik.MikroTikServiceProviderImpl
+import com.app.miklink.data.repositoryimpl.mikrotik.DhcpGatewayRepositoryImpl
 import com.app.miklink.data.repositoryimpl.roomv1.RoomV1ClientRepository
 import com.app.miklink.data.repositoryimpl.roomv1.RoomV1ProbeRepository
 import com.app.miklink.data.repositoryimpl.roomv1.RoomV1ReportRepository
@@ -79,6 +83,14 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPingTargetResolver(impl: PingTargetResolverImpl): PingTargetResolver
+
+    @Binds
+    @Singleton
+    abstract fun bindMikroTikServiceProvider(impl: MikroTikServiceProviderImpl): MikroTikServiceProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindDhcpGatewayRepository(impl: DhcpGatewayRepositoryImpl): DhcpGatewayRepository
 
     companion object {
         @Provides

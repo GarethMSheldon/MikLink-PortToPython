@@ -1,0 +1,7 @@
+﻿
+app\src\main\java\com\app\miklink\data\repositoryimpl\NetworkConfigRepositoryImpl.kt:19: * Esegue direttamente le 
+operazioni di configurazione rete senza dipendere da AppRepository.
+app\src\main\java\com\app\miklink\data\repositoryimpl\NetworkConfigRepositoryImpl.kt:20: * Replica la logica di 
+AppRepository.applyClientNetworkConfig mantenendo lo stesso comportamento.
+
+
