@@ -5,8 +5,8 @@ import com.app.miklink.ui.common.BaseEditViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.data.local.room.v1.dao.ProbeConfigDao
 import com.app.miklink.core.data.local.room.v1.model.ProbeConfig
-import com.app.miklink.core.data.repository.AppRepository
 import com.app.miklink.core.data.repository.ProbeCheckResult
+import com.app.miklink.core.data.repository.probe.ProbeConnectivityRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,7 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ProbeEditViewModel @Inject constructor(
     private val probeConfigDao: ProbeConfigDao,
-    private val repository: AppRepository,
+    private val probeConnectivityRepository: ProbeConnectivityRepository,
     savedStateHandle: SavedStateHandle
 ) : BaseEditViewModel(savedStateHandle, "probeId") {
 
@@ -111,7 +111,7 @@ class ProbeEditViewModel @Inject constructor(
             _verificationState.value = VerificationState.Loading
             val tempProbe = connectionDetailsFlow.first()
 
-            when (val result = repository.checkProbeConnection(tempProbe)) {
+            when (val result = probeConnectivityRepository.checkProbeConnection(tempProbe)) {
                 is ProbeCheckResult.Success -> {
                     _isOnline.value = true
                     testInterface.value = result.interfaces.firstOrNull() ?: ""

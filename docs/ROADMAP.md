@@ -544,3 +544,25 @@ Acceptance Criteria EPIC S6
 ✅ Nessun riferimento a AppRepository / legacy.* nel path Run Test.
 
 ✅ Build + unit test PASS con log salvati in docs/migration/.
+
+---
+
+## EPIC S7 — Rimozione dipendenza da AppRepository dalle feature rimanenti (Dashboard / Probe) + Repository SOLID dedicati
+
+**STATO:** ✅ **COMPLETATA**
+
+**Obiettivo:** Rendere le feature Dashboard e Probe indipendenti da AppRepository, creando repository SOLID dedicati.
+
+**Risultato:** 
+- ✅ Creati `ProbeStatusRepository` e `ProbeConnectivityRepository`
+- ✅ Migrati `DashboardViewModel`, `ProbeEditViewModel`, `ProbeListViewModel`
+- ✅ Rimossa dipendenza non utilizzata da `TestViewModel`
+- ✅ Tutti i metodi AppRepository utilizzati da Dashboard/Probe sono stati deprecati
+- ✅ Build e test PASS (7 test S7, tutti PASSED)
+
+**Documentazione:** 
+- `docs/migration/S7_RESULT.md` - Report completo
+- `docs/migration/S7_AUDIT_FINAL.md` - Audit finale di verifica
+- `docs/migration/S7_viewmodel_dependency_matrix.md` - Matrice dipendenze ViewModel
+- `docs/migration/S7_repository_inventory.md` - Inventario repository
+- `docs/migration/S7_tests_inventory.md` - Inventario test

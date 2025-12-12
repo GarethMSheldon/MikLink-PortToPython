@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.data.local.room.v1.dao.*
 import com.app.miklink.core.data.local.room.v1.model.*
 import com.app.miklink.core.data.remote.mikrotik.dto.SpeedTestResult
-import com.app.miklink.core.data.repository.AppRepository
 import com.app.miklink.core.domain.test.model.TestEvent
 import com.app.miklink.core.domain.test.model.TestPlan
 import com.app.miklink.core.domain.usecase.test.RunTestUseCase
@@ -34,7 +33,6 @@ class TestViewModel @Inject constructor(
     private val probeDao: ProbeConfigDao,
     private val profileDao: TestProfileDao,
     private val reportDao: ReportDao,
-    private val repository: AppRepository, // TODO: Rimuovere quando completamente migrato
     private val moshi: Moshi,
     private val runTestUseCase: RunTestUseCase
 ) : ViewModel() {

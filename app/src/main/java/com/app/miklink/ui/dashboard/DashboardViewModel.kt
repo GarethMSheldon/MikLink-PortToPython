@@ -5,10 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.data.local.room.v1.dao.ClientDao
 import com.app.miklink.core.data.local.room.v1.dao.ReportDao
 import com.app.miklink.core.data.local.room.v1.dao.TestProfileDao
+import com.app.miklink.core.data.local.room.v1.dao.ProbeConfigDao
 import com.app.miklink.core.data.local.room.v1.model.Client
 import com.app.miklink.core.data.local.room.v1.model.ProbeConfig
 import com.app.miklink.core.data.local.room.v1.model.TestProfile
-import com.app.miklink.core.data.repository.AppRepository
+import com.app.miklink.core.data.repository.probe.ProbeStatusRepository
 import com.app.miklink.data.repository.IdNumberingStrategy
 import com.app.miklink.data.repository.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +24,8 @@ class DashboardViewModel @Inject constructor(
     clientDao: ClientDao,
     testProfileDao: TestProfileDao,
     private val reportDao: ReportDao,
-    private val repository: AppRepository,
+    probeConfigDao: ProbeConfigDao,
+    private val probeStatusRepository: ProbeStatusRepository,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -32,7 +34,7 @@ class DashboardViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // MODIFICATO: sonda unica invece di lista
-    val currentProbe: StateFlow<ProbeConfig?> = repository.currentProbe
+    val currentProbe: StateFlow<ProbeConfig?> = probeConfigDao.getSingleProbe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val profiles: StateFlow<List<TestProfile>> = testProfileDao.getAllProfiles()
@@ -48,7 +50,7 @@ class DashboardViewModel @Inject constructor(
         if (probe == null) {
             flowOf(false)
         } else {
-            repository.observeProbeStatus(probe)
+            probeStatusRepository.observeProbeStatus(probe)
         }
     }.stateIn(
         scope = viewModelScope,

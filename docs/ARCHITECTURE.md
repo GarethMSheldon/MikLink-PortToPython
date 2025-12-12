@@ -278,26 +278,64 @@ data class TracerouteHop(
 
 ---
 
-## 💼 BUSINESS LOGIC LAYER (AppRepository)
+## 💼 BUSINESS LOGIC LAYER (AppRepository → Repository SOLID)
 
-### Core Responsibilities
+### Repository Boundaries (Post-S7)
 
-1. **Network Configuration**
+Con l'EPIC S7, AppRepository è stato sostituito da repository SOLID dedicati seguendo i principi di Clean Architecture:
+
+#### **Repository per Test Execution** (S5/S6)
+- **MikroTikTestRepository**: Operazioni di test (cable test, link status, neighbors, ping, speed test)
+- **NetworkConfigRepository**: Configurazione rete (DHCP/Static)
+- **DhcpGatewayRepository**: Risoluzione gateway DHCP
+- **PingTargetResolver**: Risoluzione target ping (incluso DHCP_GATEWAY)
+
+#### **Repository per Probe Management** (S7)
+- **ProbeStatusRepository**: Monitoraggio stato online/offline delle sonde
+  - `observeProbeStatus(probe)`: Polling periodico singola sonda
+  - `observeAllProbesWithStatus()`: Polling periodico tutte le sonde
+- **ProbeConnectivityRepository**: Verifica connessione e validazione configurazione
+  - `checkProbeConnection(probe)`: Verifica one-shot connessione e info hardware
+
+#### **Repository per Data Access** (S3-S5)
+- **ClientRepository**: Accesso dati Client (Room v1)
+- **ProbeRepository**: Accesso dati ProbeConfig (Room v1)
+- **TestProfileRepository**: Accesso dati TestProfile (Room v1)
+- **ReportRepository**: Accesso dati Report (Room v1)
+
+#### **Service Provider** (S6)
+- **MikroTikServiceProvider**: Centralizza creazione MikroTikApiService con WiFi network binding
+
+### AppRepository (Legacy - Deprecato)
+
+**Stato:** I metodi utilizzati da Dashboard/Probe sono stati deprecati e migrati a repository dedicati.
+
+**Metodi Deprecati:**
+- `currentProbe` → Usa `ProbeConfigDao.getSingleProbe()`
+- `observeProbeStatus()` → Usa `ProbeStatusRepository.observeProbeStatus()`
+- `observeAllProbesWithStatus()` → Usa `ProbeStatusRepository.observeAllProbesWithStatus()`
+- `checkProbeConnection()` → Usa `ProbeConnectivityRepository.checkProbeConnection()`
+- `applyClientNetworkConfig()` → Usa `NetworkConfigRepository.applyClientNetworkConfig()`
+- Metodi test → Usa `RunTestUseCase + Step implementations`
+
+**Core Responsibilities (Legacy - per riferimento)**
+
+1. **Network Configuration** (Migrato a NetworkConfigRepository - S6)
    - `applyClientNetworkConfig()`: configura DHCP o Static su interfaccia test
    - `getCurrentInterfaceIpConfig()`: legge config attuale
    - `resolveTargetIp()`: risolve "DHCP_GATEWAY" in IP effettivo
 
-2. **Test Execution**
+2. **Test Execution** (Migrato a RunTestUseCase + Steps - S5)
    - `runCableTest()`: TDR cable test
    - `getLinkStatus()`: stato e velocità link
    - `getNeighborsForInterface()`: LLDP/CDP discovery
    - `runPing()`: ping con count configurabile
    - `runTraceroute()`: traceroute con max-hops e timeout
 
-3. **Probe Management**
+3. **Probe Management** (Migrato a ProbeStatusRepository/ProbeConnectivityRepository - S7)
    - `checkProbeConnection()`: verifica raggiungibilità e board-name
    - `observeProbeStatus()`: polling stato online/offline (15s interval)
-   - `observeAllProbesWithStatus()`: polling multi-sonda (deprecato post-refactor)
+   - `observeAllProbesWithStatus()`: polling multi-sonda
 
 ### Key Methods (Post-Refactor)
 
@@ -374,7 +412,7 @@ Follow-up consigliati:
 3. Se necessario, aggiungere ulteriori test di integrazione per verificare il contenuto dei PDF prodotti (regressioni sui layout/metadata).
 4. ✅ DTO consolidation: tutte le DTO del layer network (PingRequest/PingResult, CableTestRequest/CableTestResult, NeighborDetail, ProplistRequest, ecc.) sono state centralizzate in `app/src/main/java/com/app/miklink/data/network/dto` (es. `MikroTikDto.kt`) e i riferimenti nel codice aggiornati.
 
-#### **DashboardViewModel** (Post-Refactor)
+#### **DashboardViewModel** (Post-S7)
 ```kotlin
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
@@ -382,14 +420,15 @@ class DashboardViewModel @Inject constructor(
     probeConfigDao: ProbeConfigDao,
     testProfileDao: TestProfileDao,
     private val reportDao: ReportDao,
-    private val repository: AppRepository
+    probeStatusRepository: ProbeStatusRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
     
     val clients: StateFlow<List<Client>> = clientDao.getAllClients()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     
-    // MODIFICATO: single probe instead of list
-    val currentProbe: StateFlow<ProbeConfig?> = repository.currentProbe
+    // MODIFICATO: single probe instead of list, usa ProbeConfigDao direttamente
+    val currentProbe: StateFlow<ProbeConfig?> = probeConfigDao.getSingleProbe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     
     val profiles: StateFlow<List<TestProfile>> = testProfileDao.getAllProfiles()
@@ -401,7 +440,7 @@ class DashboardViewModel @Inject constructor(
     
     val isProbeOnline: StateFlow<Boolean> = currentProbe.flatMapLatest { probe ->
         if (probe == null) flowOf(false)
-        else repository.observeProbeStatus(probe)
+        else probeStatusRepository.observeProbeStatus(probe)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     
     init {

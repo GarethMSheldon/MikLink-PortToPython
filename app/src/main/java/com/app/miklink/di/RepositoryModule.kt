@@ -32,9 +32,13 @@ import com.app.miklink.core.data.repository.test.MikroTikTestRepository
 import com.app.miklink.core.data.repository.test.NetworkConfigRepository
 import com.app.miklink.core.data.repository.test.PingTargetResolver
 import com.app.miklink.core.data.repository.test.DhcpGatewayRepository
+import com.app.miklink.core.data.repository.probe.ProbeStatusRepository
+import com.app.miklink.core.data.repository.probe.ProbeConnectivityRepository
 import com.app.miklink.core.data.remote.mikrotik.service.MikroTikServiceProvider
 import com.app.miklink.data.remote.mikrotik.MikroTikServiceProviderImpl
 import com.app.miklink.data.repositoryimpl.mikrotik.DhcpGatewayRepositoryImpl
+import com.app.miklink.data.repositoryimpl.mikrotik.ProbeStatusRepositoryImpl
+import com.app.miklink.data.repositoryimpl.mikrotik.ProbeConnectivityRepositoryImpl
 import com.app.miklink.data.repositoryimpl.roomv1.RoomV1ClientRepository
 import com.app.miklink.data.repositoryimpl.roomv1.RoomV1ProbeRepository
 import com.app.miklink.data.repositoryimpl.roomv1.RoomV1ReportRepository
@@ -91,6 +95,14 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindDhcpGatewayRepository(impl: DhcpGatewayRepositoryImpl): DhcpGatewayRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProbeStatusRepository(impl: ProbeStatusRepositoryImpl): ProbeStatusRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProbeConnectivityRepository(impl: ProbeConnectivityRepositoryImpl): ProbeConnectivityRepository
 
     companion object {
         @Provides
