@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.*
 import androidx.compose.ui.draw.scale
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -117,7 +118,7 @@ fun TestExecutionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = com.app.miklink.R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -382,7 +383,7 @@ fun TestInProgressView(
         TextButton(onClick = onToggleRawLog) {
             Icon(if (showRawLog) Icons.Default.VisibilityOff else Icons.Default.Code, contentDescription = null)
             Spacer(Modifier.width(6.dp))
-            Text(if (showRawLog) "Nascondi log grezzi" else "Mostra log grezzi")
+            Text(if (showRawLog) stringResource(id = com.app.miklink.R.string.test_toggle_hide_raw_logs) else stringResource(id = com.app.miklink.R.string.test_toggle_show_raw_logs))
         }
 
         Spacer(Modifier.height(8.dp))
@@ -390,6 +391,15 @@ fun TestInProgressView(
         if (showRawLog) {
             // Raw log
             RawLogsPane(log = log, modifier = Modifier.fillMaxWidth().weight(1f))
+        } else if (sections.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("In attesa dei risultati...", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
         } else {
             // Sections cards
             val infoSections = sections.filter { it.category == INFO }
@@ -407,7 +417,7 @@ fun TestInProgressView(
                             LLDP -> Icons.Default.Devices to MaterialTheme.colorScheme.secondary
                             else -> Icons.Default.Info to MaterialTheme.colorScheme.onSurfaceVariant
                         }
-                        TestSectionCard(title = section.title, status = section.status, icon = icon, statusColor = color) {
+                        TestSectionCard(title = mapTestSectionTitle(section.type, section.title), status = section.status, icon = icon, statusColor = color) {
                             section.details.forEach { d ->
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(d.label)
@@ -432,7 +442,7 @@ fun TestInProgressView(
                             else -> Icons.Default.Info to MaterialTheme.colorScheme.onSurfaceVariant
                         }
                         // Passiamo i dettagli della sezione così com'erano (persistiti dal ViewModel)
-                        TestSectionCard(title = section.title, status = section.status, icon = icon, statusColor = color) {
+                        TestSectionCard(title = mapTestSectionTitle(section.type, section.title), status = section.status, icon = icon, statusColor = color) {
                             if (section.type == PING) {
                                 // Mostra il chip LOSS solo se esiste un valore significativo (non '-' e non vuoto)
                                 val lossText = section.details.firstOrNull { it.label == "Packet Loss" }?.value ?: ""
@@ -628,12 +638,12 @@ fun TestCompletedView(
                 TextButton(onClick = onToggleRawLog) {
                     Icon(if (showRawLog) Icons.Default.VisibilityOff else Icons.Default.Code, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text(if (showRawLog) "Nascondi log" else "Mostra log", style = MaterialTheme.typography.bodySmall)
+                    Text(if (showRawLog) stringResource(id = com.app.miklink.R.string.test_toggle_hide_logs) else stringResource(id = com.app.miklink.R.string.test_toggle_show_logs), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
 
-        if (sections.isEmpty() || showRawLog) {
+        if (showRawLog) {
             item {
                 // FIX: Non possiamo usare LazyColumn dentro LazyColumn
                 // Usiamo Column + verticalScroll per i log nella schermata risultati
@@ -670,13 +680,27 @@ fun TestCompletedView(
             return@LazyColumn
         }
 
+        if (sections.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Dettagli non disponibili...", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            return@LazyColumn
+        }
+
         val infoSections = sections.filter { it.category == INFO }
         val testSections = sections.filter { it.category == TEST }
 
         // Network info card
         items(infoSections.filter { it.type == NETWORK }) { section ->
             TestSectionCard(
-                title = section.title,
+                title = mapTestSectionTitle(section.type, section.title),
                 status = section.status,
                 icon = Icons.Default.SettingsEthernet,
                 statusColor = MaterialTheme.colorScheme.primary
@@ -696,7 +720,7 @@ fun TestCompletedView(
         // LLDP card
         items(infoSections.filter { it.type == LLDP }) { section ->
             TestSectionCard(
-                title = section.title,
+                title = mapTestSectionTitle(section.type, section.title),
                 status = section.status,
                 icon = Icons.Default.Devices,
                 statusColor = MaterialTheme.colorScheme.secondary

@@ -12,12 +12,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -50,13 +52,18 @@ fun TestProfileListScreen(
                         )
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Profili di Test", fontWeight = FontWeight.Bold)
+                            Text(stringResource(id = com.app.miklink.R.string.profile_list_title), fontWeight = FontWeight.Bold)
                             Text(
                                 "${profiles.size} ${if (profiles.size == 1) "profilo" else "profili"}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = com.app.miklink.R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

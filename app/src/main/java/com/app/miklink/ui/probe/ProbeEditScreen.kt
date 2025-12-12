@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.compose.ui.res.stringResource
+import com.app.miklink.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,10 +44,10 @@ fun ProbeEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (viewModel.isEditing) "Edit Probe" else "Add Probe") },
+                title = { Text(if (viewModel.isEditing) stringResource(id = R.string.title_edit_probe) else stringResource(id = R.string.title_add_probe)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = com.app.miklink.R.string.back))
                     }
                 }
             )

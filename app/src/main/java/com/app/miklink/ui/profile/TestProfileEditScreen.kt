@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -46,10 +47,10 @@ fun TestProfileEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (viewModel.isEditing) "Edit Profile" else "Add Profile") },
+                title = { Text(if (viewModel.isEditing) stringResource(id = com.app.miklink.R.string.title_edit_profile) else stringResource(id = com.app.miklink.R.string.title_add_profile)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = com.app.miklink.R.string.back))
                     }
                 }
             )
@@ -59,8 +60,8 @@ fun TestProfileEditScreen(
                 onClick = viewModel::saveProfile,
                 modifier = Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(),
                 enabled = profileName.isNotBlank()
-            ) {
-                Text("Save Profile")
+                ) {
+                Text(stringResource(id = com.app.miklink.R.string.save))
             }
         }
     ) { padding ->

@@ -13,10 +13,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -48,13 +50,18 @@ fun ProbeListScreen(
                         )
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Gestione Sonde", fontWeight = FontWeight.Bold)
+                            Text(stringResource(id = com.app.miklink.R.string.probe_list_title), fontWeight = FontWeight.Bold)
                             Text(
                                 "${probesWithStatus.size} ${if (probesWithStatus.size == 1) "sonda" else "sonde"}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = com.app.miklink.R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

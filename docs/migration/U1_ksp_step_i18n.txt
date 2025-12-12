@@ -1,0 +1,1 @@
+[Checkpoint U1.2] kspDebugKotlin eseguito con esito FAIL. Vedi output dettagliato in console; compilazione Kotlin fallita dopo sostituzione titoli. Sarà effettuata diagnosi con --stacktrace.

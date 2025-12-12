@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -26,6 +27,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.draw.alpha
 import com.app.miklink.ui.common.TestSectionCard
+import com.app.miklink.ui.test.mapTestSectionTitle
+import com.app.miklink.ui.test.TestSectionType
 import com.app.miklink.ui.history.model.ParsedResults
 import com.app.miklink.core.data.local.room.v1.model.Report
 import com.app.miklink.utils.normalizeTime
@@ -126,7 +129,7 @@ fun ReportDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = com.app.miklink.R.string.back))
                     }
                 },
                 actions = {
@@ -596,7 +599,7 @@ fun SummaryTab(results: ParsedResults?) {
         val linkMap = results.link
         if (!linkMap.isNullOrEmpty()) {
             TestSectionCard(
-                title = "Link",
+                title = mapTestSectionTitle(com.app.miklink.ui.test.TestSectionType.LINK, "Link"),
                 status = "INFO", // Non abbiamo stato persistito: uso INFO
                 icon = Icons.Default.Link,
                 statusColor = MaterialTheme.colorScheme.tertiary,
@@ -616,7 +619,7 @@ fun SummaryTab(results: ParsedResults?) {
         val lldpList = results.lldp
         if (!lldpList.isNullOrEmpty()) {
             TestSectionCard(
-                title = "LLDP",
+                title = mapTestSectionTitle(com.app.miklink.ui.test.TestSectionType.LLDP, "LLDP"),
                 status = "INFO",
                 icon = Icons.Default.Devices,
                 statusColor = MaterialTheme.colorScheme.secondary,
@@ -659,7 +662,7 @@ fun SummaryTab(results: ParsedResults?) {
             // Calcolo alcune metriche aggregate (ultimo elemento contiene summary in source test) se presente
             val last = pingList.last()
             TestSectionCard(
-                title = "Ping",
+                title = mapTestSectionTitle(com.app.miklink.ui.test.TestSectionType.PING, "Ping"),
                 status = when (last.packetLoss?.filter { it.isDigit() || it == '.' }?.toDoubleOrNull()) {
                     null -> "INFO"
                     0.0 -> "PASS"
@@ -697,7 +700,7 @@ fun SummaryTab(results: ParsedResults?) {
         val tdrList = results.tdr
         if (!tdrList.isNullOrEmpty()) {
             TestSectionCard(
-                title = "TDR",
+                title = mapTestSectionTitle(com.app.miklink.ui.test.TestSectionType.TDR, "TDR"),
                 status = when {
                     tdrList.any { it.status.contains("fail", ignoreCase = true) || it.status.contains("short", ignoreCase = true) } -> "FAIL"
                     tdrList.any {
