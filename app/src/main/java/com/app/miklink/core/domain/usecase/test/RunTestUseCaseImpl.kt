@@ -1,5 +1,7 @@
 package com.app.miklink.core.domain.usecase.test
 
+import com.app.miklink.core.data.local.room.v1.model.ProbeConfig
+import com.app.miklink.core.data.local.room.v1.model.TestProfile
 import com.app.miklink.core.data.remote.mikrotik.dto.CableTestResult
 import com.app.miklink.core.data.remote.mikrotik.dto.MonitorResponse
 import com.app.miklink.core.data.remote.mikrotik.dto.NeighborDetail
@@ -15,6 +17,7 @@ import com.app.miklink.core.domain.test.model.TestExecutionContext
 import com.app.miklink.core.domain.test.model.TestOutcome
 import com.app.miklink.core.domain.test.model.TestProgress
 import com.app.miklink.core.domain.test.model.TestSectionResult
+import com.app.miklink.core.domain.test.model.TestSkipReason
 import com.app.miklink.core.domain.test.model.TestError
 import com.app.miklink.core.domain.test.model.TestPlan
 import com.app.miklink.core.domain.test.step.CableTestStep
@@ -28,6 +31,7 @@ import com.squareup.moshi.Moshi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import java.util.LinkedHashMap
 
 /**
  * Implementazione di RunTestUseCase.
@@ -76,9 +80,39 @@ class RunTestUseCaseImpl @Inject constructor(
         emit(TestEvent.LogLine("--- INIZIO TEST ---"))
         emit(TestEvent.Progress(TestProgress("Inizializzazione", 0, "Caricamento dati...")))
 
-        val sections = mutableListOf<TestSectionResult>()
+        val sections = buildInitialSections(profile, probe)
         val rawSteps = mutableListOf<RawStep>()
         var overallStatus = "PASS"
+
+        suspend fun emitSectionsSnapshot() {
+            emit(TestEvent.SectionsUpdated(sectionsSnapshot(sections)))
+        }
+
+        fun setSectionStatus(
+            type: String,
+            status: String,
+            details: Map<String, String> = emptyMap(),
+            title: String? = null
+        ) {
+            val index = sections.indexOfFirst { it.type == type }
+            if (index >= 0) {
+                val current = sections[index]
+                sections[index] = current.copy(
+                    title = title ?: current.title,
+                    status = status,
+                    details = details.toMap()
+                )
+            } else {
+                sections.add(
+                    TestSectionResult(
+                        type = type,
+                        title = title ?: type,
+                        status = status,
+                        details = details.toMap()
+                    )
+                )
+            }
+        }
 
         fun recordStep(
             name: String,
@@ -88,48 +122,56 @@ class RunTestUseCaseImpl @Inject constructor(
             rawData: Map<String, Any?>? = null,
             error: String? = null
         ) {
-            sections.add(TestSectionResult(type = name, title = title, status = status, details = details))
+            setSectionStatus(name, status, details, title)
             rawSteps.add(RawStep(name = name, status = status, data = rawData, error = error))
         }
+
+        emitSectionsSnapshot()
 
         try {
             // 1) Network Config
             emit(TestEvent.LogLine("Applicazione configurazione rete..."))
             emit(TestEvent.Progress(TestProgress("Network Config", 10, "Configurazione rete in corso...")))
+
+            setSectionStatus(SECTION_NETWORK, STATUS_RUNNING)
+            emitSectionsSnapshot()
             
             val networkResult = networkConfigStep.run(context)
             when (networkResult) {
                 is StepResult.Success -> {
                     val feedback = networkResult.data as NetworkConfigFeedback
                     recordStep(
-                        name = "NETWORK",
+                        name = SECTION_NETWORK,
                         title = "Network",
-                        status = "PASS",
+                        status = STATUS_PASS,
                         details = networkDetails(feedback),
                         rawData = networkRaw(feedback)
                     )
+                    emitSectionsSnapshot()
                     emit(TestEvent.LogLine("Rete configurata con successo"))
                 }
                 is StepResult.Failed -> {
                     overallStatus = "FAIL"
                     val errorMessage = networkResult.error.message
                     recordStep(
-                        name = "NETWORK",
+                        name = SECTION_NETWORK,
                         title = "Network",
-                        status = "FAIL",
+                        status = STATUS_FAIL,
                         details = mapOf("error" to (errorMessage ?: "Unknown error")),
                         error = errorMessage
                     )
+                    emitSectionsSnapshot()
                     emit(TestEvent.LogLine("Configurazione rete fallita: $errorMessage"))
                 }
                 is StepResult.Skipped -> {
                     recordStep(
-                        name = "NETWORK",
+                        name = SECTION_NETWORK,
                         title = "Network",
-                        status = "SKIP",
+                        status = STATUS_SKIP,
                         details = mapOf("reason" to networkResult.reason),
                         rawData = mapOf("reason" to networkResult.reason)
                     )
+                    emitSectionsSnapshot()
                 }
             }
 
@@ -138,29 +180,34 @@ class RunTestUseCaseImpl @Inject constructor(
                 emit(TestEvent.LogLine("Esecuzione Test Stato Link..."))
                 emit(TestEvent.Progress(TestProgress("Link Status", 30, "Verifica stato link...")))
 
+                setSectionStatus(SECTION_LINK, STATUS_RUNNING)
+                emitSectionsSnapshot()
+
                 val linkResult = linkStatusStep.run(context)
                 when (linkResult) {
                     is StepResult.Success -> {
                         val monitor = linkResult.data as MonitorResponse
                         recordStep(
-                            name = "LINK",
+                            name = SECTION_LINK,
                             title = "Link",
-                            status = "PASS",
+                            status = STATUS_PASS,
                             details = linkDetails(monitor),
                             rawData = linkRaw(monitor)
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("Link Status: OK"))
                     }
                     is StepResult.Failed -> {
                         overallStatus = "FAIL"
                         val errorMessage = linkResult.error.message
                         recordStep(
-                            name = "LINK",
+                            name = SECTION_LINK,
                             title = "Link",
-                            status = "FAIL",
+                            status = STATUS_FAIL,
                             details = mapOf("error" to (errorMessage ?: "Errore sconosciuto")),
                             error = errorMessage
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("Link Status: FALLITO"))
                         // Stop immediato su errore link
                         emit(TestEvent.Failed(linkResult.error))
@@ -168,22 +215,24 @@ class RunTestUseCaseImpl @Inject constructor(
                     }
                     is StepResult.Skipped -> {
                         recordStep(
-                            name = "LINK",
+                            name = SECTION_LINK,
                             title = "Link",
-                            status = "SKIP",
+                            status = STATUS_SKIP,
                             details = mapOf("reason" to linkResult.reason),
                             rawData = mapOf("reason" to linkResult.reason)
                         )
+                        emitSectionsSnapshot()
                     }
                 }
             } else {
                 recordStep(
-                    name = "LINK",
+                    name = SECTION_LINK,
                     title = "Link",
-                    status = "SKIP",
-                    details = mapOf("reason" to "Profilo: runLinkStatus=false"),
-                    rawData = mapOf("reason" to "disabled")
+                    status = STATUS_SKIP,
+                    details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED),
+                    rawData = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
                 )
+                emitSectionsSnapshot()
             }
 
             // 3) TDR
@@ -191,62 +240,78 @@ class RunTestUseCaseImpl @Inject constructor(
                 emit(TestEvent.LogLine("Esecuzione TDR (Cable-Test)..."))
                 emit(TestEvent.Progress(TestProgress("TDR", 50, "Test cavo in corso...")))
 
+                setSectionStatus(SECTION_TDR, STATUS_RUNNING)
+                emitSectionsSnapshot()
+
                 val tdrResult = cableTestStep.run(context)
                 when (tdrResult) {
                     is StepResult.Success -> {
                         val cableTest = tdrResult.data as CableTestResult
                         recordStep(
-                            name = "TDR",
+                            name = SECTION_TDR,
                             title = "TDR",
-                            status = "PASS",
+                            status = STATUS_PASS,
                             details = tdrDetails(cableTest),
                             rawData = tdrRaw(cableTest)
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("TDR: SUCCESSO"))
                     }
                     is StepResult.Failed -> {
                         // Non bloccare il test se TDR fallisce per incompatibilità hardware
                         val isFatal = tdrResult.error is TestError.Unsupported
                         if (!isFatal) overallStatus = "FAIL"
-                        val status = if (isFatal) "SKIP" else "FAIL"
+                        val status = if (isFatal) STATUS_SKIP else STATUS_FAIL
                         val message = tdrResult.error.message
+                        val details = if (isFatal) {
+                            mapOf(
+                                "reason" to TestSkipReason.HARDWARE_UNSUPPORTED,
+                                "error" to (message ?: "Errore sconosciuto")
+                            )
+                        } else {
+                            mapOf("error" to (message ?: "Errore sconosciuto"))
+                        }
                         recordStep(
-                            name = "TDR",
+                            name = SECTION_TDR,
                             title = "TDR",
                             status = status,
-                            details = mapOf("error" to (message ?: "Errore sconosciuto")),
+                            details = details,
                             rawData = mapOf("error" to message),
                             error = message
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("TDR: ${if (isFatal) "NON SUPPORTATO" else "FALLITO"}"))
                     }
                     is StepResult.Skipped -> {
                         recordStep(
-                            name = "TDR",
+                            name = SECTION_TDR,
                             title = "TDR",
-                            status = "SKIP",
+                            status = STATUS_SKIP,
                             details = mapOf("reason" to tdrResult.reason),
                             rawData = mapOf("reason" to tdrResult.reason)
                         )
+                        emitSectionsSnapshot()
                     }
                 }
             } else if (profile.runTdr && !probe.tdrSupported) {
                 emit(TestEvent.LogLine("TDR: SALTATO (hardware non supporta TDR)"))
                 recordStep(
-                    name = "TDR",
+                    name = SECTION_TDR,
                     title = "TDR",
-                    status = "SKIP",
-                    details = mapOf("reason" to "Hardware non supporta TDR"),
-                    rawData = mapOf("reason" to "Hardware non supporta TDR")
+                    status = STATUS_SKIP,
+                    details = mapOf("reason" to TestSkipReason.HARDWARE_UNSUPPORTED),
+                    rawData = mapOf("reason" to TestSkipReason.HARDWARE_UNSUPPORTED)
                 )
+                emitSectionsSnapshot()
             } else {
                 recordStep(
-                    name = "TDR",
+                    name = SECTION_TDR,
                     title = "TDR",
-                    status = "SKIP",
-                    details = mapOf("reason" to "Profilo: runTdr=false"),
-                    rawData = mapOf("reason" to "disabled")
+                    status = STATUS_SKIP,
+                    details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED),
+                    rawData = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
                 )
+                emitSectionsSnapshot()
             }
 
             // 4) LLDP
@@ -254,48 +319,55 @@ class RunTestUseCaseImpl @Inject constructor(
                 emit(TestEvent.LogLine("Esecuzione discovery LLDP/CDP..."))
                 emit(TestEvent.Progress(TestProgress("LLDP", 60, "Discovery neighbor...")))
 
+                setSectionStatus(SECTION_LLDP, STATUS_RUNNING)
+                emitSectionsSnapshot()
+
                 val lldpResult = neighborDiscoveryStep.run(context)
                 when (lldpResult) {
                     is StepResult.Success -> {
                         val neighbors = lldpResult.data as List<*>
                         recordStep(
-                            name = "LLDP",
+                            name = SECTION_LLDP,
                             title = "LLDP/CDP",
-                            status = "PASS",
+                            status = STATUS_PASS,
                             details = lldpDetails(neighbors),
                             rawData = lldpRaw(neighbors)
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("LLDP/CDP: Rilevato neighbor"))
                     }
                     is StepResult.Failed -> {
                         val message = lldpResult.error.message
                         recordStep(
-                            name = "LLDP",
+                            name = SECTION_LLDP,
                             title = "LLDP/CDP",
                             status = "INFO",
                             details = mapOf("error" to (message ?: "Errore sconosciuto")),
                             rawData = mapOf("error" to message)
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("LLDP/CDP: FALLITO (${lldpResult.error.message})"))
                     }
                     is StepResult.Skipped -> {
                         recordStep(
-                            name = "LLDP",
+                            name = SECTION_LLDP,
                             title = "LLDP/CDP",
-                            status = "SKIP",
+                            status = STATUS_SKIP,
                             details = mapOf("reason" to lldpResult.reason),
                             rawData = mapOf("reason" to lldpResult.reason)
                         )
+                        emitSectionsSnapshot()
                     }
                 }
             } else {
                 recordStep(
-                    name = "LLDP",
+                    name = SECTION_LLDP,
                     title = "LLDP/CDP",
-                    status = "SKIP",
-                    details = mapOf("reason" to "Profilo: runLldp=false"),
-                    rawData = mapOf("reason" to "disabled")
+                    status = STATUS_SKIP,
+                    details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED),
+                    rawData = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
                 )
+                emitSectionsSnapshot()
             }
 
             // 5) Ping
@@ -303,50 +375,57 @@ class RunTestUseCaseImpl @Inject constructor(
                 emit(TestEvent.LogLine("Esecuzione Ping..."))
                 emit(TestEvent.Progress(TestProgress("Ping", 70, "Test ping in corso...")))
 
+                setSectionStatus(SECTION_PING, STATUS_RUNNING)
+                emitSectionsSnapshot()
+
                 val pingResult = pingStep.run(context)
                 when (pingResult) {
                     is StepResult.Success -> {
                         val outcomes = pingResult.data as List<*>
                         recordStep(
-                            name = "PING",
+                            name = SECTION_PING,
                             title = "Ping",
-                            status = "PASS",
+                            status = STATUS_PASS,
                             details = pingDetails(outcomes),
                             rawData = pingRaw(outcomes)
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("Ping: SUCCESSO"))
                     }
                     is StepResult.Failed -> {
                         overallStatus = "FAIL"
                         val message = pingResult.error.message
                         recordStep(
-                            name = "PING",
+                            name = SECTION_PING,
                             title = "Ping",
-                            status = "FAIL",
+                            status = STATUS_FAIL,
                             details = mapOf("error" to (message ?: "Errore sconosciuto")),
                             rawData = mapOf("error" to message),
                             error = message
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("Ping: FALLITO"))
                     }
                     is StepResult.Skipped -> {
                         recordStep(
-                            name = "PING",
+                            name = SECTION_PING,
                             title = "Ping",
-                            status = "SKIP",
+                            status = STATUS_SKIP,
                             details = mapOf("reason" to pingResult.reason),
                             rawData = mapOf("reason" to pingResult.reason)
                         )
+                        emitSectionsSnapshot()
                     }
                 }
             } else {
                 recordStep(
-                    name = "PING",
+                    name = SECTION_PING,
                     title = "Ping",
-                    status = "SKIP",
-                    details = mapOf("reason" to "Profilo: runPing=false"),
-                    rawData = mapOf("reason" to "disabled")
+                    status = STATUS_SKIP,
+                    details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED),
+                    rawData = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
                 )
+                emitSectionsSnapshot()
             }
 
             // 6) Speed Test
@@ -354,50 +433,57 @@ class RunTestUseCaseImpl @Inject constructor(
                 emit(TestEvent.LogLine("Esecuzione Speed Test..."))
                 emit(TestEvent.Progress(TestProgress("Speed Test", 90, "Speed test in corso...")))
 
+                setSectionStatus(SECTION_SPEED, STATUS_RUNNING)
+                emitSectionsSnapshot()
+
                 val speedResult = speedTestStep.run(context)
                 when (speedResult) {
                     is StepResult.Success -> {
                         val speed = speedResult.data as SpeedTestResult
                         recordStep(
-                            name = "SPEED",
+                            name = SECTION_SPEED,
                             title = "Speed Test",
-                            status = "PASS",
+                            status = STATUS_PASS,
                             details = speedDetails(speed, client.speedTestServerAddress),
                             rawData = speedRaw(speed, client.speedTestServerAddress)
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("Speed Test: COMPLETATO"))
                     }
                     is StepResult.Failed -> {
                         // Non fail l'intero test per uno speed test fallito (opzionale)
                         val message = speedResult.error.message
                         recordStep(
-                            name = "SPEED",
+                            name = SECTION_SPEED,
                             title = "Speed Test",
-                            status = "FAIL",
+                            status = STATUS_FAIL,
                             details = mapOf("error" to (message ?: "Errore sconosciuto")),
                             rawData = mapOf("error" to message),
                             error = message
                         )
+                        emitSectionsSnapshot()
                         emit(TestEvent.LogLine("Speed Test: FALLITO"))
                     }
                     is StepResult.Skipped -> {
                         recordStep(
-                            name = "SPEED",
+                            name = SECTION_SPEED,
                             title = "Speed Test",
-                            status = "SKIP",
+                            status = STATUS_SKIP,
                             details = mapOf("reason" to speedResult.reason),
                             rawData = mapOf("reason" to speedResult.reason)
                         )
+                        emitSectionsSnapshot()
                     }
                 }
             } else {
                 recordStep(
-                    name = "SPEED",
+                    name = SECTION_SPEED,
                     title = "Speed Test",
-                    status = "SKIP",
-                    details = mapOf("reason" to "Profilo: runSpeedTest=false"),
-                    rawData = mapOf("reason" to "disabled")
+                    status = STATUS_SKIP,
+                    details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED),
+                    rawData = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
                 )
+                emitSectionsSnapshot()
             }
 
             emit(TestEvent.LogLine("--- TEST COMPLETATO ---"))
@@ -561,4 +647,90 @@ private data class RawTestResults(
     val plan: RawPlan,
     val steps: List<RawStep>
 )
+
+private const val STATUS_PENDING = "PENDING"
+private const val STATUS_RUNNING = "RUNNING"
+private const val STATUS_PASS = "PASS"
+private const val STATUS_FAIL = "FAIL"
+private const val STATUS_SKIP = "SKIP"
+
+private const val SECTION_NETWORK = "NETWORK"
+private const val SECTION_LINK = "LINK"
+private const val SECTION_TDR = "TDR"
+private const val SECTION_LLDP = "LLDP"
+private const val SECTION_PING = "PING"
+private const val SECTION_SPEED = "SPEED"
+
+private fun buildInitialSections(profile: TestProfile, probe: ProbeConfig): MutableList<TestSectionResult> {
+    val sections = mutableListOf<TestSectionResult>()
+    sections += TestSectionResult(type = SECTION_NETWORK, title = "Network", status = STATUS_PENDING)
+
+    sections += if (profile.runLinkStatus) {
+        TestSectionResult(type = SECTION_LINK, title = "Link", status = STATUS_PENDING)
+    } else {
+        TestSectionResult(
+            type = SECTION_LINK,
+            title = "Link",
+            status = STATUS_SKIP,
+            details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
+        )
+    }
+
+    sections += when {
+        profile.runTdr && probe.tdrSupported -> TestSectionResult(type = SECTION_TDR, title = "TDR", status = STATUS_PENDING)
+        profile.runTdr && !probe.tdrSupported -> TestSectionResult(
+            type = SECTION_TDR,
+            title = "TDR",
+            status = STATUS_SKIP,
+            details = mapOf("reason" to TestSkipReason.HARDWARE_UNSUPPORTED)
+        )
+        else -> TestSectionResult(
+            type = SECTION_TDR,
+            title = "TDR",
+            status = STATUS_SKIP,
+            details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
+        )
+    }
+
+    sections += if (profile.runLldp) {
+        TestSectionResult(type = SECTION_LLDP, title = "LLDP/CDP", status = STATUS_PENDING)
+    } else {
+        TestSectionResult(
+            type = SECTION_LLDP,
+            title = "LLDP/CDP",
+            status = STATUS_SKIP,
+            details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
+        )
+    }
+
+    sections += if (profile.runPing) {
+        TestSectionResult(type = SECTION_PING, title = "Ping", status = STATUS_PENDING)
+    } else {
+        TestSectionResult(
+            type = SECTION_PING,
+            title = "Ping",
+            status = STATUS_SKIP,
+            details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
+        )
+    }
+
+    sections += if (profile.runSpeedTest) {
+        TestSectionResult(type = SECTION_SPEED, title = "Speed Test", status = STATUS_PENDING)
+    } else {
+        TestSectionResult(
+            type = SECTION_SPEED,
+            title = "Speed Test",
+            status = STATUS_SKIP,
+            details = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
+        )
+    }
+
+    return sections
+}
+
+private fun sectionsSnapshot(source: List<TestSectionResult>): List<TestSectionResult> {
+    return source.map { section ->
+        section.copy(details = LinkedHashMap(section.details))
+    }
+}
 

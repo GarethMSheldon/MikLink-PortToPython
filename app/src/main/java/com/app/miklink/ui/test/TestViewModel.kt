@@ -59,6 +59,7 @@ class TestViewModel @Inject constructor(
                     when (event) {
                         is TestEvent.LogLine -> appendLog(event.message)
                         is TestEvent.Progress -> appendLog("${event.progress.currentStep}: ${event.progress.message}")
+                        is TestEvent.SectionsUpdated -> _sections.value = mapSections(event.sections)
                         is TestEvent.Completed -> handleCompletion(plan, event.outcome)
                         is TestEvent.Failed -> handleFailure(event.error.message)
                     }
