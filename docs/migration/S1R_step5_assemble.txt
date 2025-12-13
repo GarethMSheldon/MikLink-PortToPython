@@ -1,4 +1,0 @@
-> Task :app:assembleDebug
-BUILD SUCCESSFUL
-
-(assembleDebug completed successfully)

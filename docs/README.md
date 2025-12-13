@@ -1,68 +1,44 @@
-# MikLink - Indice Documentazione
+# MikLink — Documentazione
 
-**Ultima Revisione**: 2025-11-15  
-**Versione App**: 2.0
+Questa cartella contiene **la documentazione “di riferimento”** per MikLink.
+L'obiettivo è ridurre il drift tipico del vibe-coding: pochi documenti, aggiornati, con decisioni tracciate.
 
----
+## Navigazione
 
-## 📐 Architettura e Design
+- [Architettura](explanation/architecture.md)
+- [V1 — Obiettivi e confini](explanation/v1-scope.md)
+- [Struttura del progetto](reference/project-structure.md)
+- [Database](reference/database.md)
+- [MikroTik REST API](reference/mikrotik-rest-api.md)
+- [Testing](reference/testing.md)
+- [Fixtures](reference/fixtures.md)
+- [Dipendenze](reference/dependencies.md)
+- How-to:
+  - [Aggiungere un golden test](howto/add-golden-test.md)
+- Decisioni (ADR):
+  - [ADR-0001 — Sonda unica](decisions/ADR-0001-single-probe.md)
+  - [ADR-0002 — HTTP/HTTPS + trust-all](decisions/ADR-0002-https-toggle-trust-all.md)
+- [Discrepanze Docs vs Codice](DISCREPANCIES.md)
 
-### [ARCHITECTURE.md](ARCHITECTURE.md)
-**Documentazione tecnica completa dell'architettura MikLink**
+## Come eseguire
 
-- Diagramma architetturale (Presentation → Domain → Data Layer)
-- Schema Database Room v8 con tutte le entità
-- Descrizione dettagliata di `Client`, `ProbeConfig`, `TestProfile`, `Report`
-- Business rules e constraint per ogni entità
-- Pattern MVVM + Repository
+### Build & test (da CLI)
 
-**Target**: Sviluppatori senior, architetti software
-
----
-
-### [UX_UI_SPEC.md](UX_UI_SPEC.md)
-**Design System completo (stile Ubiquiti)**
-
-- Palette colori (primari, semantici, light/dark theme)
-**MikLink** è l'app Android per il testing e la certificazione di infrastrutture di rete basate su MikroTik. È pensata per tecnici di campo e team di installazione: esegue test (TDR, Link Status, LLDP, Ping, Traceroute), produce report certificati (PDF) e mantiene uno storico dei test.
-
-Questo repository contiene codice sorgente, test e documentazione tecnica. I contenuti della documentazione sono stati consolidati sotto `docs/` (README, ROADMAP, ARCHITECTURE, IMPLEMENTATION_SUMMARY).
-
-**Struttura principale della documentazione (ora canonica in `docs/`):**
-- `docs/README.md` - Overview e guida rapida (questo file)
-- `docs/ROADMAP.md` - Roadmap, priorità e azioni raccomandate
-- `docs/ARCHITECTURE.md` - Documentazione tecnica approfondita
-- `docs/IMPLEMENTATION_SUMMARY.md` - Riepilogo delle modifiche, audit e report
-
----
-
-## Quick Start
-
-Prerequisiti:
-
-Build and run (PowerShell):
+```bash
+./gradlew test
+./gradlew connectedAndroidTest
 ```
-.\gradlew clean build
-.\gradlew installDebug
-```
-PDF generation: the project now uses a SOLID design for PDF output — a `PdfGenerator` interface with an iText implementation (`PdfGeneratorIText`) bound via Hilt. Legacy HTML/WebView templates were removed and replaced by the iText flow.
 
-If you hit build issues related to PDF generation, check `app/src/main/java/com/app/miklink/data/pdf/PdfGeneratorIText.kt` and ensure CI reflects the latest changes. Local builds and unit tests are currently green.
-Se la build fallisce nella fase KSP/compilazione (errori legati a `PdfGeneratorIText.kt`), risolvere il file indicato o usare la branch di emergenza che ripristina un wrapper `PdfGenerator`.
+### Info toolchain (dallo stato attuale della codebase)
 
----
+- **AGP**: 8.13.1
+- **Kotlin**: 2.1.0
+- **compileSdk / targetSdk / minSdk**: 36 / 36 / 26
 
-## Dove cercare le informazioni tecniche
-- Architettura e database: `docs/ARCHITECTURE.md`
-- Roadmap e azioni: `docs/ROADMAP.md`
-- Audit / Implementation summary: `docs/IMPLEMENTATION_SUMMARY.md`
+> Nota: i numeri qui sopra sono quelli presenti *oggi* nei file Gradle della repo.
 
----
+## Regole anti-drift
 
-## Note sulla migrazione della documentazione
-I contenuti dalle vecchie note, report e piani (es. `CODEBASE_ANALYSIS_REPORT.md`, `MASTER_PLAN_v2.0.md`, `API_VALIDATION.md`, `VALIDATION_REPORT_v2.0.md`, `DUPLICATES_CLEANUP.md`) sono stati consolidati in questi file in `docs/`. I file originali nella root e in `docs/archive/` sono stati rimossi per evitare duplicazione, dopo verifica che le informazioni siano state migrate.
-
-Se qualcosa sembra mancare o desideri che includa o preservi specifiche sezioni dettagliate in appendice, dimmi quali e lo inserisco esplicitamente.
----
-
-
+- Le decisioni architetturali vivono in `docs/decisions/` (ADR).
+- Le regole di layering stanno in `docs/explanation/architecture.md`.
+- Se qualcosa non torna tra docs e codice: aggiornare `docs/DISCREPANCIES.md` (e poi sistemare).
