@@ -7,6 +7,7 @@ import com.app.miklink.core.data.repository.report.ReportRepository
 import com.app.miklink.core.data.repository.test.TestProfileRepository
 import com.app.miklink.core.data.repository.probe.ProbeRepository
 import com.app.miklink.core.domain.model.Client
+import com.app.miklink.core.domain.model.socketNameFor
 import com.app.miklink.core.domain.model.ProbeConfig
 import com.app.miklink.core.domain.model.TestProfile
 import com.app.miklink.core.data.repository.probe.ProbeStatusRepository
@@ -88,9 +89,8 @@ class DashboardViewModel @Inject constructor(
                             findNextAvailableId(client)
                         }
                     }
-                    // Format: prefix + separator + paddedNumber + separator + suffix
-                    val paddedNumber = String.format(Locale.US, "%0${client.socketNumberPadding}d", nextNumber)
-                    socketName.value = "${client.socketPrefix}${client.socketSeparator}${paddedNumber}${client.socketSeparator}${client.socketSuffix}"
+                    // Format using domain helper to keep generation deterministic
+                    socketName.value = client.socketNameFor(nextNumber)
                 } else {
                     socketName.value = ""
                 }

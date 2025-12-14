@@ -71,3 +71,29 @@ Evidenze (solo comandi/output):
 - `./gradlew testDebugUnitTest` → **BUILD SUCCESSFUL**
 - `./gradlew assembleDebug` → **BUILD SUCCESSFUL**
 - `./gradlew assembleRelease` → **BUILD SUCCESSFUL**
+
+---
+
+## D-006 — Socket-ID LITE increment gating
+
+Evidenze (implementazione + verifiche anti-drift):
+
+- Increment location (single block):
+  - `app/src/main/java/com/app/miklink/data/repositoryimpl/room/RoomReportRepository.kt:40`
+    - `val updated = client.copy(nextIdNumber = client.nextIdNumber + 1)`
+
+- Anti-drift grep (only 1 increment block):
+  - `git grep -nE "nextIdNumber\s*=\s*.*\+\s*1|nextIdNumber\+\+|incrementNextId|advanceNextId" app/src/main/java` → 1 match (`RoomReportRepository.kt:40`)
+
+- UI check (no UI-side increments found):
+  - `git grep -n "nextIdNumber" app/src/main/java/**/ui/**` → matches are only UI read/placeholder usages (no arithmetic/update)
+
+- ProbeId anti-regression (must be 0):
+  - `git grep -n "probeId" app/src/main app/src/test` → **0 matches**
+
+- Build gates (after tests & changes):
+  - `./gradlew testDebugUnitTest` → **BUILD SUCCESSFUL**
+  - `./gradlew assembleDebug` → **BUILD SUCCESSFUL**
+  - `./gradlew assembleRelease` → **BUILD SUCCESSFUL**
+
+Stato: **RISOLTO** ✅

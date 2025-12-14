@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class RoomReportRepository @Inject constructor(
-    private val testReportDao: TestReportDao
+    private val testReportDao: TestReportDao,
+    private val clientRepository: com.app.miklink.core.data.repository.client.ClientRepository
 ) : ReportRepository {
     override fun observeAllReports(): Flow<List<TestReport>> {
         return testReportDao.observeAll().map { entities ->
@@ -29,7 +30,19 @@ class RoomReportRepository @Inject constructor(
     }
 
     override suspend fun saveReport(report: TestReport): Long {
-        return testReportDao.insert(report.toEntity())
+        val id = testReportDao.insert(report.toEntity())
+
+        // Socket-ID LITE: increment client.nextIdNumber only when report is SUCCESS (PASS)
+        if (report.overallStatus == "PASS") {
+            val clientId = report.clientId ?: return id
+            val client = clientRepository.getClient(clientId)
+            if (client != null) {
+                val updated = client.copy(nextIdNumber = client.nextIdNumber + 1)
+                clientRepository.updateClient(updated)
+            }
+        }
+
+        return id
     }
 
     override suspend fun deleteReport(report: TestReport) {

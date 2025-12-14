@@ -24,3 +24,12 @@ data class Client(
 enum class NetworkMode {
     DHCP, STATIC
 }
+
+/**
+ * Deterministic socket name builder using the client's socket formatting fields.
+ * This function is pure and does not mutate state.
+ */
+fun Client.socketNameFor(idNumber: Int): String {
+    val paddedNumber = String.format(java.util.Locale.US, "%0${this.socketNumberPadding}d", idNumber)
+    return "${this.socketPrefix}${this.socketSeparator}${paddedNumber}${this.socketSeparator}${this.socketSuffix}"
+}
