@@ -27,13 +27,24 @@ Evidenza:
 
 Vincolo: `core/data/**` = solo ports/contratti (no Retrofit/Room/iText/Android).
 
-Stato: parzialmente risolto.
+Stato: **RISOLTO** ✅
 
-- Retrofit/Moshi in core/data (remote): **RISOLTO (EPIC-0003)** — implementazioni spostate in `app/src/main/java/com/app/miklink/data/remote/mikrotik/**`.
-- iText + Android in core/data (pdf impl):
-  - `app/src/main/java/com/app/miklink/core/data/pdf/impl/PdfGeneratorIText.kt:3,15-21`
-    - import `android.content.Context`
-    - import `com.itextpdf.*`
+Evidenze:
+
+- Le implementazioni iText + Android sono state spostate in `app/src/main/java/com/app/miklink/data/pdf/**`:
+  - `app/src/main/java/com/app/miklink/data/pdf/PdfDocumentHelper.kt` (contiene `com.itextpdf.*`).
+  - `app/src/main/java/com/app/miklink/data/pdf/impl/PdfGeneratorIText.kt` (contiene `com.itextpdf.*` e `android.content.Context`).
+
+- In `core/data/**` rimangono solo il port e i modelli neutrali (nessuna dipendenza platform-specifica):
+  - `app/src/main/java/com/app/miklink/core/data/pdf/PdfGenerator.kt` (interface)
+  - `app/src/main/java/com/app/miklink/core/data/pdf/PdfExportConfig.kt`
+  - `app/src/main/java/com/app/miklink/core/data/pdf/parser/ParsedResultsParser.kt`
+
+- Verifiche eseguite:
+  - `git grep -nE "com\\.itextpdf\\.|android\\." app/src/main/java/**/core/data/**` → **0 occorrenze**
+  - `./gradlew testDebugUnitTest` → **BUILD SUCCESSFUL**
+  - `./gradlew assembleDebug` → **BUILD SUCCESSFUL**
+  - `./gradlew assembleRelease` → **BUILD SUCCESSFUL**
 
 ---
 
