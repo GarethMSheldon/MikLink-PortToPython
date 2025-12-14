@@ -29,6 +29,29 @@ Vincolo: `core/data/**` = solo ports/contratti (no Retrofit/Room/iText/Android).
 
 Stato: **RISOLTO** ✅
 
+---
+
+## D-007 — Backup format: single-probe shape enforced
+
+Evidence that the app backup format uses a single `probe` (nullable) and includes `clients`, `profiles`, `reports`:
+
+- `app/src/main/java/com/app/miklink/data/repository/BackupData.kt:1-50` – `BackupData` now contains `probe: ProbeConfig?`, `clients: List<BackupClient>`, `profiles: List<TestProfile>`, `reports: List<BackupReport>`
+- `app/src/main/java/com/app/miklink/data/repository/BackupManager.kt:1-200` – `exportConfigToJson()` / `importBackupData()` implement export/import for single probe, clients and reports
+
+Checks/verification performed:
+
+- `git grep -nE "List<\\s*ProbeConfig\\s*>|\\bprobeConfigs\\b" app/src/main/java app/src/test` → **0 matches** (no list-based probe backup shapes)
+- `git grep -n "probeId" app/src/main app/src/test` → **0 matches** (no public probe id)
+- `./gradlew testDebugUnitTest` → **BUILD SUCCESSFUL**
+- `./gradlew assembleDebug` → **BUILD SUCCESSFUL**
+- `./gradlew assembleRelease` → **BUILD SUCCESSFUL**
+
+Additional evidence:
+
+- Roundtrip test added: `app/src/test/java/com/app/miklink/data/repository/BackupManagerTest.kt` → `roundtrip_export_import_preserves_client_report_associations()` verifies that client→report associations are preserved via a stable `clientKey` mapping during export/import (no DB schema changes).
+
+Stato: **RISOLTO** ✅
+
 Evidenze:
 
 - Le implementazioni iText + Android sono state spostate in `app/src/main/java/com/app/miklink/data/pdf/**`:
