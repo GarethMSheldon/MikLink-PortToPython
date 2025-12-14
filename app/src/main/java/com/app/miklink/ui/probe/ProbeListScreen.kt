@@ -71,7 +71,7 @@ fun ProbeListScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { navController.navigate("probe_edit/-1") },
+                onClick = { navController.navigate("probe_config") },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("NUOVA SONDA") },
                 containerColor = Color(0xFF2196F3)
@@ -126,7 +126,7 @@ fun ProbeListScreen(
                         )
                         Spacer(Modifier.height(24.dp))
                         Button(
-                            onClick = { navController.navigate("probe_edit/-1") },
+                            onClick = { navController.navigate("probe_config") },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF2196F3)
                             )
@@ -153,7 +153,7 @@ fun ProbeListScreen(
                     ) {
                         ProbeCard(
                             probeInfo = probeInfo,
-                            onClick = { navController.navigate("probe_edit") }
+                            onClick = { navController.navigate("probe_config") }
                         )
                     }
                 }

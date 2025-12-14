@@ -22,9 +22,9 @@ class BackupManagerImpl @Inject constructor(
 ) : BackupManager {
 
     override suspend fun exportConfigToJson(): String {
-        val probes = listOfNotNull(probeRepository.getProbeConfig())
+        val probe = probeRepository.getProbeConfig()
         val profiles = testProfileRepository.observeAllProfiles().first()
-        val backupData = com.app.miklink.data.repository.BackupData(probes = probes, profiles = profiles)
+        val backupData = com.app.miklink.data.repository.BackupData(probe = probe, profiles = profiles)
         val adapter = moshi.adapter(BackupData::class.java)
         return adapter.toJson(backupData)
     }
@@ -39,7 +39,7 @@ class BackupManagerImpl @Inject constructor(
 
     override suspend fun importBackupData(backupData: BackupData): Result<Unit> {
         // Basic validation
-        if (backupData.probes.any { it.ipAddress.isBlank() || it.username.isBlank() }) {
+        if (backupData.probe == null || backupData.probe.ipAddress.isBlank() || backupData.probe.username.isBlank()) {
             return Result.failure(Exception("Dati sonda incompleti"))
         }
         if (backupData.profiles.any { it.profileName.isBlank() }) {
@@ -58,10 +58,8 @@ class BackupManagerImpl @Inject constructor(
                     testProfileRepository.deleteProfile(profile)
                 }
 
-                // Save the first probe (singleton pattern)
-                if (backupData.probes.isNotEmpty()) {
-                    probeRepository.saveProbeConfig(backupData.probes.first())
-                }
+                // Save singleton probe
+                backupData.probe?.let { probeRepository.saveProbeConfig(it) }
                 
                 // Insert all profiles
                 backupData.profiles.forEach { profile ->
@@ -79,9 +77,7 @@ class BackupManagerImpl @Inject constructor(
                         testProfileRepository.observeAllProfiles().first().forEach { profile ->
                             testProfileRepository.deleteProfile(profile)
                         }
-                        if (originalBackup.probes.isNotEmpty()) {
-                            probeRepository.saveProbeConfig(originalBackup.probes.first())
-                        }
+                        originalBackup.probe?.let { probeRepository.saveProbeConfig(it) }
                         originalBackup.profiles.forEach { profile ->
                             testProfileRepository.insertProfile(profile)
                         }

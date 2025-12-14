@@ -8,6 +8,6 @@ import com.app.miklink.core.domain.model.TestProfile
  */
 data class BackupData(
     val version: Int = 1,
-    val probes: List<ProbeConfig>,
+    val probe: ProbeConfig?,
     val profiles: List<TestProfile>
 )

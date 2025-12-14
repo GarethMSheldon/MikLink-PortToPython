@@ -148,7 +148,7 @@ fun SettingsScreen(
                     headline = stringResource(R.string.settings_configure_probe),
                     subtitle = stringResource(R.string.settings_configure_probe_desc),
                     leadingIcon = Icons.Default.Router,
-                    onClick = { navController.navigate("probe_edit/-1") }
+                    onClick = { navController.navigate("probe_config") }
                 )
 
                 // Polling Interval

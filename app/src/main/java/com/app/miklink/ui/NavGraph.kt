@@ -56,10 +56,9 @@ fun NavGraph() {
         composable("settings") { SettingsScreen(navController) }
         composable("pdf_settings") { com.app.miklink.ui.settings.PdfSettingsScreen(navController) }
         
-        // Probe Routes (DEPRECATO: multi-probe, mantenuto per compatibility)
-        // composable("probe_list") { ProbeListScreen(navController) }
-        composable("probe_add") { ProbeEditScreen(navController) } // CRASH FIX
-        composable("probe_edit") { ProbeEditScreen(navController) }  // Singleton: no ID in route
+        // Probe Routes (singleton probe)
+        // composable("probe_list") { ProbeListScreen(navController) } // deprecated: single-probe UI
+        composable("probe_config") { ProbeEditScreen(navController) }
 
         // Profile Routes
         composable("profile_list") { TestProfileListScreen(navController) }

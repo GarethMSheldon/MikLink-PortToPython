@@ -3,18 +3,10 @@
 **Status:** Draft (ready to execute)  
 **Owner:** Agent  
 **Scope:** Code + tests (no DB rebase yet; DB rebase is EPIC-0002)
-
-## Goal
-
-Remove the *concept* of multi-probe and remove `probeId` from:
 - UI navigation and ViewModels
 - Domain `TestPlan` and test execution orchestration
 - Probe repository contract (no ID-based lookup)
 - Backup import/export (single-probe)
-
-After this epic, the app must behave as: **there is exactly one probe configuration** (even if internally the current Room schema still contains `probeId`; that schema will be replaced in EPIC-0002).
-
-## Non-goals (explicit)
 
 - Do **not** rebase Room DB schema/version/name. (Handled in EPIC-0002)
 - Do **not** remove `probeId` from Room entity/DAO/migrations packages (`core/data/local/room/v1/**`). (Handled in EPIC-0002)
@@ -29,45 +21,31 @@ After this epic, the app must behave as: **there is exactly one probe configurat
 4) **Update this epic file:** As you complete each step, mark it as done and append a short “Implementation notes” section at the end with:
    - files touched
    - commands run
-   - failures (if any) and their exact error output (first 30 lines)
-
 ## Pre-flight checks (must do before editing)
-
 - [ ] `git status` is clean
 - [ ] `./gradlew test` is attempted once (even if it fails today). Record outcome in notes.
 
 ---
 
-## Step 1 — Remove `probeId` from test execution navigation route
-
-**File:** `app/src/main/java/com/app/miklink/ui/NavGraph.kt`  
 **Known anchors (from dump):**
 - test execution route at line ~36
-- `navArgument("probeId")` at line ~39
 - probe edit route at line ~64–66
 
 ### Tasks
-- [ ] Change test execution route from:
-  - `test_execution/{clientId}/{probeId}/{profileId}/{socketName}`
   to:
   - `test_execution/{clientId}/{profileId}/{socketName}`
-- [ ] Remove `navArgument("probeId")` from that composable argument list.
 - [ ] Ensure `TestExecutionScreen(navController, vm)` remains unchanged.
 
-### Probe settings navigation (single-probe)
 - [ ] Replace the `probe_add` and `probe_edit/{probeId}` routes with **a single route with no arguments**:
   - route name: `probe_config`
   - composable: `ProbeEditScreen(navController)` (keep file/class name for now)
-- [ ] Delete (or keep commented-out) any `probe_list` route; it must not be reachable.
 
 **STOP condition:** If NavGraph contains literal placeholder lines like `...`, STOP and ask (do not guess what should be there).
 
 ---
 
 ## Step 2 — Update route builders that currently include `probeId`
-
 ### 2.1 Dashboard → Test execution route
-
 **File:** `app/src/main/java/com/app/miklink/ui/dashboard/DashboardScreen.kt`  
 **Anchor:** line ~198 contains `probe.probeId`
 
@@ -75,32 +53,20 @@ After this epic, the app must behave as: **there is exactly one probe configurat
   - `test_execution/<clientId>/<profileId>/<socketName>`
 - [ ] Ensure you no longer interpolate `probe.probeId` anywhere in this file.
 
-**STOP condition:** If the route string contains truncation/ellipsis in the actual file, STOP and ask.
-
 ### 2.2 History → Re-run test route
-
 **File:** `app/src/main/java/com/app/miklink/ui/history/HistoryViewModel.kt`  
-**Anchors:**
 - line ~185 reads probe via `probeDao.getAllProbes()...`
-- line ~194 builds `test_execution/.../${probe.probeId}/...`
 
-- [ ] Remove the need to load a probe just to build a route:
   - Remove the `ProbeConfigDao` dependency from this ViewModel (constructor + imports).
 - [ ] Update route build to:
-  - `test_execution/${report.clientId}/${profile.profileId}/$encodedSocket`
 - [ ] Ensure no reference to `probe.probeId` remains in this file.
 
----
 
-## Step 3 — Settings navigation must open probe config without IDs
 
-**File:** `app/src/main/java/com/app/miklink/ui/settings/SettingsScreen.kt`  
 **Anchor:** line ~150 navigates to `probe_edit/-1`
 
 - [ ] Replace navigation target with:
   - `probe_config`
-- [ ] Ensure there is no remaining `probe_edit` string usage in this file.
-
 ---
 
 ## Step 4 — Remove `probeId` from TestViewModel plan creation

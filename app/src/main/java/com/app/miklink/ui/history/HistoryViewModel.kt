@@ -3,7 +3,6 @@ package com.app.miklink.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.data.repository.client.ClientRepository
-import com.app.miklink.core.data.repository.probe.ProbeRepository
 import com.app.miklink.core.data.repository.report.ReportRepository
 import com.app.miklink.core.data.repository.test.TestProfileRepository
 import com.app.miklink.core.domain.model.Client
@@ -24,7 +23,6 @@ class HistoryViewModel @Inject constructor(
     private val reportRepository: ReportRepository,
     private val clientRepository: ClientRepository,
     private val pdfGenerator: PdfGenerator,
-    private val probeRepository: ProbeRepository,
     private val profileRepository: TestProfileRepository,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
@@ -180,12 +178,11 @@ class HistoryViewModel @Inject constructor(
      */
     suspend fun getRepeatTestRoute(report: TestReport): String? = withContext(Dispatchers.IO) {
         try {
-            val probe = probeRepository.observeProbeConfig().first()
             val profile = profileRepository.observeAllProfiles().first().firstOrNull {
                 it.profileName == report.profileName
             }
-            
-            if (probe != null && profile != null && report.clientId != null) {
+
+            if (profile != null && report.clientId != null) {
                 val encodedSocket = android.net.Uri.encode(report.socketName ?: "")
                 "test_execution/${report.clientId}/${profile.profileId}/$encodedSocket"
             } else {
