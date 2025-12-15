@@ -1,3 +1,9 @@
+/*
+ * Purpose: Run LLDP/CDP neighbor discovery and surface domain neighbors.
+ * Inputs: Test execution context (probe configuration with interface).
+ * Outputs: StepResult carrying a list of NeighborData items or failure reason.
+ * Notes: Repository returns domain neighbors; this step keeps control-flow and error mapping only.
+ */
 package com.app.miklink.data.teststeps
 
 import com.app.miklink.core.data.repository.test.MikroTikTestRepository
@@ -21,24 +27,9 @@ class NeighborDiscoveryStepImpl @Inject constructor(
                 probe = context.probeConfig,
                 interfaceName = context.probeConfig.testInterface
             )
-            // Restituisce il primo neighbor o lista vuota (non è un errore se non ci sono neighbor)
-            StepResult.Success(neighbors.map { it.toDomain() })
+            StepResult.Success(neighbors)
         } catch (e: Exception) {
             StepResult.Failed(TestError.NetworkError(e.message ?: "Neighbor discovery failed"))
         }
     }
 }
-
-private fun com.app.miklink.data.remote.mikrotik.dto.NeighborDetail.toDomain(): NeighborData {
-    return NeighborData(
-        identity = identity,
-        interfaceName = interfaceName,
-        discoveredBy = discoveredBy,
-        vlanId = vlanId,
-        voiceVlanId = voiceVlanId,
-        poeClass = poeClass,
-        systemDescription = systemDescription,
-        portId = portId
-    )
-}
-

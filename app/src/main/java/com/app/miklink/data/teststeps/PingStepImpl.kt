@@ -1,8 +1,13 @@
+/*
+ * Purpose: Execute ping tests for configured targets, resolving DHCP gateway placeholders and aggregating outcomes.
+ * Inputs: Test execution context (client, profile, probe) and resolved ping targets.
+ * Outputs: StepResult with per-target outcomes including packet loss and measurements.
+ * Notes: Repository returns domain PingMeasurement items; this step focuses on orchestration and result evaluation.
+ */
 package com.app.miklink.data.teststeps
 
 import com.app.miklink.core.data.repository.test.MikroTikTestRepository
 import com.app.miklink.core.data.repository.test.PingTargetResolver
-import com.app.miklink.core.domain.test.model.PingMeasurement
 import com.app.miklink.core.domain.test.model.PingTargetOutcome
 import com.app.miklink.core.domain.test.model.StepResult
 import com.app.miklink.core.domain.test.model.TestError
@@ -57,16 +62,15 @@ class PingStepImpl @Inject constructor(
                     continue
                 }
 
-                val pingResults = mikrotikTestRepository.ping(
+                val measurements = mikrotikTestRepository.ping(
                     probe = context.probeConfig,
                     target = resolvedTarget,
                     interfaceName = context.probeConfig.testInterface,
                     count = context.testProfile.pingCount
                 )
-                val measurements = pingResults.map { it.toMeasurement() }
 
                 // Verifica packet loss per determinare se questo target ha avuto successo
-                val lastResult = pingResults.lastOrNull()
+                val lastResult = measurements.lastOrNull()
                 val packetLoss = lastResult?.packetLoss ?: "100"
                 val numericLoss = packetLoss.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 100.0
                 if (numericLoss > 0.0) {
@@ -102,20 +106,4 @@ class PingStepImpl @Inject constructor(
             else -> StepResult.Failed(TestError.NetworkError("Alcuni ping sono falliti"))
         }
     }
-}
-
-private fun com.app.miklink.data.remote.mikrotik.dto.PingResult.toMeasurement(): PingMeasurement {
-    return PingMeasurement(
-        host = host,
-        minRtt = minRtt,
-        avgRtt = avgRtt,
-        maxRtt = maxRtt,
-        packetLoss = packetLoss,
-        sent = sent,
-        received = received,
-        seq = seq,
-        time = time,
-        ttl = ttl,
-        size = size
-    )
 }

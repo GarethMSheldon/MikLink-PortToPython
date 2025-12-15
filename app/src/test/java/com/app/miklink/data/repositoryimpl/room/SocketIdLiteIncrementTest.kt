@@ -3,6 +3,8 @@ package com.app.miklink.data.repositoryimpl.room
 import com.app.miklink.core.data.repository.client.ClientRepository
 import com.app.miklink.core.domain.model.Client
 import com.app.miklink.core.domain.model.TestReport
+import com.app.miklink.core.domain.usecase.report.SaveTestReportUseCase
+import com.app.miklink.core.domain.usecase.report.SaveTestReportUseCaseImpl
 import com.app.miklink.data.local.room.dao.TestReportDao
 import com.app.miklink.data.local.room.entity.TestReportEntity
 import kotlinx.coroutines.runBlocking
@@ -48,6 +50,14 @@ class SocketIdLiteIncrementTest {
         }
     }
 
+    private fun makeUseCase(client: Client): Pair<SaveTestReportUseCase, FakeClientRepository> {
+        val fakeDao = FakeTestReportDao()
+        val fakeClientRepo = FakeClientRepository(listOf(client))
+        val reportRepository = RoomReportRepository(fakeDao)
+        val useCase = SaveTestReportUseCaseImpl(reportRepository, fakeClientRepo)
+        return useCase to fakeClientRepo
+    }
+
     @Test
     fun `SUCCESS increments nextIdNumber`() = runBlocking {
         val client = Client(
@@ -71,9 +81,7 @@ class SocketIdLiteIncrementTest {
             speedTestServerPassword = null
         )
 
-        val fakeDao = FakeTestReportDao()
-        val fakeClientRepo = FakeClientRepository(listOf(client))
-        val repo = RoomReportRepository(fakeDao, fakeClientRepo)
+        val (useCase, fakeClientRepo) = makeUseCase(client)
 
         val report = TestReport(
             clientId = client.clientId,
@@ -86,7 +94,7 @@ class SocketIdLiteIncrementTest {
             resultsJson = "{}"
         )
 
-        repo.saveReport(report)
+        useCase(report)
 
         val updated = fakeClientRepo.getClient(client.clientId)!!
         assertEquals(6, updated.nextIdNumber)
@@ -115,9 +123,7 @@ class SocketIdLiteIncrementTest {
             speedTestServerPassword = null
         )
 
-        val fakeDao = FakeTestReportDao()
-        val fakeClientRepo = FakeClientRepository(listOf(client))
-        val repo = RoomReportRepository(fakeDao, fakeClientRepo)
+        val (useCase, fakeClientRepo) = makeUseCase(client)
 
         val report = TestReport(
             clientId = client.clientId,
@@ -130,7 +136,7 @@ class SocketIdLiteIncrementTest {
             resultsJson = "{}"
         )
 
-        repo.saveReport(report)
+        useCase(report)
 
         val updated = fakeClientRepo.getClient(client.clientId)!!
         assertEquals(10, updated.nextIdNumber)
@@ -159,9 +165,7 @@ class SocketIdLiteIncrementTest {
             speedTestServerPassword = null
         )
 
-        val fakeDao = FakeTestReportDao()
-        val fakeClientRepo = FakeClientRepository(listOf(client))
-        val repo = RoomReportRepository(fakeDao, fakeClientRepo)
+        val (useCase, fakeClientRepo) = makeUseCase(client)
 
         val report1 = TestReport(
             clientId = client.clientId,
@@ -176,8 +180,8 @@ class SocketIdLiteIncrementTest {
 
         val report2 = report1.copy(timestamp = System.currentTimeMillis() + 1000)
 
-        repo.saveReport(report1)
-        repo.saveReport(report2)
+        useCase(report1)
+        useCase(report2)
 
         val updated = fakeClientRepo.getClient(client.clientId)!!
         assertEquals(3, updated.nextIdNumber)

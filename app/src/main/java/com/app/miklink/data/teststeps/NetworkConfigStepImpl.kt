@@ -1,3 +1,9 @@
+/*
+ * Purpose: Apply client network configuration through the MikroTik API before running tests.
+ * Inputs: Test execution context (probe + client settings).
+ * Outputs: NetworkConfigFeedback describing the applied configuration or failure reason.
+ * Notes: Client override is intentionally not supported in the current single-probe flow.
+ */
 package com.app.miklink.data.teststeps
 
 import com.app.miklink.core.data.repository.NetworkConfigFeedback
@@ -20,7 +26,7 @@ class NetworkConfigStepImpl @Inject constructor(
             val feedback = networkConfigRepository.applyClientNetworkConfig(
                 probe = context.probeConfig,
                 client = context.client,
-                override = null // TODO: Support override client se necessario
+                override = null // Override disabilitato nel flusso corrente single-probe
             )
             StepResult.Success(feedback)
         } catch (e: Exception) {
@@ -28,4 +34,3 @@ class NetworkConfigStepImpl @Inject constructor(
         }
     }
 }
-

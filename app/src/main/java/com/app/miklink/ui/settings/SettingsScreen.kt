@@ -1,3 +1,9 @@
+/*
+ * Purpose: Render the MikLink settings experience with navigation to management screens and feature toggles.
+ * Inputs: NavController for navigation and SettingsViewModel state (theme, preferences, ids, probe tuning).
+ * Outputs: Compose UI that updates user preferences and routes to configuration flows.
+ * Notes: Filtering mode selector is intentionally non-interactive until requirements are finalized.
+ */
 package com.app.miklink.ui.settings
 
 import androidx.compose.foundation.background
@@ -317,7 +323,7 @@ fun SettingsScreen(
                     headline = "Filtraggio CDP/LLDP",
                     subtitle = "Seleziona la modalità di filtraggio",
                     leadingIcon = Icons.Default.FilterList,
-                    onClick = { /* TODO: Implement Filtering Mode Selector */ },
+                    onClick = { /* Filtering mode selector pending confirmed requirements */ },
                     trailingContent = {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -701,3 +707,4 @@ fun ColorPickerRow(label: String, colors: List<Int>, selectedColor: Int?, onSele
         }
     }
 }
+

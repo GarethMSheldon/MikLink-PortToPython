@@ -1,3 +1,9 @@
+/*
+ * Purpose: Orchestrate test execution UI state and delegate report persistence through domain use cases.
+ * Inputs: SavedStateHandle navigation args (clientId, profileId, socketName) and RunTestUseCase events.
+ * Outputs: UiState/TestSection flows for the UI and persisted reports via SaveTestReportUseCase.
+ * Notes: Keeps UI free from repository details; persistence policy (Socket-ID increment) lives in the use case.
+ */
 package com.app.miklink.ui.test
 
 import android.net.Uri
@@ -5,11 +11,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.domain.model.TestReport
-import com.app.miklink.core.data.repository.report.ReportRepository
 import com.app.miklink.core.domain.test.model.TestEvent
 import com.app.miklink.core.domain.test.model.TestOutcome
 import com.app.miklink.core.domain.test.model.TestPlan
 import com.app.miklink.core.domain.test.model.TestSectionResult
+import com.app.miklink.core.domain.usecase.report.SaveTestReportUseCase
 import com.app.miklink.core.domain.usecase.test.RunTestUseCase
 import com.app.miklink.utils.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +31,7 @@ import kotlinx.coroutines.launch
 class TestViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val runTestUseCase: RunTestUseCase,
-    private val reportRepository: ReportRepository
+    private val saveTestReportUseCase: SaveTestReportUseCase
 ) : ViewModel() {
 
     // Logs removed from UI; keep Execution state only
@@ -68,7 +74,7 @@ class TestViewModel @Inject constructor(
 
     fun saveReportToDb(report: TestReport) {
         viewModelScope.launch {
-            reportRepository.saveReport(report)
+            saveTestReportUseCase(report, incrementClientCounter = true)
         }
     }
 
@@ -96,7 +102,6 @@ class TestViewModel @Inject constructor(
         }
 
         if (clientId <= 0 || profileId <= 0) {
-            val message = "Parametri di test non validi. client=$clientId profile=$profileId"
             _uiState.value = UiState.Error("Parametri di navigazione non validi.")
             return null
         }

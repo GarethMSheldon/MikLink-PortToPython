@@ -5,10 +5,7 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- Default rules retained; configure <include> or <exclude> tags if cloud backup is enabled. -->
     </cloud-backup>
     <!--
     <device-transfer>

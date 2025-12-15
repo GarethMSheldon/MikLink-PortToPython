@@ -1,58 +1,65 @@
-﻿package com.app.miklink.di
+/*
+ * Purpose: Central DI bindings for repositories, platform bridges, and selected use cases.
+ * Inputs: Data-layer implementations and platform services.
+ * Outputs: Bound interfaces for core/domain consumption across the app.
+ * Notes: This module will be split further as the DI modularization progresses.
+ */
+package com.app.miklink.di
 
-import com.app.miklink.data.repository.RouteManager
-import com.app.miklink.data.repository.RouteManagerImpl
-import com.app.miklink.data.repository.BackupManager
-import com.app.miklink.data.repository.BackupManagerImpl
-import com.app.miklink.data.repository.TransactionRunner
-import com.app.miklink.data.repository.RoomTransactionRunner
-import com.app.miklink.data.local.room.MikLinkDatabase
-import dagger.Provides
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
-import com.app.miklink.core.domain.usecase.backup.ImportBackupUseCase
-import com.app.miklink.core.domain.usecase.backup.ImportBackupUseCaseImpl
-import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
+import com.app.miklink.core.data.io.DocumentReader
+import com.app.miklink.core.data.io.DocumentWriter
 import com.app.miklink.core.data.repository.client.ClientRepository
+import com.app.miklink.core.data.repository.preferences.UserPreferencesRepository
+import com.app.miklink.core.data.repository.probe.ProbeConnectivityRepository
 import com.app.miklink.core.data.repository.probe.ProbeRepository
+import com.app.miklink.core.data.repository.probe.ProbeStatusRepository
 import com.app.miklink.core.data.repository.report.ReportRepository
-import com.app.miklink.core.data.repository.test.TestProfileRepository
+import com.app.miklink.core.data.repository.test.DhcpGatewayRepository
 import com.app.miklink.core.data.repository.test.MikroTikTestRepository
 import com.app.miklink.core.data.repository.test.NetworkConfigRepository
 import com.app.miklink.core.data.repository.test.PingTargetResolver
-import com.app.miklink.core.data.repository.test.DhcpGatewayRepository
-import com.app.miklink.core.data.repository.probe.ProbeStatusRepository
-import com.app.miklink.core.data.repository.probe.ProbeConnectivityRepository
-import com.app.miklink.data.remote.mikrotik.service.MikroTikServiceProvider
+import com.app.miklink.core.data.repository.test.TestProfileRepository
+import com.app.miklink.core.domain.usecase.backup.ImportBackupUseCase
+import com.app.miklink.core.domain.usecase.backup.ImportBackupUseCaseImpl
+import com.app.miklink.core.domain.usecase.preferences.ObserveIdNumberingStrategyUseCase
+import com.app.miklink.core.domain.usecase.preferences.ObserveIdNumberingStrategyUseCaseImpl
+import com.app.miklink.core.domain.usecase.preferences.ObserveThemeConfigUseCase
+import com.app.miklink.core.domain.usecase.preferences.ObserveThemeConfigUseCaseImpl
+import com.app.miklink.core.domain.usecase.preferences.SetIdNumberingStrategyUseCase
+import com.app.miklink.core.domain.usecase.preferences.SetIdNumberingStrategyUseCaseImpl
+import com.app.miklink.core.domain.usecase.preferences.SetThemeConfigUseCase
+import com.app.miklink.core.domain.usecase.preferences.SetThemeConfigUseCaseImpl
+import com.app.miklink.data.io.AndroidDocumentReader
+import com.app.miklink.data.io.AndroidDocumentWriter
+import com.app.miklink.data.local.room.MikLinkDatabase
+import com.app.miklink.data.preferences.UserPreferencesRepositoryImpl
 import com.app.miklink.data.remote.mikrotik.MikroTikServiceProviderImpl
+import com.app.miklink.data.remote.mikrotik.service.MikroTikServiceProvider
+import com.app.miklink.data.repository.BackupManager
+import com.app.miklink.data.repository.BackupManagerImpl
+import com.app.miklink.data.repository.DefaultBackupRepository
+import com.app.miklink.data.repository.RouteManager
+import com.app.miklink.data.repository.RouteManagerImpl
+import com.app.miklink.data.repository.RoomTransactionRunner
+import com.app.miklink.data.repository.TransactionRunner
+import com.app.miklink.data.repositoryimpl.NetworkConfigRepositoryImpl
+import com.app.miklink.data.repositoryimpl.PingTargetResolverImpl
 import com.app.miklink.data.repositoryimpl.mikrotik.DhcpGatewayRepositoryImpl
-import com.app.miklink.data.repositoryimpl.mikrotik.ProbeStatusRepositoryImpl
+import com.app.miklink.data.repositoryimpl.mikrotik.MikroTikTestRepositoryImpl
 import com.app.miklink.data.repositoryimpl.mikrotik.ProbeConnectivityRepositoryImpl
+import com.app.miklink.data.repositoryimpl.mikrotik.ProbeStatusRepositoryImpl
 import com.app.miklink.data.repositoryimpl.room.RoomClientRepository
 import com.app.miklink.data.repositoryimpl.room.RoomProbeRepository
 import com.app.miklink.data.repositoryimpl.room.RoomReportRepository
 import com.app.miklink.data.repositoryimpl.room.RoomTestProfileRepository
-import com.app.miklink.data.repositoryimpl.mikrotik.MikroTikTestRepositoryImpl
-import com.app.miklink.data.repositoryimpl.NetworkConfigRepositoryImpl
-import com.app.miklink.data.repositoryimpl.PingTargetResolverImpl
-import com.app.miklink.core.data.io.DocumentReader
-import com.app.miklink.core.data.io.DocumentWriter
-import com.app.miklink.data.io.AndroidDocumentReader
-import com.app.miklink.data.io.AndroidDocumentWriter
-import com.app.miklink.core.data.repository.preferences.UserPreferencesRepository
-import com.app.miklink.data.preferences.UserPreferencesRepositoryImpl
-import com.app.miklink.core.domain.usecase.preferences.ObserveThemeConfigUseCase
-import com.app.miklink.core.domain.usecase.preferences.ObserveThemeConfigUseCaseImpl
-import com.app.miklink.core.domain.usecase.preferences.SetThemeConfigUseCase
-import com.app.miklink.core.domain.usecase.preferences.SetThemeConfigUseCaseImpl
-import com.app.miklink.core.domain.usecase.preferences.ObserveIdNumberingStrategyUseCase
-import com.app.miklink.core.domain.usecase.preferences.ObserveIdNumberingStrategyUseCaseImpl
-import com.app.miklink.core.domain.usecase.preferences.SetIdNumberingStrategyUseCase
-import com.app.miklink.core.domain.usecase.preferences.SetIdNumberingStrategyUseCaseImpl
+import dagger.Binds
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -60,6 +67,7 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindRouteManager(impl: RouteManagerImpl): RouteManager
+
     @Binds
     abstract fun bindBackupManager(impl: BackupManagerImpl): BackupManager
 
@@ -78,7 +86,6 @@ abstract class RepositoryModule {
     @Binds
     abstract fun bindSetIdNumberingStrategyUseCase(impl: SetIdNumberingStrategyUseCaseImpl): SetIdNumberingStrategyUseCase
 
-    // Repository bindings con nuove implementazioni Room
     @Binds
     @Singleton
     abstract fun bindClientRepository(impl: RoomClientRepository): ClientRepository
@@ -133,7 +140,9 @@ abstract class RepositoryModule {
 
         @Provides
         @Singleton
-        fun provideBackupRepositoryBridge(impl: com.app.miklink.data.repository.BackupRepository): com.app.miklink.core.data.repository.BackupRepository = impl
+        fun provideBackupRepositoryBridge(
+            impl: DefaultBackupRepository
+        ): com.app.miklink.core.data.repository.BackupRepository = impl
 
         @Provides
         @Singleton
@@ -144,4 +153,3 @@ abstract class RepositoryModule {
         fun provideDocumentWriter(@ApplicationContext context: Context): DocumentWriter = AndroidDocumentWriter(context)
     }
 }
-

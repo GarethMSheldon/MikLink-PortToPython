@@ -188,5 +188,4 @@
     <string name="section_speed">Speedtest</string>
     <string name="profile_list_title">Test Profiles</string>
     <string name="client_list_title">Manage Clients</string>
-    <string name="probe_list_title">Manage Probes</string>
 </resources>

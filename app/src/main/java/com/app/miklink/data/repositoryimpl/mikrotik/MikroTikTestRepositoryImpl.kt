@@ -1,20 +1,36 @@
+/*
+ * Purpose: MikroTik test repository implementation that binds Retrofit calls to the Wi-Fi network and returns domain data.
+ * Inputs: Probe configuration plus per-call parameters (interface names, targets, credentials).
+ * Outputs: Domain test models derived from MikroTik REST endpoints.
+ * Notes: DTO usage stays internal; mapping is centralized in data/remote/mikrotik/mapper to keep ports clean.
+ */
 package com.app.miklink.data.repositoryimpl.mikrotik
 
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import com.app.miklink.core.domain.model.ProbeConfig
-import com.app.miklink.data.remote.mikrotik.dto.*
-import com.app.miklink.data.remote.mikrotik.infra.MikroTikServiceFactory
-import com.app.miklink.data.remote.mikrotik.service.MikroTikApiService
 import com.app.miklink.core.data.repository.test.MikroTikTestRepository
+import com.app.miklink.core.domain.model.ProbeConfig
+import com.app.miklink.core.domain.model.report.LinkStatusData
+import com.app.miklink.core.domain.model.report.NeighborData
+import com.app.miklink.core.domain.model.report.SpeedTestData
+import com.app.miklink.core.domain.test.model.CableTestSummary
+import com.app.miklink.core.domain.test.model.PingMeasurement
+import com.app.miklink.data.remote.mikrotik.dto.CableTestRequest
+import com.app.miklink.data.remote.mikrotik.dto.MonitorRequest
+import com.app.miklink.data.remote.mikrotik.dto.PingRequest
+import com.app.miklink.data.remote.mikrotik.dto.SpeedTestRequest
+import com.app.miklink.data.remote.mikrotik.infra.MikroTikServiceFactory
+import com.app.miklink.data.remote.mikrotik.mapper.toDomain
+import com.app.miklink.data.remote.mikrotik.mapper.toLinkStatusData
+import com.app.miklink.data.remote.mikrotik.mapper.toMeasurement
+import com.app.miklink.data.remote.mikrotik.mapper.toSummary
+import com.app.miklink.data.remote.mikrotik.service.MikroTikApiService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
-import java.net.ConnectException
-import java.net.SocketTimeoutException
 import javax.inject.Inject
 
 /**
@@ -44,23 +60,24 @@ class MikroTikTestRepositoryImpl @Inject constructor(
         probe: ProbeConfig,
         interfaceName: String,
         once: Boolean
-    ): MonitorResponse = withContext(Dispatchers.IO) {
+    ): LinkStatusData = withContext(Dispatchers.IO) {
         val api = buildServiceFor(probe)
         val results = api.getLinkStatus(MonitorRequest(numbers = interfaceName, once = once))
-        results.lastOrNull() ?: throw IllegalStateException("No link status returned")
+        val latest = results.lastOrNull() ?: throw IllegalStateException("No link status returned")
+        latest.toLinkStatusData()
     }
 
     override suspend fun cableTest(
         probe: ProbeConfig,
         interfaceName: String,
         once: Boolean
-    ): CableTestResult = withContext(Dispatchers.IO) {
+    ): CableTestSummary = withContext(Dispatchers.IO) {
         val api = buildServiceFor(probe)
         val results = api.runCableTest(CableTestRequest(numbers = interfaceName, duration = "5s"))
-        // Filtrare risultati validi: con cable-pairs O con status positivo
-        results.lastOrNull {
+        val validResult = results.lastOrNull {
             it.cablePairs != null || it.status.lowercase() in listOf("ok", "open", "link-ok", "running")
         } ?: throw IllegalStateException("No valid cable test results found")
+        validResult.toSummary()
     }
 
     override suspend fun ping(
@@ -68,17 +85,18 @@ class MikroTikTestRepositoryImpl @Inject constructor(
         target: String,
         interfaceName: String?,
         count: Int
-    ): List<PingResult> = withContext(Dispatchers.IO) {
+    ): List<PingMeasurement> = withContext(Dispatchers.IO) {
         val api = buildServiceFor(probe)
         api.runPing(PingRequest(address = target, `interface` = interfaceName, count = count.toString()))
+            .map { it.toMeasurement() }
     }
 
     override suspend fun neighbors(
         probe: ProbeConfig,
         interfaceName: String
-    ): List<NeighborDetail> = withContext(Dispatchers.IO) {
+    ): List<NeighborData> = withContext(Dispatchers.IO) {
         val api = buildServiceFor(probe)
-        api.getIpNeighbors(interfaceName)
+        api.getIpNeighbors(interfaceName).map { it.toDomain() }
     }
 
     override suspend fun speedTest(
@@ -87,7 +105,7 @@ class MikroTikTestRepositoryImpl @Inject constructor(
         username: String?,
         password: String?,
         duration: String
-    ): SpeedTestResult = withContext(Dispatchers.IO) {
+    ): SpeedTestData = withContext(Dispatchers.IO) {
         val api = buildServiceFor(probe)
         val requestBody = SpeedTestRequest(
             address = serverAddress,
@@ -99,7 +117,7 @@ class MikroTikTestRepositoryImpl @Inject constructor(
         if (response.isSuccessful) {
             val body = response.body()
             val result = body?.lastOrNull { it.status == "done" } ?: body?.lastOrNull()
-            result ?: throw IllegalStateException("Empty speed test response")
+            result?.toDomain(serverAddress) ?: throw IllegalStateException("Empty speed test response")
         } else {
             when (response.code()) {
                 400 -> throw IllegalArgumentException("Bad request: ${response.message()}")
@@ -108,11 +126,4 @@ class MikroTikTestRepositoryImpl @Inject constructor(
             }
         }
     }
-
-    override suspend fun systemResource(probe: ProbeConfig): SystemResource = withContext(Dispatchers.IO) {
-        val api = buildServiceFor(probe)
-        api.getSystemResource(ProplistRequest(listOf("board-name"))).firstOrNull()
-            ?: throw IllegalStateException("No system resource returned")
-    }
 }
-

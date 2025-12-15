@@ -1,3 +1,9 @@
+/*
+ * Purpose: Room-backed implementation of ReportRepository focused on CRUD operations only.
+ * Inputs: TestReport entities passed from domain/use cases.
+ * Outputs: Persisted reports and reactive flows of report lists.
+ * Notes: Business rules (e.g., Socket-ID increment) are handled by use cases, not by this repository.
+ */
 package com.app.miklink.data.repositoryimpl.room
 
 import com.app.miklink.core.data.repository.report.ReportRepository
@@ -10,8 +16,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class RoomReportRepository @Inject constructor(
-    private val testReportDao: TestReportDao,
-    private val clientRepository: com.app.miklink.core.data.repository.client.ClientRepository
+    private val testReportDao: TestReportDao
 ) : ReportRepository {
     override fun observeAllReports(): Flow<List<TestReport>> {
         return testReportDao.observeAll().map { entities ->
@@ -30,19 +35,7 @@ class RoomReportRepository @Inject constructor(
     }
 
     override suspend fun saveReport(report: TestReport): Long {
-        val id = testReportDao.insert(report.toEntity())
-
-        // Socket-ID LITE: increment client.nextIdNumber only when report is SUCCESS (PASS)
-        if (report.overallStatus == "PASS") {
-            val clientId = report.clientId ?: return id
-            val client = clientRepository.getClient(clientId)
-            if (client != null) {
-                val updated = client.copy(nextIdNumber = client.nextIdNumber + 1)
-                clientRepository.updateClient(updated)
-            }
-        }
-
-        return id
+        return testReportDao.insert(report.toEntity())
     }
 
     override suspend fun deleteReport(report: TestReport) {

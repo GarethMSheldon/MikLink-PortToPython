@@ -1,3 +1,9 @@
+/*
+ * Purpose: Application navigation graph wiring feature destinations.
+ * Inputs: Navigation controller and route arguments for screens.
+ * Outputs: Compose NavHost configuration for MikLink features.
+ * Notes: Probe list route removed per single-probe policy.
+ */
 package com.app.miklink.ui
 
 import androidx.compose.runtime.Composable
@@ -11,7 +17,6 @@ import com.app.miklink.ui.client.ClientListScreen
 import com.app.miklink.ui.dashboard.DashboardScreen
 import com.app.miklink.ui.history.HistoryScreen
 import com.app.miklink.ui.history.ReportDetailScreen
-// import com.app.miklink.ui.probe.ProbeListScreen // DEPRECATO: sonda unica
 import com.app.miklink.ui.probe.ProbeEditScreen
 import com.app.miklink.ui.profile.TestProfileEditScreen
 import com.app.miklink.ui.profile.TestProfileListScreen
@@ -57,7 +62,6 @@ fun NavGraph() {
         composable("pdf_settings") { com.app.miklink.ui.settings.PdfSettingsScreen(navController) }
         
         // Probe Routes (singleton probe)
-        // composable("probe_list") { ProbeListScreen(navController) } // deprecated: single-probe UI
         composable("probe_config") { ProbeEditScreen(navController) }
 
         // Profile Routes

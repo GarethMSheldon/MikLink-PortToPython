@@ -1,6 +1,6 @@
 # ADR-0004 — Socket ID Lite (formattazione deterministica)
 
-- **Status:** Accepted
+- **Status:** Accepted  
 - **Data:** 2025-12-14
 
 ## Contesto
@@ -31,13 +31,14 @@ Regola:
 > Nota: la funzione concatena sempre entrambi i separatori (anche se prefix/suffix sono vuoti).  
 > Fonte: `core/domain/model/Client.kt`.
 
-### Incremento nextIdNumber
+### Incremento `nextIdNumber`
 
-`nextIdNumber` si incrementa **solo** quando un report salvato ha `overallStatus == "PASS"`.
-
-Fonte: `data/repositoryimpl/room/RoomReportRepository.kt` + `SocketIdLiteIncrementTest`.
+- Il contatore si incrementa **solo** quando un report salvato ha `overallStatus == "PASS"` ed è salvato dal **flow di run-test**.
+- L'incremento è applicato nel use case `SaveTestReportUseCase`; il repository Room rimane CRUD e non muta `Client`.
+- Percorsi di duplicazione/import/restore devono usare il repository raw (senza incrementare).
 
 ## Conseguenze
 
-- Il comportamento è deterministico e testabile.
+- Comportamento deterministico e testabile.
+- Nessun side-effect nascosto nei repository; le policy restano nel livello use case.
 - Un eventuale “full template” resta fuori scope e richiede ADR dedicato.

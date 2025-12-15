@@ -30,7 +30,7 @@ com.app.miklink
       model/                      # entità/value object: Client, ProbeConfig, TestReport, TestProfile e simili
       policy/                     # regole business pure (validazioni, socket-id, ecc.)
       test/                       # modelli e astrazioni del runner (step/result/outcome)
-      usecase/                    # orchestrazione applicativa: salva report, export/import, ecc.
+      usecase/                    # orchestrazione applicativa: salva report (SaveTestReportUseCase), export/import, ecc.
     data/
       repository/                 # PORTE: interfacce repository per feature
         client/
@@ -94,7 +94,7 @@ com.app.miklink
 ### Porte e implementazioni
 
 - Porta: `XxxRepository`
-- Implementazione “esplicita”:
+- Implementazione esplicita:
   - Room: `RoomXxxRepository`
   - MikroTik: `MikroTikXxxRepository`
   - DataStore: `DataStoreXxxRepository` (o `DataStoreUserPreferencesRepository`)

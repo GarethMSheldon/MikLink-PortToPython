@@ -1,3 +1,9 @@
+/*
+ * Purpose: Provide Room database and DAOs with default seed data for test profiles.
+ * Inputs: Application context and DAO providers for callback seeding.
+ * Outputs: Singleton MikLinkDatabase instance configured for pre-production destructive migrations.
+ * Notes: Destructive migration is intentional until production to align with fast iteration policy.
+ */
 package com.app.miklink.di
 
 import android.content.Context
@@ -34,6 +40,7 @@ object DatabaseModule {
             MikLinkDatabase::class.java,
             "miklink"
         )
+        .fallbackToDestructiveMigration() // Pre-production: wipe on schema mismatch to speed up iteration
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)

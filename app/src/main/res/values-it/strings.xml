@@ -187,6 +187,5 @@
     <string name="section_speed">Speedtest</string>
     <string name="profile_list_title">Profili di Test</string>
     <string name="client_list_title">Gestione Clienti</string>
-    <string name="probe_list_title">Gestione Sonde</string>
         <!-- Rimozione toggle log grezzi: non più visualizzati in UI -->
 </resources>

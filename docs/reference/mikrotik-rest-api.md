@@ -52,4 +52,5 @@ Definiti in `data/remote/mikrotik/service/MikroTikApiService.kt`:
 
 ## Parsing e Golden tests
 - I DTO vengono parsati con **Moshi**.
+- Il mapping `dto -> domain` per gli step di test è centralizzato in `data/remote/mikrotik/mapper` e le porte espongono solo tipi dominio.
 - Le suite `app/src/test/java/com/app/miklink/data/remote/mikrotik/golden/*` validano che il parsing resti stabile su fixture versionate.

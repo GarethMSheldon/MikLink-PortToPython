@@ -1,3 +1,9 @@
+/*
+ * Purpose: Execute speed test step using MikroTikTestRepository and surface domain speed test data.
+ * Inputs: Test execution context (probe config and client speed test settings).
+ * Outputs: StepResult carrying SpeedTestData or skip/failure reasons.
+ * Notes: Repository maps DTOs to domain; this step only performs validation and error handling.
+ */
 package com.app.miklink.data.teststeps
 
 import com.app.miklink.core.data.repository.test.MikroTikTestRepository
@@ -30,7 +36,7 @@ class SpeedTestStepImpl @Inject constructor(
                 password = context.client.speedTestServerPassword,
                 duration = "5"
             )
-            StepResult.Success(speedTestResult.toDomain(serverAddress))
+            StepResult.Success(speedTestResult)
         } catch (e: SecurityException) {
             StepResult.Failed(TestError.AuthError(e.message ?: "Authentication failed"))
         } catch (e: Exception) {
@@ -38,19 +44,3 @@ class SpeedTestStepImpl @Inject constructor(
         }
     }
 }
-
-private fun com.app.miklink.data.remote.mikrotik.dto.SpeedTestResult.toDomain(serverAddress: String?): SpeedTestData {
-    return SpeedTestData(
-        status = status,
-        ping = ping,
-        jitter = jitter,
-        loss = loss,
-        tcpDownload = tcpDownload,
-        tcpUpload = tcpUpload,
-        udpDownload = udpDownload,
-        udpUpload = udpUpload,
-        warning = warning,
-        serverAddress = serverAddress
-    )
-}
-

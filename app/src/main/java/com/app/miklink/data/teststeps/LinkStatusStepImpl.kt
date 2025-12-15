@@ -1,3 +1,9 @@
+/*
+ * Purpose: Run the link status step using MikroTikTestRepository and return domain link status data.
+ * Inputs: Test execution context containing probe configuration.
+ * Outputs: StepResult wrapping LinkStatusData describing link status and rate.
+ * Notes: Repository already maps DTOs to domain; this step only orchestrates flow control.
+ */
 package com.app.miklink.data.teststeps
 
 import com.app.miklink.core.data.repository.test.MikroTikTestRepository
@@ -17,20 +23,14 @@ class LinkStatusStepImpl @Inject constructor(
 ) : LinkStatusStep {
     override suspend fun run(context: TestExecutionContext): StepResult<LinkStatusData> {
         return try {
-            val monitorResponse = mikrotikTestRepository.monitorEthernet(
+            val linkStatus = mikrotikTestRepository.monitorEthernet(
                 probe = context.probeConfig,
                 interfaceName = context.probeConfig.testInterface,
                 once = true
             )
-            StepResult.Success(
-                LinkStatusData(
-                    status = monitorResponse.status,
-                    rate = monitorResponse.rate
-                )
-            )
+            StepResult.Success(linkStatus)
         } catch (e: Exception) {
             StepResult.Failed(TestError.NetworkError(e.message ?: "Link status check failed"))
         }
     }
 }
-

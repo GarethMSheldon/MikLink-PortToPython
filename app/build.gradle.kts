@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.hilt.android)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.ksp) // Annotation processing defaults to KSP; enable kapt only if a processor lacks KSP support.
     id("androidx.room")
 }
 
@@ -64,7 +64,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    // Hilt
+    // Hilt (running on KSP; if reverting, apply kotlin("kapt") and swap this to kapt)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 

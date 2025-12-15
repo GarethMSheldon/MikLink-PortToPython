@@ -1,14 +1,20 @@
+/*
+ * Purpose: Generate PDF reports using iText 7 with domain report data decoded from persisted JSON.
+ * Inputs: Test reports, client metadata, and export configuration.
+ * Outputs: PDF files written to the cache directory.
+ * Notes: Report parsing uses ReportResultsCodec directly; DTO parsing remains in the data layer.
+ */
 package com.app.miklink.data.pdf.impl
 
 import android.content.Context
-import com.app.miklink.core.domain.model.Client
-import com.app.miklink.core.domain.model.TestReport
-import com.app.miklink.core.domain.model.TestProfile
 import com.app.miklink.core.data.pdf.ExportColumn
 import com.app.miklink.core.data.pdf.PdfExportConfig
 import com.app.miklink.core.data.pdf.PdfGenerator
 import com.app.miklink.core.data.pdf.PdfPageOrientation
-import com.app.miklink.core.data.pdf.parser.ParsedResultsParser
+import com.app.miklink.core.data.report.ReportResultsCodec
+import com.app.miklink.core.domain.model.Client
+import com.app.miklink.core.domain.model.TestReport
+import com.app.miklink.core.domain.model.TestProfile
 import com.app.miklink.core.domain.model.report.ReportData
 import com.app.miklink.utils.normalizeLinkSpeed
 import com.itextpdf.io.font.constants.StandardFonts
@@ -29,7 +35,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 import java.util.regex.Pattern
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,20 +48,10 @@ import javax.inject.Singleton
 @Singleton
 class PdfGeneratorIText @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val parsedResultsParser: ParsedResultsParser
+    private val reportResultsCodec: ReportResultsCodec
 ) : PdfGenerator {
-    // Page number event handler is provided by PdfDocumentHelper.PageNumberEventHandler to avoid duplication
-
-    /**
-     * Generate PDF report from list of reports and client data.
-     * Returns a File object pointing to the generated PDF in cache directory.
-     */
     private val helper = com.app.miklink.data.pdf.PdfDocumentHelper()
 
-    /**
-     * Generate PDF report from list of reports and client data.
-     * Returns a File object pointing to the generated PDF in cache directory.
-     */
     override fun generatePdfReport(
         rawReports: List<TestReport>,
         client: Client?,
@@ -72,32 +69,35 @@ class PdfGeneratorIText @Inject constructor(
         val file = File(context.cacheDir, fileName)
 
         try {
-            val writer = com.itextpdf.kernel.pdf.PdfWriter(FileOutputStream(file))
-            val pdf = com.itextpdf.kernel.pdf.PdfDocument(writer)
-            
-            val pageSize = if (config.orientation == PdfPageOrientation.PORTRAIT) 
-                PageSize.A4 
-            else 
+            val writer = PdfWriter(FileOutputStream(file))
+            val pdf = PdfDocument(writer)
+
+            val pageSize = if (config.orientation == PdfPageOrientation.PORTRAIT) {
+                PageSize.A4
+            } else {
                 PageSize.A4.rotate()
-                
+            }
+
             val document = Document(pdf, pageSize)
-            document.setMargins(20f, 20f, 60f, 20f) // Increased bottom margin for footer
+            document.setMargins(20f, 20f, 60f, 20f)
 
             // Add Header/Footer Event Handler (Page Numbers)
-            pdf.addEventHandler(com.itextpdf.kernel.events.PdfDocumentEvent.END_PAGE, com.app.miklink.data.pdf.PdfDocumentHelper.PageNumberEventHandler())
+            pdf.addEventHandler(
+                com.itextpdf.kernel.events.PdfDocumentEvent.END_PAGE,
+                com.app.miklink.data.pdf.PdfDocumentHelper.PageNumberEventHandler()
+            )
 
             // 1. Load Logo
             var logoData: com.itextpdf.io.image.ImageData? = null
             try {
-                // Try to load specific branding logo
                 val logoId = context.resources.getIdentifier("logo_miklink_black", "drawable", context.packageName)
                 val resId = if (logoId != 0) logoId else com.app.miklink.R.mipmap.ic_launcher
-                
+
                 val bitmap = android.graphics.BitmapFactory.decodeResource(context.resources, resId)
                 val stream = java.io.ByteArrayOutputStream()
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
                 logoData = com.itextpdf.io.image.ImageDataFactory.create(stream.toByteArray())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Ignore logo load error
             }
 
@@ -118,12 +118,12 @@ class PdfGeneratorIText @Inject constructor(
                         probe.contains("remote-cpu-load:100%", ignoreCase = true)
                 } == true
             }
-            
+
             val footerTable = helper.createFooterTable(client?.notes, showCpuWarning, config)
             val pageNum = pdf.numberOfPages
             val pageParams = pdf.getPage(pageNum).pageSize
             val bottomMargin = 20f
-            
+
             footerTable.setFixedPosition(pageNum, pageParams.left + 20f, pageParams.bottom + bottomMargin, pageParams.width - 40f)
             document.add(footerTable)
 
@@ -135,10 +135,6 @@ class PdfGeneratorIText @Inject constructor(
         }
     }
 
-    /**
-     * Generate a PDF for a single test report.
-     * Delegates to generatePdfReport with a default configuration.
-     */
     override fun generateSingleTestPdf(
         report: TestReport,
         client: Client?,
@@ -152,51 +148,45 @@ class PdfGeneratorIText @Inject constructor(
             showSignatures = true,
             signatureLeftLabel = "Tecnico",
             signatureRightLabel = "Cliente",
-            orientation = PdfPageOrientation.PORTRAIT // Default for single is Portrait usually better
+            orientation = PdfPageOrientation.PORTRAIT
         )
         return generatePdfReport(listOf(report), client, config)
     }
 
-
-
     private fun addResultsTable(document: Document, reports: List<TestReport>, config: PdfExportConfig) {
-        // Section title
-        // Note: replaced non-ASCII emoji with ASCII text to ensure consistent iText rendering and avoid font issues
-        document.add(Paragraph("Dettaglio Test")
-            .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD))
-            .setFontSize(10f)
-            .setFontColor(DeviceRgb(102, 102, 102))
-            .setMarginBottom(12f))
+        document.add(
+            Paragraph("Dettaglio Test")
+                .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD))
+                .setFontSize(10f)
+                .setFontColor(DeviceRgb(102, 102, 102))
+                .setMarginBottom(12f)
+        )
 
         if (reports.isEmpty()) {
-            document.add(Paragraph("Nessun test presente nel report.")
-                .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_OBLIQUE))
-                .setFontSize(10f)
-                .setFontColor(DeviceRgb(150, 150, 150)))
+            document.add(
+                Paragraph("Nessun test presente nel report.")
+                    .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_OBLIQUE))
+                    .setFontSize(10f)
+                    .setFontColor(DeviceRgb(150, 150, 150))
+            )
             return
         }
 
-        // Filter columns if hideEmptyColumns is enabled
         val activeColumns = if (config.hideEmptyColumns) {
-            config.columns.filter { col ->
-                // Keep column if AT LEAST ONE report has data for it
-                reports.any { report -> hasDataForColumn(report, col) }
-            }
+            config.columns.filter { col -> reports.any { report -> hasDataForColumn(report, col) } }
         } else {
             config.columns
         }
 
         if (activeColumns.isEmpty()) {
-             document.add(Paragraph("Nessuna colonna selezionata o dati non disponibili.")
-                .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_OBLIQUE))
-                .setFontSize(10f))
-             return
+            document.add(
+                Paragraph("Nessuna colonna selezionata o dati non disponibili.")
+                    .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_OBLIQUE))
+                    .setFontSize(10f)
+            )
+            return
         }
 
-        // Calculate column widths dynamically based on activeColumns
-        // Base Unit for relative width.
-        // LinkSpeed=12, Neighbor=18, Ping=15, TDR=10, Speed=18
-        // Socket=12, Date=18, Status=12
         val widthMap = mapOf(
             ExportColumn.SOCKET to 12f,
             ExportColumn.DATE to 18f,
@@ -207,19 +197,18 @@ class PdfGeneratorIText @Inject constructor(
             ExportColumn.TDR to 10f,
             ExportColumn.SPEED_TEST to 18f
         )
-        
-        val columnWidths = activeColumns.map { widthMap[it] ?: 10f }.toFloatArray()
-        
-        val table = Table(UnitValue.createPercentArray(columnWidths))
-            .setWidth(UnitValue.createPercentValue(100f))
 
-        // Add header
+        val columnWidths = activeColumns.map { widthMap[it] ?: 10f }.toFloatArray()
+        val table = Table(UnitValue.createPercentArray(columnWidths)).setWidth(UnitValue.createPercentValue(100f))
+
         activeColumns.forEach { col ->
             val cell = Cell()
-                .add(Paragraph(col.label)
-                    .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD))
-                    .setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER))
+                .add(
+                    Paragraph(col.label)
+                        .setFont(PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD))
+                        .setFontSize(9f)
+                        .setTextAlignment(TextAlignment.CENTER)
+                )
                 .setBackgroundColor(DeviceRgb(241, 243, 244))
                 .setBorder(SolidBorder(DeviceRgb(221, 221, 221), 1f))
                 .setPadding(8f)
@@ -227,7 +216,6 @@ class PdfGeneratorIText @Inject constructor(
             table.addHeaderCell(cell)
         }
 
-        // Add rows
         val sortedReports = reports.sortedBy { it.timestamp }
         sortedReports.forEachIndexed { index, report ->
             val parsed = parseReportData(report.resultsJson)
@@ -254,7 +242,7 @@ class PdfGeneratorIText @Inject constructor(
                             buildString {
                                 if (!p.avgRtt.isNullOrBlank()) append("avg ${p.avgRtt}")
                                 if (!p.packetLoss.isNullOrBlank()) {
-                                    if (isNotEmpty()) append(" • ")
+                                    if (isNotEmpty()) append(" | ")
                                     append("loss ${p.packetLoss}%")
                                 }
                             }
@@ -279,7 +267,6 @@ class PdfGeneratorIText @Inject constructor(
                 }
             }
 
-            // Flush every 50 rows
             if (table.numberOfRows % 50 == 0) {
                 table.flush()
             }
@@ -289,15 +276,12 @@ class PdfGeneratorIText @Inject constructor(
     }
 
     private fun hasDataForColumn(report: TestReport, col: ExportColumn): Boolean {
-        // Socket, Date, Status always have data (or are metadata)
         if (col == ExportColumn.SOCKET || col == ExportColumn.DATE || col == ExportColumn.STATUS) return true
-        
+
         val parsed = parseReportData(report.resultsJson) ?: return false
-        
+
         return when (col) {
-            ExportColumn.LINK_SPEED -> {
-                !parsed.linkStatus?.rate.isNullOrBlank()
-            }
+            ExportColumn.LINK_SPEED -> !parsed.linkStatus?.rate.isNullOrBlank()
             ExportColumn.NEIGHBOR -> parsed.neighbors.isNotEmpty()
             ExportColumn.PING -> parsed.pingSamples.isNotEmpty()
             ExportColumn.TDR -> parsed.tdr.isNotEmpty()
@@ -307,11 +291,6 @@ class PdfGeneratorIText @Inject constructor(
             else -> true
         }
     }
-
-
-    
-    // Removed old scanColumnsAndCpu, buildColumnWidths, addTableHeader, addTableRow relying on Flags - replaced by config driven ones above.
-    // Helper used by createDataCell is kept below.
 
     private fun cleanCpuStrings(input: String?): String {
         if (input.isNullOrBlank()) return ""
@@ -324,8 +303,7 @@ class PdfGeneratorIText @Inject constructor(
         return out?.replace(Regex("[ ]{2,}"), " ")?.trim()?.trim(',') ?: ""
     }
 
-    // Reuse parsed report data helper to keep PdfGenerator focused on rendering
     internal fun parseReportData(json: String): ReportData? {
-        return parsedResultsParser.parse(json)
+        return reportResultsCodec.decode(json).getOrNull()
     }
 }
