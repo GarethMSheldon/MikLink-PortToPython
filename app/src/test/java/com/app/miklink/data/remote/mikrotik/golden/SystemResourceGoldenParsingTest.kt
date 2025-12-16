@@ -1,3 +1,8 @@
+/*
+ * Purpose: Confirm Moshi parsing of system resource golden fixture for board metadata.
+ * Inputs: RouterOS 7.20.5 system_resource_hap_ax2.json and default Moshi adapter.
+ * Outputs: Assertions on boardName and version fields.
+ */
 package com.app.miklink.data.remote.mikrotik.golden
 
 import com.app.miklink.testsupport.FixtureLoader
@@ -9,7 +14,7 @@ import org.junit.Test
 class SystemResourceGoldenParsingTest {
 
     data class GoldenSystemResource(
-        @Json(name = "board-name") val boardName: String?,
+        @field:Json(name = "board-name") val boardName: String?,
         val version: String?
     )
 

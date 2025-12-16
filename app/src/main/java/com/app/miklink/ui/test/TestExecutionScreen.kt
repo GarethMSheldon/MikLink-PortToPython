@@ -83,6 +83,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -100,6 +101,8 @@ import com.app.miklink.ui.test.TestSectionType.NETWORK
 import com.app.miklink.ui.test.TestSectionType.PING
 import com.app.miklink.ui.test.TestSectionType.SPEED
 import com.app.miklink.ui.test.TestSectionType.TDR
+import com.app.miklink.ui.test.components.RawLogsPane
+import com.app.miklink.ui.test.components.TestExecutionTags
 import com.app.miklink.utils.UiState
 
 // Helper per estrarre velocità e CPU load da stringhe come:
@@ -133,9 +136,12 @@ fun TestExecutionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sections by viewModel.sections.collectAsStateWithLifecycle()
     val isRunning by viewModel.isRunning.collectAsStateWithLifecycle()
+    val logs by viewModel.logs.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var showRepeatDialog by remember { mutableStateOf(false) }
     var hasAutoStarted by rememberSaveable { mutableStateOf(false) }
+    var showRawLogs by rememberSaveable { mutableStateOf(false) }
+    var showLogs by rememberSaveable { mutableStateOf(false) }
 
     // Avvio automatico alla prima composizione quando lo stato è Idle
     LaunchedEffect(uiState, isRunning) {
@@ -187,7 +193,7 @@ fun TestExecutionScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = com.app.miklink.R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = when {
                         isRunning -> MaterialTheme.colorScheme.primaryContainer
                         uiState is UiState.Success && (uiState as UiState.Success<TestReport>).data.overallStatus == "PASS" -> Color(0xFF4CAF50).copy(alpha = 0.2f)
@@ -265,12 +271,22 @@ fun TestExecutionScreen(
                     TestCompletedView(
                         report = state.data,
                         sections = sections,
+                        logs = logs,
+                        showLogs = showLogs,
+                        onToggleLogs = { showLogs = !showLogs },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
                 is UiState.Loading -> {
                     if (isRunning) {
-                        TestInProgressView(sections = sections, listState = listState)
+                        TestInProgressView(
+                            sections = sections,
+                            listState = listState,
+                            logs = logs,
+                            showRawLogs = showRawLogs,
+                            onToggleRawLogs = { showRawLogs = !showRawLogs },
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
                 is UiState.Idle -> {
@@ -397,6 +413,9 @@ fun TestExecutionScreen(
 fun TestInProgressView(
     sections: List<TestSection>,
     listState: LazyListState,
+    logs: List<String>,
+    showRawLogs: Boolean,
+    onToggleRawLogs: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -437,6 +456,28 @@ fun TestInProgressView(
         }
 
         Spacer(Modifier.height(16.dp))
+
+        TextButton(
+            onClick = onToggleRawLogs,
+            modifier = Modifier
+                .align(Alignment.End)
+                .testTag(TestExecutionTags.IN_PROGRESS_TOGGLE)
+        ) {
+            Text(
+                text = if (showRawLogs) stringResource(id = com.app.miklink.R.string.test_toggle_hide_raw_logs) else stringResource(
+                    id = com.app.miklink.R.string.test_toggle_show_raw_logs
+                )
+            )
+        }
+
+        if (showRawLogs) {
+            RawLogsPane(
+                logs = logs,
+                emptyLabel = stringResource(id = com.app.miklink.R.string.test_logs_empty),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+        }
 
         if (sections.isEmpty()) {
             Card(
@@ -631,6 +672,9 @@ private fun StatChip(label: String, value: String, icon: ImageVector) {
 fun TestCompletedView(
     report: TestReport,
     sections: List<TestSection>,
+    logs: List<String>,
+    showLogs: Boolean,
+    onToggleLogs: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isPassed = report.overallStatus == "PASS"
@@ -728,6 +772,27 @@ fun TestCompletedView(
                     text = "Dettagli Test",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
+                )
+                TextButton(
+                    onClick = onToggleLogs,
+                    modifier = Modifier.testTag(TestExecutionTags.COMPLETED_TOGGLE)
+                ) {
+                    Text(
+                        text = if (showLogs) stringResource(id = com.app.miklink.R.string.test_toggle_hide_logs) else stringResource(
+                            id = com.app.miklink.R.string.test_toggle_show_logs
+                        )
+                    )
+                }
+            }
+        }
+
+        if (showLogs) {
+            item {
+                RawLogsPane(
+                    logs = logs,
+                    emptyLabel = stringResource(id = com.app.miklink.R.string.test_logs_empty),
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(id = com.app.miklink.R.string.test_logs_title)
                 )
             }
         }

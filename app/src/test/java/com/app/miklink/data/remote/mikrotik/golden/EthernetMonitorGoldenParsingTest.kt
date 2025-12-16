@@ -1,3 +1,8 @@
+/*
+ * Purpose: Ensure Moshi correctly parses ethernet monitor golden responses for link and duplex status.
+ * Inputs: RouterOS 7.20.5 ethernet monitor fixtures and configured Moshi instance.
+ * Outputs: Assertions on parsed link status, rate, and duplex flag.
+ */
 package com.app.miklink.data.remote.mikrotik.golden
 
 import com.app.miklink.testsupport.FixtureLoader
@@ -14,7 +19,7 @@ class EthernetMonitorGoldenParsingTest {
         val name: String?,
         val status: String?,
         val rate: String?,
-        @Json(name = "full-duplex") val fullDuplex: String?
+        @field:Json(name = "full-duplex") val fullDuplex: String?
     )
 
     @Test

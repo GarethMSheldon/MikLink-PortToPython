@@ -1,3 +1,8 @@
+/*
+ * Purpose: Guard Moshi parsing of MikroTik cable test golden responses for link-ok and no-link scenarios.
+ * Inputs: RouterOS 7.20.5 cable test fixtures and TestMoshiProvider configuration.
+ * Outputs: Assertions on parsed status and cablePairs values.
+ */
 package com.app.miklink.data.remote.mikrotik.golden
 
 import com.app.miklink.testsupport.FixtureLoader
@@ -13,7 +18,7 @@ class CableTestGoldenParsingTest {
     data class GoldenCableTest(
         val name: String?,
         val status: String?,
-        @Json(name = "cable-pairs") val cablePairs: String?
+        @field:Json(name = "cable-pairs") val cablePairs: String?
     )
 
     @Test

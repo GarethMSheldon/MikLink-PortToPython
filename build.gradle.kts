@@ -5,3 +5,7 @@ plugins {
     alias(libs.plugins.hilt.android) apply false
     alias(libs.plugins.ksp) apply false
 }
+
+tasks.register<ForbiddenPatternsTask>("checkForbiddenPatterns") {
+    roots.set(listOf("app/src", "docs"))
+}

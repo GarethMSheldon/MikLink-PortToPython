@@ -1,19 +1,26 @@
 /*
- * Purpose: Validate TestExecution views render sections (including pending) and omit deprecated raw logs.
- * Inputs: Compose rules with synthetic TestSection data and a sample TestReport for completed view.
- * Outputs: Assertions on visible section titles and absence of removed raw log elements during instrumented tests.
- * Notes: Aligns Ping detail label with Packet Loss key used by domain/use case aggregation.
+ * Purpose: Validate TestExecution views expose log toggles and panes with stable semantics tags.
+ * Inputs: Compose rules with synthetic sections/logs and sample TestReport for completed view.
+ * Outputs: Assertions on toggle visibility, log pane visibility, and log content presence in both in-progress and completed screens.
+ * Notes: Uses semantics tags instead of localized strings to keep tests stable across languages.
  */
 package com.app.miklink.ui.test
 
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.*
-import androidx.navigation.compose.rememberNavController
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.app.miklink.R
-import com.app.miklink.core.domain.model.TestReport
-import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.miklink.core.domain.model.TestReport
+import com.app.miklink.ui.test.components.TestExecutionTags
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,8 +45,9 @@ class TestExecutionToggleTest {
     )
 
     @Test
-    fun completed_view_toggle_shows_raw_logs() {
+    fun completed_view_toggle_shows_and_hides_logs() {
         composeRule.setContent {
+            var showLogs by remember { mutableStateOf(false) }
             TestCompletedView(
                 report = sampleReport,
                 sections = listOf(
@@ -51,34 +59,54 @@ class TestExecutionToggleTest {
                         listOf(TestDetail("Packet Loss", "0%"))
                     )
                 ),
-                modifier = Modifier.fillMaxSize()
+                logs = listOf("Completed log line"),
+                showLogs = showLogs,
+                onToggleLogs = { showLogs = !showLogs },
+                modifier = androidx.compose.ui.Modifier.fillMaxSize()
             )
         }
-        // The toggles and raw logs have been removed: sections should be present and raw log should not be displayed
-        composeRule.onNodeWithText("Ping").assertIsDisplayed()
-        composeRule.onNodeWithText("RAW LOG: SAMPLE LINE").assertDoesNotExist()
+
+        composeRule.onNodeWithTag(TestExecutionTags.COMPLETED_TOGGLE).assertIsDisplayed()
+        composeRule.onNodeWithTag(TestExecutionTags.LOG_PANE).assertDoesNotExist()
+
+        composeRule.onNodeWithTag(TestExecutionTags.COMPLETED_TOGGLE).performClick()
+        composeRule.onNodeWithTag(TestExecutionTags.LOG_PANE).assertIsDisplayed()
+        composeRule.onNodeWithText("Completed log line").assertIsDisplayed()
+
+        composeRule.onNodeWithTag(TestExecutionTags.COMPLETED_TOGGLE).performClick()
+        composeRule.onNodeWithTag(TestExecutionTags.LOG_PANE).assertDoesNotExist()
     }
 
     @Test
-    fun in_progress_view_toggle_shows_raw_logs() {
+    fun in_progress_view_toggle_shows_and_hides_logs() {
         composeRule.setContent {
+            var showLogs by remember { mutableStateOf(false) }
             TestInProgressView(
                 sections = listOf(
                     TestSection(
                         TestSectionCategory.TEST,
                         TestSectionType.PING,
                         "Ping",
-                        "PASS",
-                        listOf(TestDetail("Packet Loss", "0%"))
+                        "PENDING"
                     )
                 ),
                 listState = rememberLazyListState(),
-                modifier = Modifier.fillMaxSize()
+                logs = listOf("In-progress log"),
+                showRawLogs = showLogs,
+                onToggleRawLogs = { showLogs = !showLogs },
+                modifier = androidx.compose.ui.Modifier.fillMaxSize()
             )
         }
-        // Toggles/raw logs removed: section should be present and raw log should not exist
-        composeRule.onNodeWithText("Ping").assertIsDisplayed()
-        composeRule.onNodeWithText("RAW LOG: SAMPLE IN PROGRESS").assertDoesNotExist()
+
+        composeRule.onNodeWithTag(TestExecutionTags.IN_PROGRESS_TOGGLE).assertIsDisplayed()
+        composeRule.onNodeWithTag(TestExecutionTags.LOG_PANE).assertDoesNotExist()
+
+        composeRule.onNodeWithTag(TestExecutionTags.IN_PROGRESS_TOGGLE).performClick()
+        composeRule.onNodeWithTag(TestExecutionTags.LOG_PANE).assertIsDisplayed()
+        composeRule.onNodeWithText("In-progress log").assertIsDisplayed()
+
+        composeRule.onNodeWithTag(TestExecutionTags.IN_PROGRESS_TOGGLE).performClick()
+        composeRule.onNodeWithTag(TestExecutionTags.LOG_PANE).assertDoesNotExist()
     }
 
     @Test
@@ -91,7 +119,10 @@ class TestExecutionToggleTest {
                     TestSection(TestSectionCategory.TEST, TestSectionType.SPEED, "Speed Test", "PENDING")
                 ),
                 listState = rememberLazyListState(),
-                modifier = Modifier.fillMaxSize()
+                logs = emptyList(),
+                showRawLogs = false,
+                onToggleRawLogs = {},
+                modifier = androidx.compose.ui.Modifier.fillMaxSize()
             )
         }
 

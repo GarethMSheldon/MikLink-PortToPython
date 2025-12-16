@@ -1,6 +1,6 @@
 # ADR-0005 — Rimozione Logs dallo scope
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0009
 - **Data:** 2025-12-14
 
 ## Contesto

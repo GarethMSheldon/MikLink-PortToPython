@@ -1,3 +1,8 @@
+/*
+ * Purpose: Compose screen to display and edit report details with summary and edit tabs.
+ * Inputs: ReportDetailViewModel-provided state (report, parsed results, socket name, notes) and NavController.
+ * Outputs: UI for viewing parsed test data, editing metadata, exporting PDFs, and navigating back.
+ */
 package com.app.miklink.ui.history
 
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +26,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -114,7 +119,7 @@ fun ReportDetailScreen(
             androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.padding(padding))
         } else {
             Column(modifier = Modifier.padding(padding)) {
-                TabRow(selectedTabIndex = selectedTab) {
+                PrimaryTabRow(selectedTabIndex = selectedTab) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = selectedTab == index,

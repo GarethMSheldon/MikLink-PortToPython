@@ -5,7 +5,7 @@ Questa pagina descrive lo **schema v1** del database Room, preso come fonte di v
 ## Invarianti
 - `probe_config` è **singleton**: PK fissa `id = 1`.
 - Le tabelle `clients`, `test_profiles`, `test_reports` usano ID autogenerati.
-- In pre-produzione il database è creato con `fallbackToDestructiveMigration()` (vedi `di/DatabaseModule.kt`); ogni bump di versione resetta i dati per velocizzare l'iterazione.
+- In pre-produzione il database è creato con `fallbackToDestructiveMigration(dropAllTables = true)` (vedi `di/DatabaseModule.kt`); ogni bump di versione resetta i dati per velocizzare l'iterazione.
 
 ## Tabella `clients`
 
@@ -85,3 +85,4 @@ Questa pagina descrive lo **schema v1** del database Room, preso come fonte di v
 - `index_test_reports_clientId` su (clientId)
 - `index_test_reports_timestamp` su (timestamp)
 - `index_test_reports_clientId_timestamp` su (clientId, timestamp)
+

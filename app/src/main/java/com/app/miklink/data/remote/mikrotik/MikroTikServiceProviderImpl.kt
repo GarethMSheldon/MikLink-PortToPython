@@ -1,3 +1,8 @@
+/*
+ * Purpose: Provide MikroTik API services bound to the active Wi-Fi network for probe interactions.
+ * Inputs: Application context for network discovery and a service factory for building API clients.
+ * Outputs: Configured MikroTikApiService instances using the correct socket factory when Wi-Fi is available.
+ */
 package com.app.miklink.data.remote.mikrotik
 
 import android.content.Context
@@ -18,7 +23,7 @@ import javax.inject.Inject
  * per garantire che le chiamate API utilizzino la rete WiFi corretta.
  */
 class MikroTikServiceProviderImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val serviceFactory: MikroTikServiceFactory
 ) : MikroTikServiceProvider {
 
@@ -36,4 +41,3 @@ class MikroTikServiceProviderImpl @Inject constructor(
         return serviceFactory.createService(probe, wifiNetwork?.socketFactory)
     }
 }
-

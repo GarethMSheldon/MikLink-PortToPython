@@ -1,3 +1,8 @@
+/*
+ * Purpose: Validate Moshi mapping for MikroTik neighbor discovery golden fixture data.
+ * Inputs: RouterOS ip_neighbor_single.json fixture and Moshi adapters from TestMoshiProvider.
+ * Outputs: Assertions covering MAC, discovery protocols, system caps, and interface fields.
+ */
 package com.app.miklink.data.remote.mikrotik.golden
 
 import com.app.miklink.testsupport.FixtureLoader
@@ -10,11 +15,11 @@ import org.junit.Test
 
 class NeighborGoldenParsingTest {
     data class GoldenNeighbor(
-        @Json(name = "mac-address") val macAddress: String?,
-        @Json(name = "discovered-by") val discoveredBy: String?,
-        @Json(name = "system-caps") val systemCaps: String?,
-        @Json(name = "interface") val iface: String?,
-        @Json(name = "interface-name") val interfaceName: String?
+        @field:Json(name = "mac-address") val macAddress: String?,
+        @field:Json(name = "discovered-by") val discoveredBy: String?,
+        @field:Json(name = "system-caps") val systemCaps: String?,
+        @field:Json(name = "interface") val iface: String?,
+        @field:Json(name = "interface-name") val interfaceName: String?
     )
 
     @Test

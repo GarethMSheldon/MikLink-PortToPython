@@ -38,7 +38,7 @@ import javax.inject.Inject
  * Replica la logica di AppRepository_legacy per costruire il service con WiFi network binding.
  */
 class MikroTikTestRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val serviceFactory: MikroTikServiceFactory
 ) : MikroTikTestRepository {
 

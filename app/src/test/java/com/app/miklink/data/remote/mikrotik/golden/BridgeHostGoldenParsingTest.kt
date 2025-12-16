@@ -1,3 +1,8 @@
+/*
+ * Purpose: Verify Moshi parsing for bridge host golden file ensuring MAC and interface are read correctly.
+ * Inputs: RouterOS 7.20.5 bridge_host.json fixture via FixtureLoader and TestMoshiProvider.
+ * Outputs: Assertions that parsed hosts contain expected MAC/interface combination.
+ */
 package com.app.miklink.data.remote.mikrotik.golden
 
 import com.app.miklink.testsupport.FixtureLoader
@@ -10,8 +15,8 @@ import org.junit.Test
 
 class BridgeHostGoldenParsingTest {
     data class GoldenBridgeHost(
-        @Json(name = "mac-address") val macAddress: String?,
-        @Json(name = "on-interface") val onInterface: String?
+        @field:Json(name = "mac-address") val macAddress: String?,
+        @field:Json(name = "on-interface") val onInterface: String?
     )
 
     @Test

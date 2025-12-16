@@ -1,3 +1,8 @@
+/*
+ * Purpose: Check MikroTik probe connectivity and surface board/interface metadata to the app layer.
+ * Inputs: Probe configuration, MikroTikServiceProvider, and application context for localized errors.
+ * Outputs: ProbeCheckResult indicating success with metadata or an error message.
+ */
 package com.app.miklink.data.repositoryimpl.mikrotik
 
 import android.content.Context
@@ -18,7 +23,7 @@ import javax.inject.Inject
  * per verificare la connessione e ottenere informazioni hardware.
  */
 class ProbeConnectivityRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val serviceProvider: MikroTikServiceProvider
 ) : ProbeConnectivityRepository {
 
@@ -42,4 +47,3 @@ class ProbeConnectivityRepositoryImpl @Inject constructor(
             }
         }
 }
-

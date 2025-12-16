@@ -146,6 +146,14 @@
     <string name="unknown_client">Cliente Sconosciuto</string>
     <string name="unnamed_socket">Presa Senza Nome</string>
 
+    <!-- Test execution logs -->
+    <string name="test_toggle_show_raw_logs">Mostra log grezzi</string>
+    <string name="test_toggle_hide_raw_logs">Nascondi log grezzi</string>
+    <string name="test_toggle_show_logs">Mostra log</string>
+    <string name="test_toggle_hide_logs">Nascondi log</string>
+    <string name="test_logs_empty">Nessun log</string>
+    <string name="test_logs_title">Log di esecuzione</string>
+
     <!-- PDF Dialog -->
     <string name="pdf_export_title">Esporta PDF</string>
     <string name="pdf_export_confirm">Generare report PDF per %1$s?</string>

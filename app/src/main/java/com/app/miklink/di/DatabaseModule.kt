@@ -40,7 +40,7 @@ object DatabaseModule {
             MikLinkDatabase::class.java,
             "miklink"
         )
-        .fallbackToDestructiveMigration() // Pre-production: wipe on schema mismatch to speed up iteration
+        .fallbackToDestructiveMigration(dropAllTables = true) // Pre-production: wipe on schema mismatch to speed up iteration
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)

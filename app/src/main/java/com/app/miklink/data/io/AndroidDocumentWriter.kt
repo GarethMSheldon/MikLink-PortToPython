@@ -1,3 +1,8 @@
+/*
+ * Purpose: Write byte streams to URIs provided by the domain layer using Android's ContentResolver.
+ * Inputs: DocumentDestination targets, raw byte arrays, MIME type string, and injected application context.
+ * Outputs: Result wrapping the outcome of writing bytes to the specified destination.
+ */
 package com.app.miklink.data.io
 
 import android.content.Context
@@ -10,7 +15,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class AndroidDocumentWriter @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : DocumentWriter {
     override suspend fun writeBytes(dest: DocumentDestination, bytes: ByteArray, mimeType: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {

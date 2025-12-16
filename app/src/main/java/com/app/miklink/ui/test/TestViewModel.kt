@@ -1,8 +1,8 @@
 /*
  * Purpose: Orchestrate test execution UI state and delegate report persistence through domain use cases.
  * Inputs: SavedStateHandle navigation args (clientId, profileId, socketName) and RunTestUseCase events.
- * Outputs: UiState/TestSection flows for the UI and persisted reports via SaveTestReportUseCase.
- * Notes: Keeps UI free from repository details; persistence policy (Socket-ID increment) lives in the use case.
+ * Outputs: UiState/TestSection/log flows for the UI and persisted reports via SaveTestReportUseCase.
+ * Notes: Keeps UI free from repository details; persistence policy (Socket-ID increment) lives in the use case; log buffer is UI-only.
  */
 package com.app.miklink.ui.test
 
@@ -11,6 +11,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.domain.model.TestReport
+import com.app.miklink.core.domain.test.logging.ExecutionLogBuffer
 import com.app.miklink.core.domain.test.model.TestEvent
 import com.app.miklink.core.domain.test.model.TestOutcome
 import com.app.miklink.core.domain.test.model.TestPlan
@@ -45,6 +46,10 @@ class TestViewModel @Inject constructor(
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 
+    private val logBuffer = ExecutionLogBuffer()
+    private val _logs = MutableStateFlow<List<String>>(emptyList())
+    val logs: StateFlow<List<String>> = _logs.asStateFlow()
+
     fun startTest() {
         if (_isRunning.value) return
 
@@ -54,6 +59,8 @@ class TestViewModel @Inject constructor(
             _sections.value = emptyList()
             _uiState.value = UiState.Loading
             _isRunning.value = true
+            logBuffer.clear()
+            _logs.value = emptyList()
 
             runTestUseCase.execute(plan)
                 .catch { throwable ->
@@ -61,12 +68,11 @@ class TestViewModel @Inject constructor(
                 }
                 .collect { event ->
                     when (event) {
+                        is TestEvent.Progress -> appendLog("[${event.progress.currentStep}] ${event.progress.message}")
+                        is TestEvent.LogLine -> appendLog(event.message)
                         is TestEvent.SectionsUpdated -> _sections.value = mapSections(event.sections)
                         is TestEvent.Completed -> handleCompletion(plan, event.outcome)
                         is TestEvent.Failed -> handleFailure(event.error.message)
-                        else -> {
-                            // Ignore raw log/progress events for the UI (kept internal to UseCase)
-                        }
                     }
                 }
         }
@@ -152,6 +158,11 @@ class TestViewModel @Inject constructor(
             TestSectionType.NETWORK, TestSectionType.LLDP -> TestSectionCategory.INFO
             else -> TestSectionCategory.TEST
         }
+    }
+
+    private fun appendLog(line: String) {
+        logBuffer.append(line)
+        _logs.value = logBuffer.snapshot()
     }
 
     private fun readId(key: String): Long {

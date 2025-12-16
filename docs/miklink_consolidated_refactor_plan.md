@@ -103,7 +103,7 @@ These were repeatedly requested and should be treated as hard requirements:
 
 ### 3.4 Pre‑production DB policy
 - Until production release: use Room **destructive migration** (data wipe on version mismatch), to allow rapid iteration:
-  - `fallbackToDestructiveMigration()`
+  - `fallbackToDestructiveMigration(dropAllTables = true)`
 - You explicitly requested: “**all data destroyed on every update until production**.”
 
 ---
@@ -438,7 +438,7 @@ This feature map was requested explicitly in the chat to confirm scope before re
 
 ### 9.3 C — DB destructive migration in pre‑production
 **Required outcome**
-- Add `.fallbackToDestructiveMigration()` in Room builder.
+- Add `.fallbackToDestructiveMigration(dropAllTables = true)` in Room builder.
 - Comment in English to clarify the “pre-production destructive policy”.
 
 ### 9.4 D — PDF generator refactor: remove legacy dependencies
@@ -493,7 +493,7 @@ This feature map was requested explicitly in the chat to confirm scope before re
 ## 10. Database reset policy (pre‑prod)
 
 ### 10.1 Destructive migration until production
-- Add `fallbackToDestructiveMigration()`.
+- Add `fallbackToDestructiveMigration(dropAllTables = true)`.
 - Treat as **temporary pre-prod guardrail**; revisit before release.
 
 ### 10.2 “Restart DB from zero” allowance
@@ -618,7 +618,7 @@ This feature map was requested explicitly in the chat to confirm scope before re
 - UI uses `stringResource(...)` for all user-visible text and content descriptions.
 
 ### 15.4 DB policy
-- `.fallbackToDestructiveMigration()` enabled until production.
+- `.fallbackToDestructiveMigration(dropAllTables = true)` enabled until production.
 - Export schema and DB reference docs match the schema JSON.
 
 ### 15.5 Behavior
@@ -655,7 +655,7 @@ This ordering reduces breakage and keeps diffs reviewable:
    - Update run test flow and tests
 
 5) **DB destructive policy**
-   - Add `fallbackToDestructiveMigration()`
+   - Add `fallbackToDestructiveMigration(dropAllTables = true)`
    - Update DB reference docs
 
 6) **UI hardcoded strings extraction**
@@ -706,3 +706,4 @@ The chat contained several claims of “already done” work (not verifiable her
 ---
 
 **End of document**
+

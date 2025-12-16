@@ -1,3 +1,8 @@
+/*
+ * Purpose: Read text content from URIs supplied by the domain layer using Android's ContentResolver.
+ * Inputs: DocumentDestination targets resolved to URIs and injected application context.
+ * Outputs: Result wrapping the full text read from the destination.
+ */
 package com.app.miklink.data.io
 
 import android.content.Context
@@ -10,7 +15,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class AndroidDocumentReader @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : DocumentReader {
     override suspend fun readText(dest: DocumentDestination): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
