@@ -1,9 +1,16 @@
+/*
+ * Purpose: Manage test profile list/edit state and persist profiles through the guarded save use case.
+ * Inputs: SavedStateHandle (profileId arg), TestProfileRepository for reads, and SaveTestProfileUseCase for writes.
+ * Outputs: Profiles stream for the list screen plus save/delete operations without PK constraint crashes.
+ * Notes: Never calls insert on existing profiles; validates ping count bounds before saving.
+ */
 package com.app.miklink.ui.profile
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.data.repository.test.TestProfileRepository
 import com.app.miklink.core.domain.model.TestProfile
+import com.app.miklink.core.domain.usecase.testprofile.SaveTestProfileUseCase
 import com.app.miklink.ui.common.BaseEditViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -13,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TestProfileViewModel @Inject constructor(
     private val testProfileRepository: TestProfileRepository,
+    private val saveTestProfileUseCase: SaveTestProfileUseCase,
     private val savedStateHandle: SavedStateHandle
 ) : BaseEditViewModel(savedStateHandle, "profileId") {
 
@@ -70,7 +78,7 @@ class TestProfileViewModel @Inject constructor(
                 pingCount = pingCount.value.toIntOrNull()?.coerceIn(1, 20) ?: 4, // validation
                 runSpeedTest = runSpeedTest.value
             )
-            testProfileRepository.insertProfile(profile)
+            saveTestProfileUseCase(profile)
             markSaved()
         }
     }
@@ -94,4 +102,3 @@ class TestProfileViewModel @Inject constructor(
     // Validation helper for UI/tests (not part of BaseEditViewModel contract)
     fun isValidForSave(): Boolean = profileName.value.isNotBlank()
 }
-

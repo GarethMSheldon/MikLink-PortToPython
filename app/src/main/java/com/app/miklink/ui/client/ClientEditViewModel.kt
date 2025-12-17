@@ -1,3 +1,9 @@
+/*
+ * Purpose: Manage client edit/create state, loading existing entities and persisting them via the save use case.
+ * Inputs: SavedStateHandle (clientId arg), ClientRepository for reads, and SaveClientUseCase for guarded inserts/updates.
+ * Outputs: Form state flows plus save operations that avoid UNIQUE/PK crashes when editing.
+ * Notes: Preserves nextIdNumber when editing and never calls insert on an existing primary key.
+ */
 package com.app.miklink.ui.client
 
 import androidx.lifecycle.SavedStateHandle
@@ -5,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.app.miklink.core.data.repository.client.ClientRepository
 import com.app.miklink.core.domain.model.Client
 import com.app.miklink.core.domain.model.NetworkMode
+import com.app.miklink.core.domain.usecase.client.SaveClientUseCase
 import com.app.miklink.ui.common.BaseEditViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ClientEditViewModel @Inject constructor(
     private val clientRepository: ClientRepository,
+    private val saveClientUseCase: SaveClientUseCase,
     savedStateHandle: SavedStateHandle
 ) : BaseEditViewModel(savedStateHandle, "clientId") {
 
@@ -108,13 +116,10 @@ class ClientEditViewModel @Inject constructor(
 
     suspend fun persistEntity(entity: Client) {
         val finalEntity = if (isEditing) {
-            // Re-fetch existing client to preserve nextIdNumber
             val existingClient = clientRepository.getClient(entityId)
-            entity.copy(nextIdNumber = existingClient?.nextIdNumber ?: 1)
-        } else {
-            entity
-        }
-        clientRepository.insertClient(finalEntity)
+            entity.copy(nextIdNumber = existingClient?.nextIdNumber ?: entity.nextIdNumber)
+        } else entity
+        saveClientUseCase(finalEntity)
     }
 
     /**
@@ -128,7 +133,7 @@ class ClientEditViewModel @Inject constructor(
         if (companyName.value.isBlank()) return
 
         viewModelScope.launch {
-            val originalClient = if(isEditing) clientRepository.getClient(entityId) else null
+            val originalClient = if (isEditing) clientRepository.getClient(entityId) else null
 
             val client = Client(
                 clientId = if (isEditing) entityId else 0,
@@ -150,7 +155,7 @@ class ClientEditViewModel @Inject constructor(
                 speedTestServerUser = speedTestServerUser.value.takeIf { it.isNotBlank() },
                 speedTestServerPassword = speedTestServerPassword.value.takeIf { it.isNotBlank() }
             )
-            clientRepository.insertClient(client)
+            saveClientUseCase(client)
             markSaved()
         }
     }

@@ -1,6 +1,13 @@
+/*
+ * Purpose: Contract tests for probe connectivity repository to verify board name/interface retrieval and error handling.
+ * Inputs: Fake MikroTik API responses via mocked service provider and probe configuration.
+ * Outputs: Assertions on ProbeCheckResult contents for success, errors, and missing board-name scenarios.
+ * Notes: Ensures board names propagate correctly and handshake errors are surfaced as expected.
+ */
 package com.app.miklink.core.data.repository.probe
 
 import android.content.Context
+import com.app.miklink.R
 import com.app.miklink.core.domain.model.ProbeConfig
 import com.app.miklink.data.remote.mikrotik.dto.EthernetInterface
 import com.app.miklink.data.remote.mikrotik.dto.ProplistRequest
@@ -17,6 +24,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 import retrofit2.HttpException
+import javax.net.ssl.SSLHandshakeException
 
 /**
  * Contract test per ProbeConnectivityRepository.
@@ -48,6 +56,8 @@ class ProbeConnectivityRepositoryContractTest {
         mockkStatic("android.util.Log")
         every { android.util.Log.d(any(), any()) } returns 0
         every { android.util.Log.e(any(), any(), any()) } returns 0
+        every { android.util.Log.w(any(), any(), any()) } returns 0
+        every { android.util.Log.isLoggable(any(), any()) } returns false
         // Given: Connessione riuscita
         every { mockServiceProvider.build(testProbe) } returns mockApiService
         coEvery { mockApiService.getSystemResource(any<ProplistRequest>()) } returns listOf(
@@ -75,6 +85,8 @@ class ProbeConnectivityRepositoryContractTest {
         mockkStatic("android.util.Log")
         every { android.util.Log.d(any(), any()) } returns 0
         every { android.util.Log.e(any(), any(), any()) } returns 0
+        every { android.util.Log.w(any(), any(), any()) } returns 0
+        every { android.util.Log.isLoggable(any(), any()) } returns false
         // Given: Connessione fallita
         every { mockServiceProvider.build(testProbe) } returns mockApiService
         coEvery { mockApiService.getSystemResource(any<ProplistRequest>()) } throws HttpException(
@@ -96,6 +108,8 @@ class ProbeConnectivityRepositoryContractTest {
         mockkStatic("android.util.Log")
         every { android.util.Log.d(any(), any()) } returns 0
         every { android.util.Log.e(any(), any(), any()) } returns 0
+        every { android.util.Log.w(any(), any(), any()) } returns 0
+        every { android.util.Log.isLoggable(any(), any()) } returns false
         // Given: Risposta API senza board-name
         every { mockServiceProvider.build(testProbe) } returns mockApiService
         coEvery { mockApiService.getSystemResource(any<ProplistRequest>()) } returns emptyList()
@@ -112,5 +126,75 @@ class ProbeConnectivityRepositoryContractTest {
         assertEquals("Unknown Board", success.boardName)
         assertEquals(1, success.interfaces.size)
     }
-}
 
+    @Test
+    fun `checkProbeConnection picks first available boardName even if earlier entries missing`() = runTest {
+        mockkStatic("android.util.Log")
+        every { android.util.Log.d(any(), any()) } returns 0
+        every { android.util.Log.e(any(), any(), any()) } returns 0
+        every { android.util.Log.w(any(), any(), any()) } returns 0
+        every { android.util.Log.isLoggable(any(), any()) } returns false
+        every { mockServiceProvider.build(testProbe) } returns mockApiService
+        coEvery { mockApiService.getSystemResource(any<ProplistRequest>()) } returns listOf(
+            SystemResource(boardName = null),
+            SystemResource(boardName = "RB5000")
+        )
+        coEvery { mockApiService.getEthernetInterfaces() } returns listOf(EthernetInterface(name = "ether1"))
+
+        val result = repository.checkProbeConnection(testProbe)
+
+        assertTrue(result is ProbeCheckResult.Success)
+        val success = result as ProbeCheckResult.Success
+        assertEquals("RB5000", success.boardName)
+    }
+
+    @Test
+    fun `checkProbeConnection falls back to HTTP when HTTPS handshake fails`() = runTest {
+        mockkStatic("android.util.Log")
+        every { android.util.Log.d(any(), any()) } returns 0
+        every { android.util.Log.w(any(), any(), any()) } returns 0
+        every { android.util.Log.e(any(), any(), any()) } returns 0
+        every { android.util.Log.isLoggable(any(), any()) } returns false
+        val httpsProbe = testProbe.copy(isHttps = true)
+        val mockHttpsApi = mockk<MikroTikApiService>()
+        val mockHttpApi = mockk<MikroTikApiService>()
+        every { mockServiceProvider.build(match { it.isHttps }) } returns mockHttpsApi
+        every { mockServiceProvider.build(match { !it.isHttps }) } returns mockHttpApi
+        coEvery { mockHttpsApi.getSystemResource(any<ProplistRequest>()) } throws SSLHandshakeException("protocol_version")
+        coEvery { mockHttpApi.getSystemResource(any<ProplistRequest>()) } returns listOf(
+            SystemResource(boardName = "RB4011")
+        )
+        coEvery { mockHttpApi.getEthernetInterfaces() } returns listOf(EthernetInterface(name = "ether1"))
+
+        val result = repository.checkProbeConnection(httpsProbe)
+
+        assertTrue(result is ProbeCheckResult.Success)
+        val success = result as ProbeCheckResult.Success
+        assertEquals("RB4011", success.boardName)
+        assertEquals(listOf("ether1"), success.interfaces)
+    }
+
+    @Test
+    fun `checkProbeConnection surfaces TLS guidance if fallback fails`() = runTest {
+        mockkStatic("android.util.Log")
+        every { android.util.Log.d(any(), any()) } returns 0
+        every { android.util.Log.w(any(), any(), any()) } returns 0
+        every { android.util.Log.e(any(), any(), any()) } returns 0
+        every { android.util.Log.isLoggable(any(), any()) } returns false
+        val httpsProbe = testProbe.copy(isHttps = true)
+        val mockHttpsApi = mockk<MikroTikApiService>()
+        val mockHttpApi = mockk<MikroTikApiService>()
+        every { mockServiceProvider.build(match { it.isHttps }) } returns mockHttpsApi
+        every { mockServiceProvider.build(match { !it.isHttps }) } returns mockHttpApi
+        coEvery { mockHttpsApi.getSystemResource(any<ProplistRequest>()) } throws SSLHandshakeException("protocol_version")
+        coEvery { mockHttpApi.getSystemResource(any<ProplistRequest>()) } throws HttpException(mockk(relaxed = true))
+        every { mockContext.getString(R.string.error_probe_connection_unknown) } returns "Fallback"
+        every { mockContext.getString(R.string.error_probe_connection_tls_handshake) } returns "TLS handshake failed guidance"
+
+        val result = repository.checkProbeConnection(httpsProbe)
+
+        assertTrue(result is ProbeCheckResult.Error)
+        val error = result as ProbeCheckResult.Error
+        assertEquals("TLS handshake failed guidance", error.message)
+    }
+}

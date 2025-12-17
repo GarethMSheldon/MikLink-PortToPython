@@ -1,14 +1,25 @@
+/*
+ * Purpose: Manage probe edit/verification state and persist probe configuration including board/model metadata.
+ * Inputs: ProbeRepository for persistence, ProbeConnectivityRepository for verification, navigation args via SavedStateHandle.
+ * Outputs: Form state flows, verification state, and saved ProbeConfig with modelName/testInterface populated after verification.
+ * Notes: _modelName is updated on successful verification to ensure persistence; verificationState is UI-only feedback.
+ */
 package com.app.miklink.ui.probe
 
 import androidx.lifecycle.SavedStateHandle
-import com.app.miklink.ui.common.BaseEditViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.miklink.core.data.repository.probe.ProbeRepository
-import com.app.miklink.core.domain.model.ProbeConfig
 import com.app.miklink.core.data.repository.ProbeCheckResult
 import com.app.miklink.core.data.repository.probe.ProbeConnectivityRepository
+import com.app.miklink.core.data.repository.probe.ProbeRepository
+import com.app.miklink.core.domain.model.ProbeConfig
+import com.app.miklink.ui.common.BaseEditViewModel
+import com.app.miklink.utils.Compatibility
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -108,6 +119,8 @@ class ProbeEditViewModel @Inject constructor(
             when (val result = probeConnectivityRepository.checkProbeConnection(tempProbe)) {
                 is ProbeCheckResult.Success -> {
                     _isOnline.value = true
+                    _tdrSupported.value = Compatibility.isTdrSupported(result.boardName)
+                    _modelName.value = result.boardName
                     testInterface.value = result.interfaces.firstOrNull() ?: ""
                     _verificationState.value = VerificationState.Success(result.boardName, result.interfaces)
                 }

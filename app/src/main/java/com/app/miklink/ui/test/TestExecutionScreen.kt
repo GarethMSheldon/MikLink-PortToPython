@@ -80,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -91,8 +92,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.app.miklink.R
 import com.app.miklink.core.domain.model.TestReport
 import com.app.miklink.ui.common.TestSectionCard
+import com.app.miklink.ui.common.UiText
+import com.app.miklink.ui.common.asString
 import com.app.miklink.ui.test.TestSectionCategory.INFO
 import com.app.miklink.ui.test.TestSectionCategory.TEST
 import com.app.miklink.ui.test.TestSectionType.LINK
@@ -103,6 +107,8 @@ import com.app.miklink.ui.test.TestSectionType.SPEED
 import com.app.miklink.ui.test.TestSectionType.TDR
 import com.app.miklink.ui.test.components.RawLogsPane
 import com.app.miklink.ui.test.components.TestExecutionTags
+import com.app.miklink.ui.format.SectionDetailFormatter
+import com.app.miklink.ui.format.SectionId
 import com.app.miklink.utils.UiState
 
 // Helper per estrarre velocità e CPU load da stringhe come:
@@ -550,8 +556,20 @@ fun TestInProgressView(
 
 @Composable
 private fun TestSectionDetails(section: TestSection) {
+    val sectionId = SectionId.fromTestSectionType(section.type)
+    val formattedDetails = section.details.mapNotNull { detail ->
+        if (detail.label == "---" || detail.label.startsWith("Ping #")) null
+        else SectionDetailFormatter.format(sectionId, detail.label, detail.value)
+    }
+
     if (section.type == PING) {
-        val lossText = section.details.firstOrNull { it.label == "Packet Loss" }?.value ?: ""
+        val lossDetail = formattedDetails.firstOrNull { detail ->
+            when (val label = detail.label) {
+                is UiText.Resource -> label.resId == R.string.detail_label_packet_loss
+                is UiText.Dynamic -> label.value.equals("Packet Loss", ignoreCase = true)
+            }
+        }
+        val lossText = lossDetail?.value?.asString() ?: ""
         if (lossText.isNotBlank() && lossText != "-" && lossText.any { it.isDigit() }) {
             val isZeroLoss = lossText.trim().startsWith("0")
             val chipBg = if (isZeroLoss) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
@@ -606,44 +624,51 @@ private fun TestSectionDetails(section: TestSection) {
                     )
                 }
             }
-            isSpeedDetailLabel(d.label) -> {
-                val (speed, load) = parseSpeedAndLoad(d.value)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(d.label)
-                    Text(speed, fontWeight = FontWeight.Bold)
-                }
-                if (!load.isNullOrBlank()) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("CPU Load")
-                        Text(load, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            d.label.equals("Avviso", ignoreCase = true) -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(d.value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
             else -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(d.label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        if (d.label == "reason") TestSkipReasonMapper.getLocalizedReason(d.value) else d.value,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                val formatted = SectionDetailFormatter.format(sectionId, d.label, d.value) ?: return@forEach
+                val labelText = formatted.label.asString()
+                val valueText = formatted.value.asString()
+                when {
+                    isSpeedDetailLabel(labelText) -> {
+                        val (speed, load) = parseSpeedAndLoad(valueText)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(labelText)
+                            Text(speed, fontWeight = FontWeight.Bold)
+                        }
+                        if (!load.isNullOrBlank()) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("CPU Load")
+                                Text(load, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    labelText.equals("Avviso", ignoreCase = true) || labelText.equals(stringResource(id = R.string.detail_label_warning), ignoreCase = true) -> {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(valueText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    else -> {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(labelText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                valueText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -699,30 +724,50 @@ fun TestCompletedView(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "status_pulse")
-                    val scale by infiniteTransition.animateFloat(
-                        initialValue = 1f,
-                        targetValue = 1.1f,
+                    val glowAlpha by infiniteTransition.animateFloat(
+                        initialValue = 0.35f,
+                        targetValue = 0.75f,
                         animationSpec = infiniteRepeatable(
-                            animation = tween(1000, easing = FastOutSlowInEasing),
+                            animation = tween(1200, easing = FastOutSlowInEasing),
                             repeatMode = RepeatMode.Reverse
                         ),
-                        label = "scale"
+                        label = "glow_alpha"
+                    )
+                    val glowRadius by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 22f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "glow_radius"
                     )
 
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
-                            .scale(scale)
-                            .clip(CircleShape)
-                            .background(resultColor),
+                            .size(96.dp)
+                            .drawBehind {
+                                drawCircle(
+                                    color = resultColor.copy(alpha = glowAlpha),
+                                    radius = (size.minDimension / 2f) + glowRadius
+                                )
+                            },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            if (isPassed) Icons.Default.CheckCircle else Icons.Default.Cancel,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = Color.White
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .background(resultColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (isPassed) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = Color.White
+                            )
+                        }
                     }
 
                     Spacer(Modifier.height(16.dp))

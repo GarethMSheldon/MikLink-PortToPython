@@ -27,6 +27,7 @@
     <!-- Errors (Repository) -->
     <string name="error_unknown">An unknown error occurred</string>
     <string name="error_probe_connection_unknown">An unknown error occurred while connecting to the probe.</string>
+    <string name="error_probe_connection_tls_handshake">HTTPS handshake failed: TLS/cipher incompatible or certificate rejected. Install a valid certificate on RouterOS or switch to HTTP.</string>
     <string name="error_static_cidr_missing">CIDR address missing</string>
     <string name="error_static_gateway_missing">Gateway missing for static config</string>
     <string name="error_cable_test_timeout">Timeout during cable-test (>%1$ds). Command may take longer on this model.</string>
@@ -196,4 +197,36 @@
     <string name="section_speed">Speedtest</string>
     <string name="profile_list_title">Test Profiles</string>
     <string name="client_list_title">Manage Clients</string>
+    
+    <!-- Detail formatter labels -->
+    <string name="detail_label_mode">Mode</string>
+    <string name="detail_label_interface">Interface</string>
+    <string name="detail_label_address">Address</string>
+    <string name="detail_label_gateway">Gateway</string>
+    <string name="detail_label_dns">DNS</string>
+    <string name="detail_label_message">Message</string>
+    <string name="detail_label_error">Error</string>
+    <string name="detail_label_reason">Reason</string>
+    <string name="detail_label_status">Status</string>
+    <string name="detail_label_speed">Speed</string>
+    <string name="detail_label_neighbors">Neighbors</string>
+    <string name="detail_label_identity">Identity</string>
+    <string name="detail_label_protocol">Protocol</string>
+    <string name="detail_label_targets">Targets</string>
+    <string name="detail_label_target_number">Target %1$s</string>
+    <string name="detail_label_target_generic">Target</string>
+    <string name="detail_label_packet_loss">Packet Loss</string>
+    <string name="detail_label_min_rtt">Min RTT</string>
+    <string name="detail_label_avg_rtt">Avg RTT</string>
+    <string name="detail_label_max_rtt">Max RTT</string>
+    <string name="detail_label_server">Server</string>
+    <string name="detail_label_warning">Warning</string>
+
+    <!-- Detail formatter values -->
+    <string name="detail_value_dhcp">DHCP</string>
+    <string name="detail_value_static">Static</string>
+    <string name="detail_value_link_ok">Link OK</string>
+    <string name="detail_value_running">Running</string>
+    <string name="detail_value_bound">Bound</string>
+    <string name="detail_value_skipped">Skipped</string>
 </resources>

@@ -1,56 +1,53 @@
 # MikroTik REST API (RouterOS)
 
-Questa pagina descrive la costruzione del service Retrofit e **gli endpoint effettivamente presenti** nella codebase.
+Questa pagina descrive la costruzione del service Retrofit e gli endpoint effettivamente presenti nella codebase.
 
 ## Base URL e HTTPS
-
 - La URL base è costruita in `MikroTikServiceFactory.createService(probeConfig)`:
   - `scheme = https` se `ProbeConfig.isHttps = true`
   - `scheme = http` altrimenti
   - `baseUrl = "$scheme://${probe.ipAddress}/"`
 
 ## Autenticazione
-
 - Basic Auth via header `Authorization: Basic <base64(user:pass)>`.
 - L'header viene aggiunto da un interceptor locale nella factory quando `username` o `password` non sono blank.
 
 ## Trust-all (solo in HTTPS)
+- Se `isHttps = true` la factory configura un SSLContext e un hostname verifier permissivi **solo per quel client**.
+- Il trust-all disabilita la verifica del certificato e dell'hostname. **Non** risolve incompatibilità di protocollo/cipher: un TLS handshake non supportato genera `SSLHandshakeException`.
+- In caso di handshake fallito, `ProbeConnectivityRepositoryImpl` tenta un fallback automatico in HTTP; se fallisce anche il fallback, mostra il messaggio: "HTTPS handshake failed: TLS/cipher incompatible or certificate rejected. Install a valid certificate on RouterOS or switch to HTTP."
 
-- Se `isHttps = true` la factory configura un SSLContext permissivo (trust-all) e `hostnameVerifier` permissivo **solo per questo client** (vedi ADR-0002).
-
-## Binding Wi‑Fi (quando disponibile)
-
-- `MikroTikServiceProviderImpl` prova a trovare una rete Wi‑Fi attiva e, se presente, passa la `socketFactory` alla factory.
+## Binding Wi-Fi (quando disponibile)
+- `MikroTikServiceProviderImpl` prova a trovare una rete Wi-Fi attiva e, se presente, passa la `socketFactory` alla factory.
 
 ## Endpoint
-
 Definiti in `data/remote/mikrotik/service/MikroTikApiService.kt`:
 
-| Metodo | Path | Funzione |
+| Metodo | Path | Funzione (default params) |
 |---|---|---|
-| `POST` | `/rest/system/resource/print` | `getSystemResource(@Body request: ProplistRequest = ProplistRequest(…` |
-| `GET` | `/rest/interface/ethernet` | `getEthernetInterfaces(@Query(".proplist") proplist: String = "name"…` |
-| `GET` | `/rest/ip/dhcp-client` | `getDhcpClientStatus(@Query("interface") interfaceName: String): Lis…` |
-| `POST` | `/rest/ip/dhcp-client/add` | `addDhcpClient(@Body request: DhcpClientAdd): Any` |
-| `POST` | `/rest/ip/dhcp-client/enable` | `enableDhcpClient(@Body request: NumbersRequest): Any` |
-| `POST` | `/rest/ip/dhcp-client/disable` | `disableDhcpClient(@Body request: NumbersRequest): Any` |
-| `GET` | `/rest/ip/address` | `getIpAddresses(@Query(".proplist") proplist: String = ".id,address,…` |
-| `POST` | `/rest/ip/address/add` | `addIpAddress(@Body request: IpAddressAdd): Any` |
-| `POST` | `/rest/ip/address/remove` | `removeIpAddress(@Body request: NumbersRequest): Any` |
-| `GET` | `/rest/ip/route` | `getRoutes(@Query(".proplist") proplist: String = ".id,dst-address,g…` |
-| `POST` | `/rest/ip/route/add` | `addRoute(@Body request: RouteAdd): Any` |
-| `POST` | `/rest/ip/route/remove` | `removeRoute(@Body request: NumbersRequest): Any` |
-| `POST` | `/rest/interface/ethernet/cable-test` | `runCableTest(@Body request: CableTestRequest): List<CableTestResult>` |
-| `POST` | `/rest/interface/ethernet/monitor` | `getLinkStatus(@Body request: MonitorRequest): List<MonitorResponse>` |
-| `GET` | `/rest/ip/neighbor` | `getIpNeighbors(` |
-| `POST` | `/rest/ping` | `runPing(@Body request: PingRequest): List<PingResult>` |
-| `POST` | `/rest/tool/speed-test` | `runSpeedTest(` |
+| POST | `/rest/system/resource/print` | `getSystemResource(ProplistRequest(["board-name"]))` |
+| GET | `/rest/interface/ethernet` | `getEthernetInterfaces(".proplist"="name")` |
+| GET | `/rest/ip/dhcp-client` | `getDhcpClientStatus(interface)` |
+| POST | `/rest/ip/dhcp-client/add` | `addDhcpClient(DhcpClientAdd)` |
+| POST | `/rest/ip/dhcp-client/enable` | `enableDhcpClient(NumbersRequest)` |
+| POST | `/rest/ip/dhcp-client/disable` | `disableDhcpClient(NumbersRequest)` |
+| GET | `/rest/ip/address` | `getIpAddresses(".proplist"=".id,address,interface")` |
+| POST | `/rest/ip/address/add` | `addIpAddress(IpAddressAdd)` |
+| POST | `/rest/ip/address/remove` | `removeIpAddress(NumbersRequest)` |
+| GET | `/rest/ip/route` | `getRoutes(".proplist"=".id,dst-address,gateway")` |
+| POST | `/rest/ip/route/add` | `addRoute(RouteAdd)` |
+| POST | `/rest/ip/route/remove` | `removeRoute(NumbersRequest)` |
+| POST | `/rest/interface/ethernet/cable-test` | `runCableTest(CableTestRequest)` |
+| POST | `/rest/interface/ethernet/monitor` | `getLinkStatus(MonitorRequest)` |
+| GET | `/rest/ip/neighbor` | `getIpNeighbors(interface, ".proplist"="identity,interface-name,system-caps-enabled,discovered-by,vlan-id,voice-vlan-id,poe-class,system-description,port-id")` |
+| POST | `/rest/ping` | `runPing(PingRequest)` |
+| POST | `/rest/tool/speed-test` | `runSpeedTest(SpeedTestRequest)` |
 
+### Board name resilienza
+- `/rest/system/resource/print` può restituire più entry e non tutte includono `board-name`.
+- `ProbeConnectivityRepositoryImpl` usa `.proplist = ["board-name"]` per ridurre la risposta e prende la prima `board-name` non vuota; se nessuna entry la espone, usa `"Unknown Board"`.
+- Coperto dai test `ProbeConnectivityRepositoryContractTest` e `ProbeStatusRepositoryContractTest`.
 
-> Nota: alcune righe molto lunghe (es. `.proplist`) possono risultare troncate nel dump testuale; fai sempre riferimento al file Kotlin come fonte finale.
-
-
-## Parsing e Golden tests
-- I DTO vengono parsati con **Moshi**.
-- Il mapping `dto -> domain` per gli step di test è centralizzato in `data/remote/mikrotik/mapper` e le porte espongono solo tipi dominio.
-- Le suite `app/src/test/java/com/app/miklink/data/remote/mikrotik/golden/*` validano che il parsing resti stabile su fixture versionate.
+### HTTPS e TLS
+- Il toggle HTTPS abilita il client trust-all (cert/hostname) solo per la sonda.
+- Se la stretta di mano TLS fallisce (es. cipher/protocollo non supportato), il repository prova automaticamente HTTP; se anche il fallback fallisce, l'utente vede un messaggio esplicito che suggerisce di installare un certificato valido o usare HTTP. Il trust-all non modifica i cipher né forza protocolli deprecati.

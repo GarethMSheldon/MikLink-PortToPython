@@ -41,6 +41,7 @@ class MikroTikServiceFactory @Inject constructor(
             // If the probe is configured to use HTTPS, allow connecting to self-signed
             // MikroTik devices by using a permissive TrustManager on this client only.
             // Note: keep this logic local to avoid introducing new global abstractions.
+            // This bypasses cert/hostname checks only; TLS handshake still fails if cipher/protocol is unsupported.
             if (probe.isHttps) {
                 val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(
                     object : javax.net.ssl.X509TrustManager {

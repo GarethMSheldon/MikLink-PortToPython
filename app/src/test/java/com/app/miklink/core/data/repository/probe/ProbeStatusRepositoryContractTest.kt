@@ -1,3 +1,9 @@
+/*
+ * Purpose: Contract tests for probe status repository to validate online detection via MikroTik REST.
+ * Inputs: Mocked service provider responses and probe configuration.
+ * Outputs: Assertions that online/offline status is determined correctly when board-name is present or errors occur.
+ * Notes: Guards against regressions in board-name filtering and polling logic.
+ */
 package com.app.miklink.core.data.repository.probe
 
 import com.app.miklink.core.domain.model.ProbeConfig
@@ -49,7 +55,7 @@ class ProbeStatusRepositoryContractTest {
         // Given: Probe online (API risponde con successo)
         every { mockUserPreferencesRepository.probePollingInterval } returns flowOf(100L)
         every { mockServiceProvider.build(testProbe) } returns mockApiService
-        coEvery { mockApiService.getSystemResource(any<ProplistRequest>()) } returns listOf(
+        coEvery { mockApiService.getSystemResource(any()) } returns listOf(
             SystemResource(boardName = "Test Board")
         )
 
@@ -65,7 +71,7 @@ class ProbeStatusRepositoryContractTest {
         // Given: Probe offline (API lancia eccezione)
         every { mockUserPreferencesRepository.probePollingInterval } returns flowOf(100L)
         every { mockServiceProvider.build(testProbe) } returns mockApiService
-        coEvery { mockApiService.getSystemResource(any<ProplistRequest>()) } throws HttpException(
+        coEvery { mockApiService.getSystemResource(any()) } throws HttpException(
             mockk(relaxed = true)
         )
 
@@ -78,4 +84,3 @@ class ProbeStatusRepositoryContractTest {
 
     // NOTE: Multi-probe legacy behaviour tests removed for single-probe "new-only" target.
 }
-

@@ -3,17 +3,28 @@
  * Inputs: Raw JSON payloads from MikroTik HTTP APIs mapped with explicit field targets.
  * Outputs: Typed request/response models consumed by MikroTik repositories and services.
  */
+/*
+ * Purpose: Define MikroTik REST DTOs used by the data layer for requests and responses.
+ * Inputs: Serialized JSON payloads from RouterOS REST endpoints.
+ * Outputs: Typed request/response models consumed by repositories and mappers.
+ * Notes: Keep field annotations aligned with RouterOS expectations (e.g., `.proplist`).
+ */
 package com.app.miklink.data.remote.mikrotik.dto
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
 // General request wrappers
-data class ProplistRequest(@field:Json(name = ".proplist") val proplist: List<String>)
+data class ProplistRequest(
+    @param:Json(name = ".proplist")
+    val proplist: List<String>
+)
 data class InterfaceNameRequest(@field:Json(name = "?interface") val interfaceName: String)
 data class NumbersRequest(@field:Json(name = "numbers") val numbers: String)
 
 // System / Interface responses
-data class SystemResource(@field:Json(name = "board-name") val boardName: String)
+@JsonClass(generateAdapter = true)
+data class SystemResource(@param:Json(name = "board-name") val boardName: String? = null)
 data class EthernetInterface(@field:Json(name = "name") val name: String)
 
 // DHCP client

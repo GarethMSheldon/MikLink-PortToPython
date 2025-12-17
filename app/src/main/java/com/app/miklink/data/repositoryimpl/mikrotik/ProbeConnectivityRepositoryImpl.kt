@@ -14,6 +14,7 @@ import com.app.miklink.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.net.ssl.SSLHandshakeException
 import javax.inject.Inject
 
 /**
@@ -27,23 +28,74 @@ class ProbeConnectivityRepositoryImpl @Inject constructor(
     private val serviceProvider: MikroTikServiceProvider
 ) : ProbeConnectivityRepository {
 
+    private val logTag = "ProbeConnectivityRepository"
+
     override suspend fun checkProbeConnection(probe: ProbeConfig): ProbeCheckResult =
         withContext(Dispatchers.IO) {
-            try {
-                val api = serviceProvider.build(probe)
-                val boardName = api.getSystemResource(com.app.miklink.data.remote.mikrotik.dto.ProplistRequest(listOf("board-name")))
-                    .firstOrNull()?.boardName ?: "Unknown Board"
-                val interfacesRaw = api.getEthernetInterfaces()
-                android.util.Log.d("ProbeConnectivityRepository", "checkProbeConnection: Ricevute ${interfacesRaw.size} interfacce dall'API")
-                val interfaces = interfacesRaw.map {
-                    android.util.Log.d("ProbeConnectivityRepository", "checkProbeConnection: Interface name = '${it.name}'")
-                    it.name
+            runCatching { fetchProbeMetadata(probe) }
+                .getOrElse { error ->
+                    if (error is SSLHandshakeException && probe.isHttps) {
+                        if (android.util.Log.isLoggable(logTag, android.util.Log.WARN)) {
+                            android.util.Log.w(
+                                logTag,
+                                "TLS handshake failed over HTTPS, retrying with HTTP fallback.",
+                                error
+                            )
+                        }
+                        runCatching { fetchProbeMetadata(probe.copy(isHttps = false)) }
+                            .getOrElse { fallbackError ->
+                                ProbeCheckResult.Error(
+                                    ProbeErrorMapper.toMessage(
+                                        error = error,
+                                        defaultMessage = context.getString(R.string.error_probe_connection_unknown),
+                                        handshakeMessage = context.getString(R.string.error_probe_connection_tls_handshake)
+                                    )
+                                )
+                            }
+                    } else {
+                        android.util.Log.e(logTag, "checkProbeConnection: Errore durante la verifica", error)
+                        val message = ProbeErrorMapper.toMessage(
+                            error = error,
+                            defaultMessage = context.getString(R.string.error_probe_connection_unknown),
+                            handshakeMessage = context.getString(R.string.error_probe_connection_tls_handshake)
+                        )
+                        ProbeCheckResult.Error(message)
+                    }
                 }
-                android.util.Log.d("ProbeConnectivityRepository", "checkProbeConnection: Interfacce mappate: $interfaces")
-                ProbeCheckResult.Success(boardName, interfaces)
-            } catch (e: Exception) {
-                android.util.Log.e("ProbeConnectivityRepository", "checkProbeConnection: Errore durante la verifica", e)
-                ProbeCheckResult.Error(e.message ?: context.getString(R.string.error_probe_connection_unknown))
-            }
         }
+
+    private suspend fun fetchProbeMetadata(probe: ProbeConfig): ProbeCheckResult.Success {
+        val api = serviceProvider.build(probe)
+        val systemResources = api.getSystemResource(
+            com.app.miklink.data.remote.mikrotik.dto.ProplistRequest(listOf("board-name"))
+        )
+        if (android.util.Log.isLoggable(logTag, android.util.Log.DEBUG)) {
+            android.util.Log.d(
+                logTag,
+                "systemResource response (${if (probe.isHttps) "https" else "http"}): ${
+                    systemResources.joinToString { resource ->
+                        resource.boardName ?: "<null>"
+                    }
+                }"
+            )
+        }
+        val boardName = systemResources
+            .mapNotNull { it.boardName?.trim()?.takeIf { name -> name.isNotEmpty() } }
+            .firstOrNull()
+            ?: "Unknown Board"
+        val interfacesRaw = api.getEthernetInterfaces()
+        if (android.util.Log.isLoggable(logTag, android.util.Log.DEBUG)) {
+            android.util.Log.d(logTag, "checkProbeConnection: Ricevute ${interfacesRaw.size} interfacce dall'API")
+        }
+        val interfaces = interfacesRaw.map {
+            if (android.util.Log.isLoggable(logTag, android.util.Log.DEBUG)) {
+                android.util.Log.d(logTag, "checkProbeConnection: Interface name = '${it.name}'")
+            }
+            it.name
+        }
+        if (android.util.Log.isLoggable(logTag, android.util.Log.DEBUG)) {
+            android.util.Log.d(logTag, "checkProbeConnection: Interfacce mappate: $interfaces")
+        }
+        return ProbeCheckResult.Success(boardName, interfaces)
+    }
 }

@@ -1,3 +1,9 @@
+/*
+ * Purpose: Monitor probe online status using MikroTik REST calls and emit probe status updates.
+ * Inputs: Stored ProbeConfig, MikroTikServiceProvider for API access, and user preferences for polling interval.
+ * Outputs: Flows indicating online/offline status for the singleton probe.
+ * Notes: Uses `.proplist` filtering and ignores entries without board-name to avoid false positives.
+ */
 package com.app.miklink.data.repositoryimpl.mikrotik
 
 import com.app.miklink.core.data.repository.probe.ProbeRepository
@@ -34,7 +40,8 @@ class ProbeStatusRepositoryImpl @Inject constructor(
                     while (true) {
                         val isOnline = try {
                             val api = serviceProvider.build(probe)
-                            api.getSystemResource(ProplistRequest(listOf("board-name"))).isNotEmpty()
+                            api.getSystemResource(ProplistRequest(listOf("board-name")))
+                                .any { !it.boardName.isNullOrBlank() }
                         } catch (_: HttpException) {
                             false
                         } catch (_: Exception) {
@@ -56,7 +63,7 @@ class ProbeStatusRepositoryImpl @Inject constructor(
                     val isOnline = try {
                         val api = serviceProvider.build(probe)
                         val result = api.getSystemResource(ProplistRequest(listOf("board-name")))
-                        result.isNotEmpty()
+                        result.any { !it.boardName.isNullOrBlank() }
                     } catch (e: Exception) {
                         android.util.Log.w("ProbeStatusRepository", "Sonda @ ${probe.ipAddress} offline: ${e.message}")
                         false
@@ -74,4 +81,3 @@ private fun tickerFlow(periodMs: Long): Flow<Unit> = flow {
         delay(periodMs)
     }
 }
-
