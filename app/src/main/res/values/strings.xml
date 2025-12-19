@@ -319,6 +319,8 @@
     <string name="test_details_speed_ping">Ping</string>
     <string name="test_details_speed_jitter">Jitter</string>
     <string name="test_details_speed_loss">Loss</string>
+    <string name="test_details_speed_warning_title">Warning</string>
+    <string name="test_details_speed_warning_fallback">Results can be limited by CPU; traffic generation/termination performance might not be representative of forwarding performance.</string>
     <string name="show_password">Show password</string>
     <string name="hide_password">Hide password</string>
 </resources>
