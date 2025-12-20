@@ -1,8 +1,4 @@
-/*
- * Purpose: Define deterministic ordering, visibility, and expandability rules for test sections in execution UI.
- * Inputs: Lists of TestSectionSnapshot instances with ids/status; no side effects or UI dependencies.
- * Outputs: Ordered/filtered lists and predicates used by presentation-layer composables.
- */
+// UI component/screen: test execution section ordering; input state: snapshots; output rendering: ordered/visible lists.
 package com.app.miklink.ui.test
 
 import com.app.miklink.core.domain.test.model.TestSectionId
@@ -11,11 +7,11 @@ import com.app.miklink.core.domain.test.model.TestSectionStatus
 
 object TestSectionDisplayPolicy {
     private val orderedIds = listOf(
-        TestSectionId.NETWORK,
-        TestSectionId.NEIGHBORS,
         TestSectionId.LINK,
-        TestSectionId.PING,
+        TestSectionId.NETWORK,
         TestSectionId.TDR,
+        TestSectionId.NEIGHBORS,
+        TestSectionId.PING,
         TestSectionId.SPEED
     )
 
@@ -46,5 +42,6 @@ object TestSectionDisplayPolicy {
         return visible
     }
 
-    fun isExpandable(status: TestSectionStatus): Boolean = status in finalStatuses
+    fun isExpandable(status: TestSectionStatus): Boolean =
+        status in finalStatuses || status == TestSectionStatus.RUNNING || status == TestSectionStatus.PENDING
 }

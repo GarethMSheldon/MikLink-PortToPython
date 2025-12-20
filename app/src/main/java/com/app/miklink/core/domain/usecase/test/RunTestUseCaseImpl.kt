@@ -1,9 +1,4 @@
-/*
- * Purpose: Execute network certification test plans, orchestrating domain steps and emitting UI/reporting events.
- * Inputs: Client/probe/profile repositories, test step executors (network, link, TDR, LLDP, ping, speed), and TestPlan parameters via execute().
- * Outputs: Flow<TestEvent> with progress/section snapshots, accumulated ReportData serialized through ReportResultsCodec, and mapped UI-ready details.
- * Notes: Domain layer remains framework-free; ping details aggregation surfaces Packet Loss/RTT summaries required by UI cards.
- */
+// UI component/screen: test execution flow; input state: TestPlan + repositories; output rendering: TestEvent flow.
 package com.app.miklink.core.domain.usecase.test
 
 import com.app.miklink.core.domain.model.Client
@@ -57,10 +52,10 @@ import com.app.miklink.utils.normalizeTime
  * Orchestra tutti gli step necessari per eseguire un test completo.
  * 
  * Ordine degli step (replicato da TestViewModel):
- * 1. Network Config
- * 2. Link Status
+ * 1. Link Status
+ * 2. Network Config
  * 3. TDR
- * 4. LLDP
+ * 4. LLDP/CDP
  * 5. Ping
  * 6. Speed Test
  */
@@ -108,6 +103,8 @@ class RunTestUseCaseImpl @Inject constructor(
         var overallStatus = "PASS"
         var snapshotProgressKey = TestProgressKey.PREPARING
         var snapshotPercent = 0
+        var stopAfterLink = false
+        var stopAfterLinkReason: String? = null
 
         suspend fun emitSnapshot() {
             emit(
@@ -153,13 +150,152 @@ class RunTestUseCaseImpl @Inject constructor(
             )
         }
 
+        suspend fun finishTest() {
+            emitProgress(TestProgressKey.COMPLETED, 100, "Completato", "Test completato")
+
+            val finalSnapshot = TestRunSnapshot(
+                sections = typedSectionsSnapshot(typedSections),
+                progress = snapshotProgressKey,
+                percent = snapshotPercent
+            )
+            val outcome = TestOutcome(
+                overallStatus = overallStatus,
+                finalSnapshot = finalSnapshot,
+                rawResultsJson = buildReportData(plan, reportData)
+            )
+
+            emitLog("[Result] Completed with status=$overallStatus")
+            emit(TestEvent.Completed(outcome))
+        }
+
+        suspend fun skipRemainingSections(reason: String) {
+            val remaining = listOf(
+                TestSectionId.NETWORK,
+                TestSectionId.TDR,
+                TestSectionId.NEIGHBORS,
+                TestSectionId.PING,
+                TestSectionId.SPEED
+            )
+            remaining.forEach { id ->
+                val existingStatus = typedSections.firstOrNull { it.id == id }?.status
+                if (existingStatus == TestSectionStatus.SKIP) return@forEach
+                val title = when (id) {
+                    TestSectionId.NETWORK -> "Network"
+                    TestSectionId.TDR -> "TDR"
+                    TestSectionId.NEIGHBORS -> "LLDP/CDP"
+                    TestSectionId.PING -> "Ping"
+                    TestSectionId.SPEED -> "Speed Test"
+                    else -> id.name
+                }
+                recordStep(
+                    id = id,
+                    title = title,
+                    status = TestSectionStatus.SKIP,
+                    warning = reason,
+                    rawData = mapOf("reason" to reason)
+                )
+            }
+            emitSnapshot()
+        }
+
         emitSnapshot()
         emitLog("[Init] Starting test for client=${client.companyName} profile=${profile.profileName} socket=${plan.socketId}")
         emitProgress(TestProgressKey.PREPARING, 0, "Inizializzazione", "Caricamento dati...")
 
         try {
-            // 1) Network Config
-            emitProgress(TestProgressKey.NETWORK_CONFIG, 10, "Network Config", "Configurazione rete in corso...")
+            // 1) Link Status
+            if (profile.runLinkStatus) {
+                emitProgress(TestProgressKey.LINK, 10, "Link Status", "Verifica stato link...")
+
+                updateTypedSection(
+                    typedSections = typedSections,
+                    id = TestSectionId.LINK,
+                    status = TestSectionStatus.RUNNING,
+                    title = "Link"
+                )
+                emitSnapshot()
+                emitLog("[Link] Checking link status")
+
+                when (val linkResult = linkStatusStep.run(context)) {
+                    is StepResult.Success -> {
+                        val linkStatus = linkResult.data
+                        reportData.linkStatus = linkStatus
+                        val evaluation = qualityPolicy.evaluateLink(linkStatus, profile, client)
+                        val cableDisconnected = isCableDisconnected(linkStatus.status)
+                        val resolvedStatus = if (cableDisconnected) TestSectionStatus.FAIL else evaluation.status
+                        val resolvedWarning = if (cableDisconnected) {
+                            evaluation.warning ?: "Link inattivo o sconosciuto"
+                        } else {
+                            evaluation.warning
+                        }
+                        if (resolvedStatus == TestSectionStatus.FAIL) {
+                            overallStatus = "FAIL"
+                        }
+                        recordStep(
+                            id = TestSectionId.LINK,
+                            title = "Link",
+                            status = resolvedStatus,
+                            rawData = linkRaw(linkStatus),
+                            payload = TestSectionPayload.Link(linkStatus),
+                            warning = resolvedWarning
+                        )
+                        emitSnapshot()
+                        emitLog("[Link] ${resolvedStatus} status=${linkStatus.status ?: "-"} rate=${linkStatus.rate ?: "-"}")
+                        if (cableDisconnected) {
+                            stopAfterLink = true
+                            stopAfterLinkReason = resolvedWarning
+                        }
+                    }
+                    is StepResult.Failed -> {
+                        overallStatus = "FAIL"
+                        val errorMessage = linkResult.error.message
+                        recordStep(
+                            id = TestSectionId.LINK,
+                            title = "Link",
+                            status = TestSectionStatus.FAIL,
+                            warning = errorMessage,
+                            rawData = mapOf("error" to errorMessage),
+                            error = errorMessage
+                        )
+                        emitSnapshot()
+                        emitLog("[Link] FAIL ${errorMessage ?: "unknown error"}")
+                        emit(TestEvent.Failed(linkResult.error))
+                        return@flow
+                    }
+                    is StepResult.Skipped -> {
+                        recordStep(
+                            id = TestSectionId.LINK,
+                            title = "Link",
+                            status = TestSectionStatus.SKIP,
+                            warning = linkResult.reason,
+                            rawData = mapOf("reason" to linkResult.reason)
+                        )
+                        emitSnapshot()
+                        emitLog("[Link] SKIP reason=${linkResult.reason}")
+                    }
+                }
+            } else {
+                recordStep(
+                    id = TestSectionId.LINK,
+                    title = "Link",
+                    status = TestSectionStatus.SKIP,
+                    warning = TestSkipReason.PROFILE_DISABLED,
+                    rawData = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
+                )
+                emitSnapshot()
+                emitLog("[Link] SKIP reason=${TestSkipReason.PROFILE_DISABLED}")
+            }
+
+            if (stopAfterLink) {
+                val reason = stopAfterLinkReason ?: "Link inattivo o sconosciuto"
+                emitLog("[Link] Cable disconnected, skipping remaining tests")
+                skipRemainingSections(reason)
+                finishTest()
+                return@flow
+            }
+
+            // 2) Network Config
+            emitProgress(TestProgressKey.NETWORK_CONFIG, 30, "Network Config", "Configurazione rete in corso...")
 
             updateTypedSection(
                 typedSections = typedSections,
@@ -221,78 +357,6 @@ class RunTestUseCaseImpl @Inject constructor(
                     emitSnapshot()
                     emitLog("[Network] SKIP reason=${networkResult.reason}")
                 }
-            }
-
-            // 2) Link Status
-            if (profile.runLinkStatus) {
-                emitProgress(TestProgressKey.LINK, 30, "Link Status", "Verifica stato link...")
-
-                updateTypedSection(
-                    typedSections = typedSections,
-                    id = TestSectionId.LINK,
-                    status = TestSectionStatus.RUNNING,
-                    title = "Link"
-                )
-                emitSnapshot()
-                emitLog("[Link] Checking link status")
-
-                when (val linkResult = linkStatusStep.run(context)) {
-                    is StepResult.Success -> {
-                        val linkStatus = linkResult.data
-                        reportData.linkStatus = linkStatus
-                        val evaluation = qualityPolicy.evaluateLink(linkStatus, profile, client)
-                        if (evaluation.status == TestSectionStatus.FAIL) {
-                            overallStatus = "FAIL"
-                        }
-                        recordStep(
-                            id = TestSectionId.LINK,
-                            title = "Link",
-                            status = evaluation.status,
-                            rawData = linkRaw(linkStatus),
-                            payload = TestSectionPayload.Link(linkStatus),
-                            warning = evaluation.warning
-                        )
-                        emitSnapshot()
-                        emitLog("[Link] ${evaluation.status} status=${linkStatus.status ?: "-"} rate=${linkStatus.rate ?: "-"}")
-                    }
-                    is StepResult.Failed -> {
-                        overallStatus = "FAIL"
-                        val errorMessage = linkResult.error.message
-                        recordStep(
-                            id = TestSectionId.LINK,
-                            title = "Link",
-                            status = TestSectionStatus.FAIL,
-                            warning = errorMessage,
-                            rawData = mapOf("error" to errorMessage),
-                            error = errorMessage
-                        )
-                        emitSnapshot()
-                        emitLog("[Link] FAIL ${errorMessage ?: "unknown error"}")
-                        emit(TestEvent.Failed(linkResult.error))
-                        return@flow
-                    }
-                    is StepResult.Skipped -> {
-                        recordStep(
-                            id = TestSectionId.LINK,
-                            title = "Link",
-                            status = TestSectionStatus.SKIP,
-                            warning = linkResult.reason,
-                            rawData = mapOf("reason" to linkResult.reason)
-                        )
-                        emitSnapshot()
-                        emitLog("[Link] SKIP reason=${linkResult.reason}")
-                    }
-                }
-            } else {
-                recordStep(
-                    id = TestSectionId.LINK,
-                    title = "Link",
-                    status = TestSectionStatus.SKIP,
-                    warning = TestSkipReason.PROFILE_DISABLED,
-                    rawData = mapOf("reason" to TestSkipReason.PROFILE_DISABLED)
-                )
-                emitSnapshot()
-                emitLog("[Link] SKIP reason=${TestSkipReason.PROFILE_DISABLED}")
             }
 
             // 3) TDR
@@ -581,25 +645,19 @@ class RunTestUseCaseImpl @Inject constructor(
                 emitLog("[SpeedTest] SKIP reason=${TestSkipReason.PROFILE_DISABLED}")
             }
 
-            emitProgress(TestProgressKey.COMPLETED, 100, "Completato", "Test completato")
-
-            val finalSnapshot = TestRunSnapshot(
-                sections = typedSectionsSnapshot(typedSections),
-                progress = snapshotProgressKey,
-                percent = snapshotPercent
-            )
-            val outcome = TestOutcome(
-                overallStatus = overallStatus,
-                finalSnapshot = finalSnapshot,
-                rawResultsJson = buildReportData(plan, reportData)
-            )
-
-            emitLog("[Result] Completed with status=$overallStatus")
-            emit(TestEvent.Completed(outcome))
+            finishTest()
         } catch (e: Exception) {
             emitLog("[Result] Unexpected error: ${e.message ?: "unknown error"}")
             emit(TestEvent.Failed(TestError.Unexpected(e.message ?: "Unknown error", e)))
         }
+    }
+
+    private fun isCableDisconnected(status: String?): Boolean {
+        val normalized = status?.trim()?.lowercase()
+        return normalized.isNullOrBlank() ||
+            normalized == "down" ||
+            normalized == "no-link" ||
+            normalized == "unknown"
     }
 
     private fun buildReportData(plan: TestPlan, accumulator: ReportDataAccumulator): String {
@@ -858,11 +916,6 @@ private fun TestSectionId.toLegacyName(): String = when (this) {
 
 private fun buildInitialTypedSections(profile: TestProfile, probe: ProbeConfig): MutableList<TestSectionSnapshot> {
     val sections = mutableListOf<TestSectionSnapshot>()
-    sections += TestSectionSnapshot(
-        id = TestSectionId.NETWORK,
-        status = TestSectionStatus.PENDING,
-        title = "Network"
-    )
     sections += when {
         profile.runLinkStatus -> TestSectionSnapshot(id = TestSectionId.LINK, status = TestSectionStatus.PENDING, title = "Link")
         else -> TestSectionSnapshot(
@@ -872,6 +925,11 @@ private fun buildInitialTypedSections(profile: TestProfile, probe: ProbeConfig):
             warning = TestSkipReason.PROFILE_DISABLED
         )
     }
+    sections += TestSectionSnapshot(
+        id = TestSectionId.NETWORK,
+        status = TestSectionStatus.PENDING,
+        title = "Network"
+    )
     sections += when {
         profile.runTdr && probe.tdrSupported -> TestSectionSnapshot(id = TestSectionId.TDR, status = TestSectionStatus.PENDING, title = "TDR")
         profile.runTdr && !probe.tdrSupported -> TestSectionSnapshot(

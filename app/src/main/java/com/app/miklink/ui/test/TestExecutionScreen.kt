@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -27,7 +29,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SettingsEthernet
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
@@ -37,11 +38,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +71,6 @@ import com.app.miklink.core.domain.test.model.TestSectionSnapshot
 import com.app.miklink.core.domain.test.model.TestSectionStatus
 import com.app.miklink.ui.common.TestSectionCard
 import com.app.miklink.ui.components.AppTopBar
-import com.app.miklink.ui.components.LogsBottomSheet
 import com.app.miklink.ui.components.StatusHero
 import com.app.miklink.ui.components.StatusHeroState
 import com.app.miklink.ui.components.StepStatus
@@ -82,13 +83,11 @@ import com.app.miklink.ui.feature.test_details.renderers.NeighborsSectionRendere
 import com.app.miklink.ui.feature.test_details.renderers.PingSectionRenderer
 import com.app.miklink.ui.feature.test_details.renderers.SpeedSectionRenderer
 import com.app.miklink.ui.feature.test_details.renderers.TdrSectionRenderer
+import com.app.miklink.ui.test.components.RawLogsPane
 import com.app.miklink.ui.test.components.TestExecutionTags
 import com.app.miklink.ui.theme.MikLinkTheme
 import com.app.miklink.ui.theme.MikLinkThemeTokens
 import com.app.miklink.utils.UiState
-
-private val SheetPeekHeight = 92.dp
-private val CompletedActionsHeight = 176.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,6 +101,7 @@ fun TestExecutionScreen(
     val logs by viewModel.logs.collectAsStateWithLifecycle()
     var showRepeatDialog by remember { mutableStateOf(false) }
     var hasAutoStarted by remember { mutableStateOf(false) }
+    var showLogs by rememberSaveable { mutableStateOf(false) }
     val rendererRegistry = rememberRendererRegistry()
 
     LaunchedEffect(uiState, isRunning) {
@@ -111,26 +111,45 @@ fun TestExecutionScreen(
         }
     }
 
-    LogsBottomSheet(
-        logs = logs,
-        peekHeight = SheetPeekHeight,
+    Scaffold(
         topBar = {
             AppTopBar(
                 title = topBarTitle(uiState, isRunning),
                 subtitle = topBarSubtitle(uiState, isRunning),
                 onBack = { navController.popBackStack() }
             )
+        },
+        bottomBar = {
+            val report = (uiState as? UiState.Success<TestReport>)?.data
+            if (report != null) {
+                CompletedActionBar(
+                    isFailed = report.overallStatus != "PASS",
+                    onClose = { navController.popBackStack() },
+                    onRepeat = { showRepeatDialog = true },
+                    onSave = {
+                        viewModel.saveReportToDb(report)
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                )
+            }
         }
-    ) { padding ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             when (val state = uiState) {
                 is UiState.Success -> CompletedContent(
                     report = state.data,
                     snapshot = snapshot,
+                    logs = logs,
+                    showLogs = showLogs,
+                    onToggleLogs = { showLogs = !showLogs },
                     rendererRegistry = rendererRegistry,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -140,28 +159,10 @@ fun TestExecutionScreen(
                 )
                 else -> RunningContent(
                     snapshot = snapshot,
+                    logs = logs,
+                    showLogs = showLogs,
+                    onToggleLogs = { showLogs = !showLogs },
                     modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            if (uiState is UiState.Success) {
-                val report = (uiState as UiState.Success<TestReport>).data
-                CompletedActionBar(
-                    isFailed = report.overallStatus != "PASS",
-                    onClose = { navController.popBackStack() },
-                    onRepeat = { showRepeatDialog = true },
-                    onSave = {
-                        viewModel.saveReportToDb(report)
-                        navController.popBackStack()
-                    },
-                    onExport = {
-                        viewModel.saveReportToDb(report)
-                        navController.navigate("history")
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = SheetPeekHeight)
-                        .fillMaxWidth()
                 )
             }
         }
@@ -181,6 +182,9 @@ fun TestExecutionScreen(
 @Composable
 private fun RunningContent(
     snapshot: TestRunSnapshot?,
+    logs: List<String>,
+    showLogs: Boolean,
+    onToggleLogs: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sections = TestSectionDisplayPolicy.visibleForRunning(
@@ -189,7 +193,7 @@ private fun RunningContent(
     androidx.compose.foundation.lazy.LazyColumn(
         modifier = modifier
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(bottom = SheetPeekHeight + 24.dp, top = 16.dp),
+        contentPadding = PaddingValues(bottom = 24.dp, top = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -201,6 +205,30 @@ private fun RunningContent(
                     .fillMaxWidth()
                     .testTag(TestExecutionTags.HERO_RUNNING)
             )
+        }
+        item {
+            TextButton(
+                onClick = onToggleLogs,
+                modifier = Modifier.testTag(TestExecutionTags.IN_PROGRESS_TOGGLE)
+            ) {
+                Text(
+                    text = stringResource(
+                        id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
+                    )
+                )
+            }
+        }
+        if (showLogs) {
+            item {
+                RawLogsPane(
+                    logs = logs,
+                    emptyLabel = stringResource(id = R.string.test_logs_empty),
+                    title = null,
+                    autoScroll = true,
+                    colorize = true,
+                    modifier = Modifier.testTag(TestExecutionTags.LOG_PANE)
+                )
+            }
         }
         item {
             if (sections.isEmpty()) {
@@ -229,6 +257,9 @@ private fun RunningContent(
 private fun CompletedContent(
     report: TestReport,
     snapshot: TestRunSnapshot?,
+    logs: List<String>,
+    showLogs: Boolean,
+    onToggleLogs: () -> Unit,
     rendererRegistry: SectionRendererRegistry,
     modifier: Modifier = Modifier
 ) {
@@ -240,7 +271,7 @@ private fun CompletedContent(
         modifier = modifier.padding(horizontal = 16.dp),
         contentPadding = PaddingValues(
             top = 16.dp,
-            bottom = SheetPeekHeight + CompletedActionsHeight
+            bottom = 24.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -260,15 +291,7 @@ private fun CompletedContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(TestExecutionTags.HERO_COMPLETED),
-                supportingContent = {
-                    if (!report.socketName.isNullOrBlank()) {
-                        Text(
-                            text = stringResource(id = R.string.test_execution_stat_socket, report.socketName ?: "-"),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                supportingContent = null
             )
         }
         if (isFailed) {
@@ -278,6 +301,30 @@ private fun CompletedContent(
         }
         item {
             KpiRow(sections = sections)
+        }
+        item {
+            TextButton(
+                onClick = onToggleLogs,
+                modifier = Modifier.testTag(TestExecutionTags.COMPLETED_TOGGLE)
+            ) {
+                Text(
+                    text = stringResource(
+                        id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
+                    )
+                )
+            }
+        }
+        if (showLogs) {
+            item {
+                RawLogsPane(
+                    logs = logs,
+                    emptyLabel = stringResource(id = R.string.test_logs_empty),
+                    title = null,
+                    autoScroll = false,
+                    colorize = true,
+                    modifier = Modifier.testTag(TestExecutionTags.LOG_PANE)
+                )
+            }
         }
         item {
             TestSectionList(
@@ -451,7 +498,6 @@ private fun CompletedActionBar(
     onClose: () -> Unit,
     onRepeat: () -> Unit,
     onSave: () -> Unit,
-    onExport: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val semantic = MikLinkThemeTokens.semantic
@@ -499,7 +545,7 @@ private fun CompletedActionBar(
                 Button(
                     onClick = onSave,
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .testTag(TestExecutionTags.BOTTOM_SAVE),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isFailed) semantic.failure else semantic.success,
@@ -513,14 +559,6 @@ private fun CompletedActionBar(
                     )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(stringResource(id = R.string.test_execution_action_save))
-                }
-                FilledTonalButton(
-                    onClick = onExport,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(stringResource(id = R.string.test_execution_action_export))
                 }
             }
         }
@@ -729,7 +767,10 @@ private fun PreviewExecutionRunning() {
                     TestSectionSnapshot(TestSectionId.LINK, TestSectionStatus.RUNNING, title = "Link")
                 ),
                 percent = 35
-            )
+            ),
+            logs = listOf("Avvio test...", "Link status OK"),
+            showLogs = true,
+            onToggleLogs = {}
         )
     }
 }
@@ -779,6 +820,9 @@ private fun PreviewExecutionCompleted() {
                 ),
                 percent = 100
             ),
+            logs = listOf("Link OK", "Ping OK"),
+            showLogs = false,
+            onToggleLogs = {},
             rendererRegistry = registry
         )
     }
@@ -811,6 +855,9 @@ private fun PreviewExecutionCompletedDark() {
                 ),
                 percent = 100
             ),
+            logs = listOf("Link FAIL"),
+            showLogs = true,
+            onToggleLogs = {},
             rendererRegistry = registry
         )
     }
