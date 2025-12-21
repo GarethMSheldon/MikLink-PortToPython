@@ -37,3 +37,9 @@
 /key
 
 /.gradle-user-home/
+.Cleanup-Now.ps1
+.Dump-Repo.ps1
+./tools
+/.cursor
+/.continue
+/build
