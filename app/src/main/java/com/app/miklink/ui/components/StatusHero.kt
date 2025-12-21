@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -70,12 +70,6 @@ fun StatusHero(
         StatusHeroState.Success -> semantic.successGlow
         StatusHeroState.Failure -> semantic.failureGlow
     }
-    val icon = when (status) {
-        StatusHeroState.Running -> Icons.Default.HourglassEmpty
-        StatusHeroState.Success -> Icons.Default.CheckCircle
-        StatusHeroState.Failure -> Icons.Default.Cancel
-    }
-
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -88,14 +82,28 @@ fun StatusHero(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            IconHalo(
-                icon = icon,
-                glow = glow,
-                color = accent,
-                onColor = onAccent,
-                glowAlpha = if (status == StatusHeroState.Running) 0.28f else 0.18f,
-                breathe = true
-            )
+            if (status == StatusHeroState.Running) {
+                LoadingHalo(
+                    glow = glow,
+                    color = accent,
+                    onColor = onAccent,
+                    glowAlpha = 0.28f
+                )
+            } else {
+                val icon = if (status == StatusHeroState.Success) {
+                    Icons.Default.CheckCircle
+                } else {
+                    Icons.Default.Cancel
+                }
+                IconHalo(
+                    icon = icon,
+                    glow = glow,
+                    color = accent,
+                    onColor = onAccent,
+                    glowAlpha = 0.18f,
+                    breathe = true
+                )
+            }
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -146,6 +154,29 @@ private fun IconHalo(
             contentDescription = null,
             tint = onColor,
             modifier = Modifier.size(48.dp)
+        )
+    }
+}
+
+@Composable
+private fun LoadingHalo(
+    glow: Color,
+    color: Color,
+    onColor: Color,
+    glowAlpha: Float
+) {
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .size(92.dp)
+            .softGlow(color = glow, radius = 120.dp, maxAlpha = glowAlpha, breathe = true)
+            .clip(CircleShape)
+            .background(color),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(44.dp),
+            color = onColor,
+            strokeWidth = 4.dp
         )
     }
 }

@@ -200,7 +200,7 @@ class RunTestUseCaseImplTest {
         assertTrue("Expected typed snapshot updates", snapshotUpdates.isNotEmpty())
 
         val firstSnapshot = snapshotUpdates.first().snapshot
-        val expectedOrder = listOf("NETWORK", "LINK", "TDR", "NEIGHBORS", "PING", "SPEED")
+        val expectedOrder = listOf("LINK", "NETWORK", "TDR", "NEIGHBORS", "PING", "SPEED")
         val actualOrder = firstSnapshot.sections.map { it.id.name }
         assertEquals(expectedOrder, actualOrder)
         firstSnapshot.sections.forEach { section ->

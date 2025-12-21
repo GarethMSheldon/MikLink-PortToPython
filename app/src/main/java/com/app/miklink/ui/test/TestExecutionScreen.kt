@@ -20,13 +20,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Speed
@@ -59,7 +62,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -207,15 +209,20 @@ private fun RunningContent(
             )
         }
         item {
-            TextButton(
-                onClick = onToggleLogs,
-                modifier = Modifier.testTag(TestExecutionTags.IN_PROGRESS_TOGGLE)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                Text(
-                    text = stringResource(
-                        id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
+                TextButton(
+                    onClick = onToggleLogs,
+                    modifier = Modifier.testTag(TestExecutionTags.IN_PROGRESS_TOGGLE)
+                ) {
+                    Text(
+                        text = stringResource(
+                            id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
+                        )
                     )
-                )
+                }
             }
         }
         if (showLogs) {
@@ -225,8 +232,7 @@ private fun RunningContent(
                     emptyLabel = stringResource(id = R.string.test_logs_empty),
                     title = null,
                     autoScroll = true,
-                    colorize = true,
-                    modifier = Modifier.testTag(TestExecutionTags.LOG_PANE)
+                    colorize = true
                 )
             }
         }
@@ -303,15 +309,20 @@ private fun CompletedContent(
             KpiRow(sections = sections)
         }
         item {
-            TextButton(
-                onClick = onToggleLogs,
-                modifier = Modifier.testTag(TestExecutionTags.COMPLETED_TOGGLE)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                Text(
-                    text = stringResource(
-                        id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
+                TextButton(
+                    onClick = onToggleLogs,
+                    modifier = Modifier.testTag(TestExecutionTags.COMPLETED_TOGGLE)
+                ) {
+                    Text(
+                        text = stringResource(
+                            id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
+                        )
                     )
-                )
+                }
             }
         }
         if (showLogs) {
@@ -321,8 +332,7 @@ private fun CompletedContent(
                     emptyLabel = stringResource(id = R.string.test_logs_empty),
                     title = null,
                     autoScroll = false,
-                    colorize = true,
-                    modifier = Modifier.testTag(TestExecutionTags.LOG_PANE)
+                    colorize = true
                 )
             }
         }
@@ -368,7 +378,6 @@ private fun KpiRow(sections: List<TestSectionSnapshot>) {
     val passed = sections.count { it.status == TestSectionStatus.PASS }
     val failed = sections.count { it.status == TestSectionStatus.FAIL }
     val skipped = sections.count { it.status == TestSectionStatus.SKIP }
-    val total = sections.size
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -376,51 +385,55 @@ private fun KpiRow(sections: List<TestSectionSnapshot>) {
         color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            KpiItem(
+            KpiItemIcon(
                 value = passed,
-                label = stringResource(id = R.string.test_execution_kpi_passed_label),
+                icon = Icons.Default.CheckCircle,
+                contentDescription = stringResource(id = R.string.test_execution_kpi_passed_label),
                 color = semantic.success
             )
-            KpiItem(
+            KpiItemIcon(
                 value = failed,
-                label = stringResource(id = R.string.test_execution_kpi_failed_label),
+                icon = Icons.Default.Cancel,
+                contentDescription = stringResource(id = R.string.test_execution_kpi_failed_label),
                 color = semantic.failure
             )
-            KpiItem(
+            KpiItemIcon(
                 value = skipped,
-                label = stringResource(id = R.string.test_execution_kpi_skipped_label),
+                icon = Icons.Default.RemoveCircle,
+                contentDescription = stringResource(id = R.string.test_execution_kpi_skipped_label),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            KpiItem(
-                value = total,
-                label = stringResource(id = R.string.test_execution_kpi_total_label),
-                color = MaterialTheme.colorScheme.primary
             )
         }
     }
 }
 
 @Composable
-private fun KpiItem(
+private fun KpiItemIcon(
     value: Int,
-    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
     color: Color
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = color,
+            modifier = Modifier.size(18.dp)
+        )
         Text(
             text = value.toString(),
             style = MaterialTheme.typography.titleMedium,
             color = color
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
         )
     }
 }

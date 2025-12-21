@@ -7,12 +7,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -95,10 +97,10 @@ private fun TimelineRow(
         StepStatus.Pending -> MaterialTheme.colorScheme.outlineVariant
     }
 
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Card(
@@ -106,41 +108,63 @@ private fun TimelineRow(
                 colors = CardDefaults.cardColors(containerColor = containerColor)
             ) {
                 Box(
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     androidx.compose.material3.Icon(
                         imageVector = step.icon,
                         contentDescription = null,
                         tint = iconColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
+            }
+            if (step.status == StepStatus.Success || step.status == StepStatus.Failure) {
+                val statusIcon =
+                    if (step.status == StepStatus.Success) {
+                        androidx.compose.material.icons.Icons.Default.Check
+                    } else {
+                        androidx.compose.material.icons.Icons.Default.Close
+                    }
+                androidx.compose.material3.Icon(
+                    imageVector = statusIcon,
+                    contentDescription = null,
+                    tint = lineColor,
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .size(16.dp)
+                )
             }
             if (showConnector) {
                 Box(
                     modifier = Modifier
-                        .padding(top = 2.dp)
+                        .padding(top = 6.dp)
                         .width(2.dp)
                         .height(20.dp)
                         .background(lineColor, shape = MikLinkShapeTokens.pill)
                 )
             }
         }
-        Column(modifier = Modifier.weight(1f)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = step.title,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             if (!step.subtitle.isNullOrBlank()) {
                 Text(
                     text = step.subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
-            if (!step.statusLabel.isNullOrBlank()) {
+            if (
+                step.status != StepStatus.Success &&
+                step.status != StepStatus.Failure &&
+                !step.statusLabel.isNullOrBlank()
+            ) {
                 Text(
                     text = step.statusLabel,
                     style = MaterialTheme.typography.labelSmall,
