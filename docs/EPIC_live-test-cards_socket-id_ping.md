@@ -34,9 +34,9 @@ Before touching code, read these project sources to avoid drift:
 
 ## 2) Root causes confirmed in code
 
-### 2.1 Test execution: only one PENDING section is shown
-`app/src/main/java/com/app/miklink/ui/test/TestExecutionScreen.kt` builds `visibleSections` and includes **only the first PENDING** section, hiding the rest.  
-This makes the run look incomplete and prevents the user from seeing the full plan up-front.
+### 2.1 Test execution: running view uses timeline + first pending filter
+`app/src/main/java/com/app/miklink/ui/test/TestExecutionScreen.kt` builds `visibleSections` and includes **only the first PENDING** section, hiding the rest and showing a timeline instead of cards.  
+This prevents progressive card creation and makes the run feel incomplete.
 
 ### 2.2 Ping card expects “Packet Loss”, but domain does not provide it
 In `TestExecutionScreen.kt`, Ping details rendering searches for a detail with label **exactly** `"Packet Loss"` to show the LOSS chip.
@@ -63,7 +63,7 @@ Therefore the preview can differ from generated socket names used in reports/das
 ## 3) Epic outcome (Definition of Done)
 
 ### Must-have functional outcomes
-- **Test execution screen** shows the full list of sections immediately (including PENDING), and statuses update live (PENDING → RUNNING → PASS/FAIL/SKIP).
+- **Test execution screen** uses the same card component; cards appear in execution order as sections start (RUNNING or final), and details expand only after PASS/FAIL/SKIP/INFO.
 - **Ping card** shows:
   - LOSS chip (driven by `"Packet Loss"`)
   - Min/Avg/Max RTT (if available)
@@ -242,25 +242,27 @@ Then test it with simple unit tests.
 
 ### D) Test execution screen: cards must be visible and update live
 
-#### D1 — Remove “only one pending” filter (MOD)
+#### D1 - Show cards progressively (MOD)
 **File (modify):**  
 `app/src/main/java/com/app/miklink/ui/test/TestExecutionScreen.kt`
 
 **Required change:**
-- Remove `visibleSections` filtering logic.
-- Group sections into “Info” vs “Test” using the original `sections` list, not the filtered subset.
+- Replace the running timeline with the same card component used by the completed screen.
+- In running, filter out PENDING sections so cards appear when a section starts or completes.
+- Allow details expansion only for final statuses (PASS/FAIL/SKIP/INFO).
+- Keep running order aligned to execution order (no info/test grouping).
 
-**Why:** users must see the full plan; hiding PENDING sections creates a “stuck” feeling.
+**Why:** users want cards to appear progressively and to view details once a section completes.
 
 **Acceptance checks:**
-- At test start, all sections are present (most PENDING).
-- As events arrive, individual sections flip to RUNNING/PASS/FAIL/SKIP without sections disappearing.
+- At test start, no PENDING cards are shown (unless already SKIP).
+- As events arrive, cards appear for RUNNING sections and expand when they reach a final status.
 
 **Non-goals:**
 - Do not redesign UI; just ensure visibility and correct live updates.
 
-#### D2 — Add header comment to this file
-This file currently lacks the required header comment. Add it without altering existing composables.
+#### D2 - Ensure header comment
+Ensure the file header follows the required Purpose/Inputs/Outputs/Notes template.
 
 ---
 
@@ -346,7 +348,7 @@ If you discover dead files while implementing (e.g., duplicate helpers), you may
 - [ ] Socket-ID Lite preview matches ADR-0004 behavior for blank prefix/suffix.
 - [ ] Dashboard “Fill gaps” works with realistic socketName strings.
 - [ ] Ping details contain `"Packet Loss"` + RTT aggregates + per-target lines.
-- [ ] Test execution screen shows full plan at start and updates live.
+- [ ] Test execution screen shows progressive cards and supports details after completion.
 - [ ] New unit tests added and passing; no existing tests regress.
 
 ---

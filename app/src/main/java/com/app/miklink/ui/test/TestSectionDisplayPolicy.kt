@@ -1,4 +1,9 @@
-// UI component/screen: test execution section ordering; input state: snapshots; output rendering: ordered/visible lists.
+/*
+ * Purpose: Define ordering/visibility rules for test execution sections in UI.
+ * Inputs: TestSectionSnapshot lists from TestRunSnapshot.
+ * Outputs: Ordered/filtered lists and expandability decisions.
+ * Notes: Running view hides PENDING items; details expand only on final statuses.
+ */
 package com.app.miklink.ui.test
 
 import com.app.miklink.core.domain.test.model.TestSectionId
@@ -26,22 +31,11 @@ object TestSectionDisplayPolicy {
         sections.sortedBy { orderedIds.indexOf(it.id).takeIf { idx -> idx >= 0 } ?: Int.MAX_VALUE }
 
     /**
-     * Progressive reveal: keep all final sections plus only the first pending/running section.
+     * Progressive reveal: show sections once they start (RUNNING) or finish.
      */
-    fun visibleForRunning(sections: List<TestSectionSnapshot>): List<TestSectionSnapshot> {
-        val visible = mutableListOf<TestSectionSnapshot>()
-        var pendingIncluded = false
-        sections.forEach { section ->
-            val isFinal = section.status in finalStatuses
-            val isPending = section.status == TestSectionStatus.PENDING || section.status == TestSectionStatus.RUNNING
-            if (isFinal || (isPending && !pendingIncluded)) {
-                visible += section
-            }
-            if (isPending && !pendingIncluded) pendingIncluded = true
-        }
-        return visible
-    }
+    fun visibleForRunning(sections: List<TestSectionSnapshot>): List<TestSectionSnapshot> =
+        sections.filter { it.status != TestSectionStatus.PENDING }
 
     fun isExpandable(status: TestSectionStatus): Boolean =
-        status in finalStatuses || status == TestSectionStatus.RUNNING || status == TestSectionStatus.PENDING
+        status in finalStatuses
 }

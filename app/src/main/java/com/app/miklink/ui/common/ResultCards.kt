@@ -1,5 +1,8 @@
 /*
- * UI test section card, input title/status/icon/content, output contained expandable rendering.
+ * Purpose: Render reusable test section cards with optional expandable details.
+ * Inputs: Title, status label, icon, status color, and section content composable.
+ * Outputs: Material card UI with optional expand/collapse behavior.
+ * Notes: Card remains visually enabled even when expansion is disabled.
  */
 package com.app.miklink.ui.common
 
@@ -48,7 +51,7 @@ fun TestSectionCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         onClick = { if (expandable) expanded = !expanded },
-        enabled = expandable
+        enabled = true
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {

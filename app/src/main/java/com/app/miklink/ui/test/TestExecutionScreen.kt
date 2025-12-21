@@ -1,5 +1,8 @@
 /*
- * UI test execution screen, input view model state/snapshots, output expressive running/completed rendering.
+ * Purpose: Render the test execution experience for running and completed states.
+ * Inputs: TestViewModel state, TestRunSnapshot updates, and execution logs.
+ * Outputs: Status hero, progressive test cards, detailed renderers, and completion actions.
+ * Notes: Running view reveals cards as sections start; details expand only on final statuses.
  */
 package com.app.miklink.ui.test
 
@@ -75,9 +78,6 @@ import com.app.miklink.ui.common.TestSectionCard
 import com.app.miklink.ui.components.AppTopBar
 import com.app.miklink.ui.components.StatusHero
 import com.app.miklink.ui.components.StatusHeroState
-import com.app.miklink.ui.components.StepStatus
-import com.app.miklink.ui.components.StepTimeline
-import com.app.miklink.ui.components.StepTimelineItem
 import com.app.miklink.ui.feature.test_details.SectionRendererRegistry
 import com.app.miklink.ui.feature.test_details.renderers.LinkSectionRenderer
 import com.app.miklink.ui.feature.test_details.renderers.NetworkSectionRenderer
@@ -164,6 +164,7 @@ fun TestExecutionScreen(
                     logs = logs,
                     showLogs = showLogs,
                     onToggleLogs = { showLogs = !showLogs },
+                    rendererRegistry = rendererRegistry,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -187,6 +188,7 @@ private fun RunningContent(
     logs: List<String>,
     showLogs: Boolean,
     onToggleLogs: () -> Unit,
+    rendererRegistry: SectionRendererRegistry,
     modifier: Modifier = Modifier
 ) {
     val sections = TestSectionDisplayPolicy.visibleForRunning(
@@ -250,10 +252,11 @@ private fun RunningContent(
                     )
                 }
             } else {
-                StepTimeline(
-                    steps = sections.map { section -> section.toTimelineItem() },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    sections.forEach { section ->
+                        SectionCard(section, rendererRegistry)
+                    }
+                }
             }
         }
     }
@@ -645,17 +648,6 @@ private fun ErrorState(
 }
 
 @Composable
-private fun TestSectionSnapshot.toTimelineItem(): StepTimelineItem {
-    return StepTimelineItem(
-        title = sectionTitle(this),
-        icon = sectionIcon(id),
-        status = status.toStepStatus(),
-        subtitle = warning,
-        statusLabel = statusLabel(status)
-    )
-}
-
-@Composable
 private fun sectionTitle(section: TestSectionSnapshot): String {
     return section.title ?: when (section.id) {
         TestSectionId.NETWORK -> stringResource(id = R.string.section_network)
@@ -693,16 +685,6 @@ private fun statusLabel(status: TestSectionStatus): String =
         TestSectionStatus.RUNNING -> stringResource(id = R.string.test_execution_status_chip_running)
         TestSectionStatus.INFO -> stringResource(id = R.string.status_info)
         TestSectionStatus.PENDING -> stringResource(id = R.string.status_pending)
-    }
-
-private fun TestSectionStatus.toStepStatus(): StepStatus =
-    when (this) {
-        TestSectionStatus.PASS -> StepStatus.Success
-        TestSectionStatus.FAIL -> StepStatus.Failure
-        TestSectionStatus.RUNNING -> StepStatus.Running
-        TestSectionStatus.SKIP -> StepStatus.Skipped
-        TestSectionStatus.INFO -> StepStatus.Info
-        TestSectionStatus.PENDING -> StepStatus.Pending
     }
 
 @Composable
@@ -771,6 +753,7 @@ private fun rememberRendererRegistry(): SectionRendererRegistry {
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)
 @Composable
 private fun PreviewExecutionRunning() {
+    val registry = rememberRendererRegistry()
     MikLinkTheme(darkTheme = false, dynamicColor = false) {
         RunningContent(
             snapshot = TestRunSnapshot(
@@ -783,7 +766,8 @@ private fun PreviewExecutionRunning() {
             ),
             logs = listOf("Avvio test...", "Link status OK"),
             showLogs = true,
-            onToggleLogs = {}
+            onToggleLogs = {},
+            rendererRegistry = registry
         )
     }
 }
