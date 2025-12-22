@@ -1,0 +1,14 @@
+/*
+ * Purpose:
+ *   <One sentence: what this file provides and why it exists.>
+ *
+ * Inputs:
+ *   <Key inputs/parameters/data sources this code consumes.>
+ *
+ * Outputs:
+ *   <Key outputs/state/events produced by this file.>
+ *
+ * Notes:
+ *   - <Important constraints, invariants, and gotchas.>
+ *   - <Links to ADR/EPIC docs if applicable (path in repo).>
+ */
