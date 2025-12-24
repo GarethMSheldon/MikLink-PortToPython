@@ -43,7 +43,11 @@ class SpeedSectionRenderer : SectionRenderer {
             Text(stringResource(id = R.string.test_details_speed_empty), style = MaterialTheme.typography.bodyMedium)
             return
         }
-        val warningText = data.warning ?: data.cpuSaturatedWarning()
+        val warningText = data.warning ?: if (data.isCpuSaturated()) {
+            stringResource(id = R.string.test_details_speed_warning_fallback)
+        } else {
+            null
+        }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = modifier.fillMaxWidth()) {
             infoRow(stringResource(id = R.string.detail_label_server), data.serverAddress ?: "-")
             infoRow(
@@ -143,7 +147,7 @@ class SpeedSectionRenderer : SectionRenderer {
             stripped.takeIf { it.isNotBlank() } ?: original
         } ?: "-"
 
-    private fun SpeedTestData.cpuSaturatedWarning(): String? {
+    private fun SpeedTestData.isCpuSaturated(): Boolean {
         val probe = listOf(
             status,
             ping,
@@ -155,13 +159,8 @@ class SpeedSectionRenderer : SectionRenderer {
             udpUpload,
             warning
         ).joinToString(" ") { it ?: "" }
-        return if (probe.contains("local-cpu-load:100%", ignoreCase = true) ||
+        return probe.contains("local-cpu-load:100%", ignoreCase = true) ||
             probe.contains("remote-cpu-load:100%", ignoreCase = true)
-        ) {
-            stringResource(id = R.string.test_details_speed_warning_fallback)
-        } else {
-            null
-        }
     }
 
     private fun stripCpuTokens(value: String): String {
