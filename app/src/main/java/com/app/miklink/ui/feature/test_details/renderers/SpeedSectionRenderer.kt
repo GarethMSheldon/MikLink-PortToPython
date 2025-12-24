@@ -43,12 +43,7 @@ class SpeedSectionRenderer : SectionRenderer {
             Text(stringResource(id = R.string.test_details_speed_empty), style = MaterialTheme.typography.bodyMedium)
             return
         }
-        val cpuLoad = data.extractCpuLoad()
-        val warningText = data.warning ?: if (cpuLoad != null) {
-            stringResource(id = R.string.test_details_speed_warning_fallback)
-        } else {
-            null
-        }
+        val warningText = data.warning ?: data.cpuSaturatedWarning()
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = modifier.fillMaxWidth()) {
             infoRow(stringResource(id = R.string.detail_label_server), data.serverAddress ?: "-")
             infoRow(
@@ -148,23 +143,26 @@ class SpeedSectionRenderer : SectionRenderer {
             stripped.takeIf { it.isNotBlank() } ?: original
         } ?: "-"
 
-    private data class CpuLoad(val local: String?, val remote: String?)
-
-    private fun SpeedTestData.extractCpuLoad(): CpuLoad? {
-        val sources = listOf(
+    private fun SpeedTestData.cpuSaturatedWarning(): String? {
+        val probe = listOf(
+            status,
+            ping,
+            jitter,
+            loss,
             tcpDownload,
             tcpUpload,
             udpDownload,
             udpUpload,
             warning
-        )
-        val local = sources.firstNotNullOfOrNull { extractCpu(it, localCpuRegex) }
-        val remote = sources.firstNotNullOfOrNull { extractCpu(it, remoteCpuRegex) }
-        return if (local == null && remote == null) null else CpuLoad(local, remote)
+        ).joinToString(" ") { it ?: "" }
+        return if (probe.contains("local-cpu-load:100%", ignoreCase = true) ||
+            probe.contains("remote-cpu-load:100%", ignoreCase = true)
+        ) {
+            stringResource(id = R.string.test_details_speed_warning_fallback)
+        } else {
+            null
+        }
     }
-
-    private fun extractCpu(text: String?, regex: Regex): String? =
-        text?.let { regex.find(it)?.groupValues?.get(1)?.trim() }
 
     private fun stripCpuTokens(value: String): String {
         val cleaned = localCpuRegex.replace(remoteCpuRegex.replace(value, ""), "")
