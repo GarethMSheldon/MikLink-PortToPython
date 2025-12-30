@@ -25,3 +25,10 @@ L'obiettivo è una base semplice e verificabile.
   - test che assumono shape dei dati (se presenti)
 
 - Migrazioni “storiche” non fanno parte dello scope corrente: se verranno introdotte, richiedono ADR dedicato.
+## Update (2025-12-30)
+
+**Baseline corrente: versione 2**
+
+La versione DB è ora a v2 (`@Database(version = 2)`). In pre-production la policy è **destructive migration** per iterare rapidamente senza scrivere migrazioni esplicite.
+
+Vedi **ADR-0012** per decisione formalizzata su destructive migration in pre-prod.

@@ -58,4 +58,6 @@ Version catalog: `gradle/libs.versions.toml`.
 
 ## Note
 
-- Lo schema Room viene esportato in `app/schemas/**` (versione attuale: v1).
+- **Versione DB**: definita in `@Database(version = X)` in `MikLinkDatabase.kt`
+- **Schema export**: esportato in `app/schemas/com.app.miklink.data.local.room.MikLinkDatabase/<version>.json`
+- Policy pre-production: destructive migration (vedi ADR-0012)

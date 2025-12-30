@@ -1,11 +1,19 @@
 # Database (Room)
 
-Questa pagina descrive lo **schema v1** del database Room, preso come fonte di verità da `app/schemas/com.app.miklink.data.local.room.MikLinkDatabase/1.json`.
+## Source of truth
+
+- **Versione corrente**: definita in `@Database(version = X)` in `MikLinkDatabase.kt`
+- **Schema snapshot**: `app/schemas/com.app.miklink.data.local.room.MikLinkDatabase/<version>.json`
+- Il file JSON dell'ultima versione rappresenta lo schema corrente
+
+## Policy pre-production
+
+In pre-production usiamo `fallbackToDestructiveMigration(dropAllTables = true)` (vedi `di/DatabaseModule.kt` e **ADR-0012**). Ogni bump di versione resetta i dati locali per velocizzare l'iterazione.
 
 ## Invarianti
-- `probe_config` è **singleton**: PK fissa `id = 1`.
-- Le tabelle `clients`, `test_profiles`, `test_reports` usano ID autogenerati.
-- In pre-produzione il database è creato con `fallbackToDestructiveMigration(dropAllTables = true)` (vedi `di/DatabaseModule.kt`); ogni bump di versione resetta i dati per velocizzare l'iterazione.
+
+- `probe_config` è **singleton**: PK fissa `id = 1`
+- Le tabelle `clients`, `test_profiles`, `test_reports` usano ID autogenerati
 
 ## Tabella `clients`
 
