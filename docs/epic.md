@@ -532,23 +532,19 @@ After each deletion or structural step:
 
 ---
 
-### Story 2 — Centralize the default renderer registry (deduplicate wiring)
+### Story 2 — Superseded: registry resta locale (pattern attuale)
 
-**Create**
-- `app/src/main/java/com/app/miklink/ui/feature/test_details/DefaultSectionRendererRegistry.kt`
+**Stato**
+- Superseded / Won’t Do per questa EPIC: nessun file centralizzato viene introdotto.
 
-**Implementation**
-- Provide: `@Composable fun rememberDefaultSectionRendererRegistry(): SectionRendererRegistry`
-- Use `remember { SectionRendererRegistry(mapOf(...)) }`
-- The map must match the current set of renderers used in `ReportDetailScreen.kt`.
+**Comportamento attuale (fonte: codice)**
+- La registry è costruita localmente:
+	- In `app/src/main/java/com/app/miklink/ui/test/TestExecutionScreen.kt` tramite `@Composable rememberRendererRegistry()` che usa `remember { SectionRendererRegistry(mapOf(...)) }`.
+	- In `app/src/main/java/com/app/miklink/ui/history/ReportDetailScreen.kt` inline con `remember { SectionRendererRegistry(mapOf(...)) }`.
+- Renderer inclusi (sintesi): `NetworkSectionRenderer`, `LinkSectionRenderer`, `TdrSectionRenderer`, `NeighborsSectionRenderer`, `PingSectionRenderer`, `SpeedSectionRenderer`.
 
-**Modify**
-- `app/src/main/java/com/app/miklink/ui/history/ReportDetailScreen.kt`: replace inline registry creation with `rememberDefaultSectionRendererRegistry()`.
-- `app/src/main/java/com/app/miklink/ui/test/TestExecutionScreen.kt`: use the same provider instead of any inline creation.
-
-**Acceptance**
-- No inline `SectionRendererRegistry(mapOf(...))` remains in screens.
-- Build + unit tests pass.
+**Nota**
+- La deduplica è differita a un refactor futuro esplicito.
 
 ---
 
@@ -573,21 +569,20 @@ After each deletion or structural step:
 - `docs/reference/ui-architecture.md`
 
 **Add/update**
-- Mention that the default registry lives in:
-  `ui/feature/test_details/DefaultSectionRendererRegistry.kt`
-- Mention reuse from:
-  - `TestExecutionScreen` (live)
-  - `ReportDetailScreen` (history)
+- Descrivere dove la registry è costruita oggi:
+	- `app/src/main/java/com/app/miklink/ui/test/TestExecutionScreen.kt` via `rememberRendererRegistry()`.
+	- `app/src/main/java/com/app/miklink/ui/history/ReportDetailScreen.kt` via `remember { SectionRendererRegistry(mapOf(...)) }`.
+- Non introdurre riferimenti a file centralizzati inesistenti.
 
 **Acceptance**
-- Doc references real, existing paths.
-- No aspirational statements.
+- I riferimenti nei doc puntano a file reali esistenti.
+- Nessuna indicazione di file centralizzati inesistenti.
 
 ---
 
 ## 5) Definition of Done (DoD)
 
-- Registry deduplicated via `rememberDefaultSectionRendererRegistry()`
+- Docs allineati al pattern attuale (registry costruita localmente via `rememberRendererRegistry()` / `remember { SectionRendererRegistry(...) }`)
 - TestExecutionScreen split into 3 files as specified
 - UI section ordering drift removed (no sorting list in UI policy)
 - Docs updated to reflect real code
