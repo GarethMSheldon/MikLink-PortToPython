@@ -369,9 +369,9 @@ fun formatValue(section: SectionId, rawKey: String, rawValue: String): UiText
 - Trace “Save report” flow:
 	- UI (button) → ViewModel → UseCase → update client `nextIdNumber` → dashboard observe.
 - Add integration test (even “fake repo”):
-	- when saving a “PASS” report for a client, `nextIdNumber` increments.
+	- when saving a report (PASS o FAIL) for a client, `nextIdNumber` increments (ADR-0010).
 - UI/UX:
-	- If by design it increments only in some cases (e.g., PASS), make it explicit (helper text in dashboard).
+	- Esplicitare in dashboard che l'incremento avviene al salvataggio (PASS o FAIL), come da ADR-0010 (helper text opzionale).
 - Ensure usage of centralized policy `SocketIdLite` only (no duplications)
 
 dump_core_domain

@@ -115,11 +115,8 @@ These were repeatedly requested and should be treated as hard requirements:
 - Implication: import/export must support “orphan” reports or incomplete historical data without forcing a workaround.
 
 ### 4.2 Socket‑ID increment policy
-- Decision: `nextIdNumber` increments **only when**:
-  - Report is saved as part of **Run Test flow**
-  - `overallStatus == "PASS"`
-- Decision: **Duplication does NOT increment**.
-  - Duplicate/import/restore must use “raw save” paths that do not apply the increment policy.
+- Decision: `nextIdNumber` incrementa quando un test viene salvato (**PASS o FAIL**) nel flusso di **Run Test**, come da ADR-0010.
+- Decision: duplicazione/import/restore **non** incrementa (percorsi di “raw save”), come da ADR-0010.
 
 ### 4.3 Root package
 - Decision: keep root package **`com.app.miklink`** (minimize churn). Reorganize **internally**.
@@ -430,7 +427,7 @@ This feature map was requested explicitly in the chat to confirm scope before re
 1) Make `RoomReportRepository` save report without touching `ClientRepository`.
 2) Introduce `SaveTestReportUseCase` (or `FinalizeTestReportUseCase`):
    - Inputs: report + (optional) metadata needed to identify “run test” context
-   - Behavior: save report, and if `PASS` then update client `nextIdNumber`
+  - Behavior: save report e aggiorna `client.nextIdNumber` al salvataggio (PASS o FAIL), come da ADR-0010
 3) Ensure call sites:
    - **Run Test** uses use case
    - Duplicate/import/restore uses repository raw
@@ -593,7 +590,7 @@ This feature map was requested explicitly in the chat to confirm scope before re
 - `ADR-0007` Package structure and naming
 - `ADR-0008` No DTO leaks across ports
 - `ADR-0009` Pre-prod destructive DB policy
-- `ADR-0010` Socket-ID increment rule (PASS-only, run-test-only; duplication no)
+- `ADR-0010` Socket-ID increment rule (incrementa su salvataggio PASS o FAIL nel run-test; duplicazione no)
 - `ADR-0011` UI strings policy (no hardcoded; text kept as-is; moved to resources)
 
 > ADR numbering in chat varied; the important part is that these decisions are recorded and discoverable.
@@ -623,7 +620,7 @@ This feature map was requested explicitly in the chat to confirm scope before re
 
 ### 15.5 Behavior
 - Backup import/export supports `clientKey = null` for reports.
-- `nextIdNumber` increments only on PASS during run test flow.
+- `nextIdNumber` incrementa quando un test viene salvato (PASS o FAIL) nel run test flow, come da ADR-0010.
 - Duplication/import/restore does **not** increment.
 
 ### 15.6 Tests

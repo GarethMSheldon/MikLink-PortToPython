@@ -44,7 +44,7 @@ Regola:
 
 > Regola originale **superseded** da ADR-0010. Manteniamo la traccia storica.
 
-- Il contatore si incrementa **solo** quando un report salvato ha `overallStatus == "PASS"` ed è salvato dal **flow di run-test**.
+- Il contatore incrementa quando un test viene salvato (**PASS o FAIL**) nel **flow di run-test**, come da ADR-0010.
 - L'incremento è applicato nel use case `SaveTestReportUseCase`; il repository Room rimane CRUD e non muta `Client`.
 - Percorsi di duplicazione/import/restore devono usare il repository raw (senza incrementare).
 
