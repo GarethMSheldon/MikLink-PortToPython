@@ -11,10 +11,16 @@ Scopo: documentare font, semantic status colors e soft glow della UI MikLink, in
 
 ## Font
 - Base UI: **Manrope** (Regular/Medium/SemiBold) in `app/src/main/res/font/manrope_*.ttf`, referenziati in `app/src/main/java/com/app/miklink/ui/theme/Type.kt` e applicati come `MaterialTheme.typography`.
-- Monospace tecnico: **JetBrains Mono** (Regular/Medium) in `app/src/main/res/font/jetbrains_mono_*.ttf`, esposti in `Type.kt` via `JetBrainsMono`, `MonoBody`, `MonoLabel`. Usare per log, valori tecnici, ping samples (es. `RawLogsPane`, `PingSectionRenderer`).
+- Monospace tecnico: **JetBrains Mono** (Regular/Medium) in `app/src/main/res/font/jetbrains_mono_*.ttf`, esposti in `Type.kt` via `JetBrainsMono`, `MonoBody`, `MonoLabel`. Usare per log (sanitized), valori tecnici, ping samples (es. `RawLogsPane`, `PingSectionRenderer`).
 - Licenze: Manrope (SIL OFL 1.1) e JetBrains Mono (Apache 2.0). Binari da repo ufficiali; mantenere i file sotto `res/font` e documentare se si aggiungono pesi.
 
-## Semantic status colors (PASS/FAIL/RUNNING)
+## Execution logs
+- Execution logs are displayed using JetBrains Mono for readability.
+- Logs are sanitized through `LogSanitizer` (redaction of credentials/tokens and truncation of long lines).
+- Logs are kept in a bounded in-memory buffer (oldest entries trimmed) and are not persisted to DB/disk (pre‑prod).
+- A `Show logs` toggle is visible during running tests and after completion, exposing **sanitized** logs only.
+
+## Semantic status colors (PASS/FAIL/RUNNING) 
 - Definiti in `app/src/main/java/com/app/miklink/ui/theme/Color.kt` e esposti via `MikLinkThemeTokens.semantic` in `Theme.kt`:
   - `success`, `successContainer`, `onSuccess`, `onSuccessContainer`, `successGlow`
   - `failure`, `failureContainer`, `onFailure`, `onFailureContainer`, `failureGlow`

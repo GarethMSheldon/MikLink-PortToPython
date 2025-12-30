@@ -103,7 +103,7 @@
     <string name="settings_manage_profiles_desc">Add or remove test profiles</string>
     <string name="settings_manage_clients">Manage Clients</string>
     <string name="settings_manage_clients_desc">Manage customer registry</string>
-    <!-- Raw log toggles removed (UI does not display raw logs) -->
+    <!-- Execution logs: sanitized, bounded in-memory buffer, no persistence (pre-prod). Exposed via `test_toggle_show_logs`/`test_toggle_hide_logs`. Raw logs are not displayed. -->
     <!-- Theme selection removed: app uses automatic system theme only (no UI settings) -->
     <string name="settings_category_pdf">PDF Report</string>
     <string name="settings_pdf_preferences">PDF Report Preferences</string>
@@ -168,8 +168,6 @@
     <string name="unnamed_socket">Unnamed Socket</string>
 
     <!-- Test execution logs -->
-    <string name="test_toggle_show_raw_logs">Show raw logs</string>
-    <string name="test_toggle_hide_raw_logs">Hide raw logs</string>
     <string name="test_toggle_show_logs">Show logs</string>
     <string name="test_toggle_hide_logs">Hide logs</string>
     <string name="test_logs_empty">No logs yet</string>

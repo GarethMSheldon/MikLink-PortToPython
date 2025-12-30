@@ -166,9 +166,7 @@
     <string name="unknown_client">Cliente Sconosciuto</string>
     <string name="unnamed_socket">Presa Senza Nome</string>
 
-    <!-- Test execution logs -->
-    <string name="test_toggle_show_raw_logs">Mostra log grezzi</string>
-    <string name="test_toggle_hide_raw_logs">Nascondi log grezzi</string>
+    <!-- Log di esecuzione: sanitizzati, buffer limitato in memoria, nessuna persistenza (pre-prod). Esposti tramite `test_toggle_show_logs`/`test_toggle_hide_logs`. I log grezzi non sono mostrati. -->
     <string name="test_toggle_show_logs">Mostra log</string>
     <string name="test_toggle_hide_logs">Nascondi log</string>
     <string name="test_logs_empty">Nessun log</string>
@@ -292,7 +290,7 @@
     <string name="section_speed">Speedtest</string>
     <string name="profile_list_title">Profili di Test</string>
     <string name="client_list_title">Gestione Clienti</string>
-        <!-- Rimozione toggle log grezzi: non più visualizzati in UI -->
+        <!-- Log di esecuzione: sanitizzati, buffer limitato in memoria, nessuna persistenza (pre-prod). Esposti tramite `test_toggle_show_logs`/`test_toggle_hide_logs`. I log grezzi non sono mostrati. -->
     <!-- Detail formatter labels -->
     <string name="detail_label_mode">Modalita</string>
     <string name="detail_label_interface">Interfaccia</string>

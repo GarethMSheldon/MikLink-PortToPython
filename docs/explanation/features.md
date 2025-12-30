@@ -86,8 +86,10 @@ This document describes *what the app does* and the end‑to‑end flow for each
 - Sections/cards render immediately for every planned step (including PENDING) and update live as statuses change; no hidden pending filter.
 - Ping card shows a LOSS chip driven by `Packet Loss`, RTT aggregates (min/avg/max), a compact targets summary, and one line per target (errors included). Missing values render as `-` but the card still appears.
 - If a step is disabled or skipped, the card remains visible with its status and reason; users always see the full plan.
-- Optional log toggle during execution and after completion to inspect sanitized in-memory logs.
-- Logs are bounded in memory (no DB/persistence) and auto-trim oldest entries to protect performance.
+### Execution logs
+- Logs are sanitized through `LogSanitizer` (redaction of sensitive data and truncation).
+- Logs are stored in a bounded in-memory buffer (oldest entries trimmed); no persistence to DB or disk (pre‑prod).
+- A `Show logs` toggle is visible both while a test is running and after completion to inspect sanitized logs.
 
 **Persistence**
 - Table: `test_reports`
