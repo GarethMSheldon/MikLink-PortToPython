@@ -87,13 +87,7 @@
     <string name="settings_manage_profiles_desc">Aggiungi o rimuovi profili di test</string>
     <string name="settings_manage_clients">Gestisci Clienti</string>
     <string name="settings_manage_clients_desc">Gestisci anagrafica clienti</string>
-    <string name="settings_category_appearance">Aspetto</string>
-    <string name="settings_theme">Tema</string>
-    <string name="settings_theme_auto">Auto (Sistema)</string>
-    <string name="settings_theme_light">Chiaro</string>
-    <string name="settings_theme_dark">Scuro</string>
-    <string name="settings_custom_colors">Colori Personalizzati</string>
-    <string name="settings_custom_colors_desc">Scegli una palette di colori</string>
+    <!-- Theme selection removed: app uses automatic system theme only (no UI settings) -->
     <string name="settings_category_pdf">Report PDF</string>
     <string name="settings_pdf_preferences">Preferenze Rapporto PDF</string>
     <string name="settings_pdf_preferences_desc">Personalizza titoli e opzioni di default</string>

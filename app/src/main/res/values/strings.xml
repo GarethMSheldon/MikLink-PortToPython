@@ -104,13 +104,7 @@
     <string name="settings_manage_clients">Manage Clients</string>
     <string name="settings_manage_clients_desc">Manage customer registry</string>
     <!-- Raw log toggles removed (UI does not display raw logs) -->
-    <string name="settings_category_appearance">Appearance</string>
-    <string name="settings_theme">Theme</string>
-    <string name="settings_theme_auto">Auto (System)</string>
-    <string name="settings_theme_light">Light</string>
-    <string name="settings_theme_dark">Dark</string>
-    <string name="settings_custom_colors">Custom Colors</string>
-    <string name="settings_custom_colors_desc">Choose a color palette</string>
+    <!-- Theme selection removed: app uses automatic system theme only (no UI settings) -->
     <string name="settings_category_pdf">PDF Report</string>
     <string name="settings_pdf_preferences">PDF Report Preferences</string>
     <string name="settings_pdf_preferences_desc">Customize default titles and options</string>

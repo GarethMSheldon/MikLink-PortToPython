@@ -441,7 +441,7 @@ git show <hash>:app/src/main/java/.../ReportDetailScreen*.kt
 
 ---
 
-# EPIC ƒ?" De-spaghetti Test Execution + Deduplicate Renderer Registry + Remove UI Ordering Drift
+# EPIC — De-spaghetti Test Execution + Deduplicate Renderer Registry + Remove UI Ordering Drift
 
 **Codename:** EPIC-UI-TestExecution-Despaghettify-DedupRenderers-2025-12  
 **Owner:** Kotlin Senior / Maintainer  
@@ -461,20 +461,20 @@ git show <hash>:app/src/main/java/.../ReportDetailScreen*.kt
 
 ## 1) Problems (with concrete evidence)
 
-### P1 ƒ?" Renderer registry is duplicated inline (drift risk)
+### P1 — Renderer registry is duplicated inline (drift risk)
 **Where observed:** `ui/history/ReportDetailScreen.kt` builds `SectionRendererRegistry(renderers = mapOf(...))` inline.
 
-**Why itƒ?Ts bad:** drift between Live/History/Report pipelines. Every time a renderer changes, it must be updated in multiple call sites.
+**Why it's bad:** drift between Live/History/Report pipelines. Every time a renderer changes, it must be updated in multiple call sites.
 
-### P2 ƒ?" Section ordering is duplicated in UI (business rule drift)
+### P2 — Section ordering is duplicated in UI (business rule drift)
 **Where observed:** `ui/test/TestSectionDisplayPolicy.kt` keeps an `orderedIds` list and sorts sections.
 
-**Why itƒ?Ts bad:** domain/test runner already guarantees deterministic ordering. UI re-ordering creates rule duplication and eventual mismatch.
+**Why it's bad:** domain/test runner already guarantees deterministic ordering. UI re-ordering creates rule duplication and eventual mismatch.
 
-### P3 ƒ?" TestExecutionScreen is a UI monolith (spaghetti/hotspot)
+### P3 — TestExecutionScreen is a UI monolith (spaghetti/hotspot)
 **Where observed:** `ui/test/TestExecutionScreen.kt` contains entry/scaffold + running + completed + helpers in one large file.
 
-**Why itƒ?Ts bad:** merge conflicts, review difficulty, accidental coupling; slows down future changes.
+**Why it's bad:** merge conflicts, review difficulty, accidental coupling; slows down future changes.
 
 ---
 
@@ -482,22 +482,22 @@ git show <hash>:app/src/main/java/.../ReportDetailScreen*.kt
 
 - No UX redesign, no new navigation routes
 - No broad package renames or architecture rewrites
-- No ƒ?obackup_*.ktƒ?? or commented-out code to preserve old logic (Git is the backup)
+- No "backup_*.kt" or commented-out code to preserve old logic (Git is the backup)
 
 ---
 
 ## 3) Guardrails (must follow)
 
-### GR1 ƒ?" No assumptions
+### GR1 — No assumptions
 Do not infer usage from build caches, generated sources, or annotations alone.
 
-### GR2 ƒ?" File header comment required
+### GR2 — File header comment required
 Every **modified or newly created** Kotlin file must include the standard header comment (see template in this bundle).
 
-### GR3 ƒ?" Delete means delete
-If something is confirmed dead: delete it. Do not comment it out or move to ƒ?obackupƒ??.
+### GR3 — Delete means delete
+If something is confirmed dead: delete it. Do not comment it out or move to "backup".
 
-### GR4 ƒ?" Test after each elimination / structural change
+### GR4 — Test after each elimination / structural change
 After each deletion or structural step:
 - `./gradlew :app:testDebugUnitTest`
 - `./gradlew :app:assembleDebug`
@@ -507,7 +507,7 @@ After each deletion or structural step:
 
 ## 4) Stories (specific file plan)
 
-### Story 1 ƒ?" Split TestExecutionScreen into coherent files (no behavior changes)
+### Story 1 — Split TestExecutionScreen into coherent files (no behavior changes)
 
 **Modify**
 - `app/src/main/java/com/app/miklink/ui/test/TestExecutionScreen.kt`
@@ -519,7 +519,7 @@ After each deletion or structural step:
 **Rules**
 - Keep public entry API unchanged (route, parameters).
 - Move code mechanically: no UI changes, no logic changes.
-- Keep only ƒ?oentry + scaffold + delegationƒ?? in `TestExecutionScreen.kt`.
+- Keep only "entry + scaffold + delegation" in `TestExecutionScreen.kt`.
 
 **Expected responsibilities**
 - `TestExecutionScreen.kt`: collects state, owns scaffold/top bar, delegates to running/completed content.
@@ -532,7 +532,7 @@ After each deletion or structural step:
 
 ---
 
-### Story 2 ƒ?" Centralize the default renderer registry (deduplicate wiring)
+### Story 2 — Centralize the default renderer registry (deduplicate wiring)
 
 **Create**
 - `app/src/main/java/com/app/miklink/ui/feature/test_details/DefaultSectionRendererRegistry.kt`
@@ -552,7 +552,7 @@ After each deletion or structural step:
 
 ---
 
-### Story 3 ƒ?" Remove UI ordering drift (stop duplicating business rules)
+### Story 3 — Remove UI ordering drift (stop duplicating business rules)
 
 **Modify**
 - `app/src/main/java/com/app/miklink/ui/test/TestSectionDisplayPolicy.kt`
@@ -567,7 +567,7 @@ After each deletion or structural step:
 
 ---
 
-### Story 4 ƒ?" Docs-as-code update (must be true and concrete)
+### Story 4 — Docs-as-code update (must be true and concrete)
 
 **Modify**
 - `docs/reference/ui-architecture.md`
@@ -604,8 +604,8 @@ The current assembleDebug output shows two classes of warnings:
 
 ### Kotlin annotation default target warning (KT-73255)
 
-ƒ?oThis annotation is currently applied to the value parameter only, but in the future it will also be applied to field ƒ?Ý use @param: ƒ?Ý or -Xannotation-default-target=param-property ƒ?Ýƒ??
-This is tied to Kotlinƒ?Ts evolving rules for annotation use-site targets (param/property/field). Kotlin 2.2 introduces a preview defaulting rule and recommends explicit use-site targets when you need stable behavior.
+"This annotation is currently applied to the value parameter only, but in the future it will also be applied to field … use @param: … or -Xannotation-default-target=param-property …"
+This is tied to Kotlin's evolving rules for annotation use-site targets (param/property/field). Kotlin 2.2 introduces a preview defaulting rule and recommends explicit use-site targets when you need stable behavior.
 
 ### Deprecations in Room + Compose Material3
 
@@ -617,7 +617,7 @@ Compose M3: TopAppBarDefaults.centerAlignedTopAppBarColors deprecated; use topAp
 
 ## Goal
 
-Zero warnings from the list you posted, without suppressions, without ƒ?otemporaryƒ?? flags, and without altering app behavior (UX unchanged except where API semantics require no-op replacements).
+Zero warnings from the list you posted, without suppressions, without "temporary" flags, and without altering app behavior (UX unchanged except where API semantics require no-op replacements).
 
 ## Non-goals
 
@@ -625,12 +625,12 @@ No dependency upgrades.
 
 No refactor beyond what is necessary to remove the warnings cleanly.
 
-No ƒ?oturn all warnings into errorsƒ?? unless explicitly requested (too risky as a blanket policy).
+No "turn all warnings into errors" unless explicitly requested (too risky as a blanket policy).
 
 ## Key decision (anti-tech-debt)
 Decision: Fix KT-73255 by using explicit use-site targets (NOT compiler flags)
 
-We will not introduce -Xannotation-default-target=param-property because itƒ?Ts a preview behavior change and can create hidden drift in how annotations are emitted in bytecode across the codebase. Kotlin explicitly documents both approaches and the ƒ?opreviewƒ?? nature of the new rule.
+We will not introduce -Xannotation-default-target=param-property because it's a preview behavior change and can create hidden drift in how annotations are emitted in bytecode across the codebase. Kotlin explicitly documents both approaches and the "preview" nature of the new rule.
 
 Instead:
 
@@ -657,7 +657,7 @@ app/src/main/java/com/app/miklink/data/repository/mikrotik/MikroTikTestRepositor
 
 app/src/main/java/com/app/miklink/data/repository/mikrotik/MikroTikProbeConnectivityRepository.kt
 
-Also add a quick search-based sweep for the same pattern in nearby files (e.g., AndroidDocumentReader.kt), so we donƒ?Tt fix only the currently-reported subset and leave landmines for the next build variant.
+Also add a quick search-based sweep for the same pattern in nearby files (e.g., AndroidDocumentReader.kt), so we don't fix only the currently-reported subset and leave landmines for the next build variant.
 
 Room deprecation
 
@@ -680,9 +680,9 @@ TabRow (deprecated)
 annotation target policy (new doc to add)
 
 Implementation plan (step-by-step, agent-proof)
-Phase 0 ƒ?" Guardrails (anti-drift)
+Phase 0 — Guardrails (anti-drift)
 
-Task 0.1: Add a ƒ?oForbidden Patternsƒ?? quality gate (source-based, deterministic)
+Task 0.1: Add a "Forbidden Patterns" quality gate (source-based, deterministic)
 Create a small, cross-platform checker that fails CI if deprecated/known-bad patterns reappear.
 
 Preferred approach (portable): Gradle task using Kotlin
@@ -715,9 +715,9 @@ Acceptance
 
 Running ./gradlew checkForbiddenPatterns fails on the current code, then passes once all tasks below are completed.
 
-Phase 1 ƒ?" Fix KT-73255 (DI qualifiers)
+Phase 1 — Fix KT-73255 (DI qualifiers)
 
-Kotlinƒ?Ts docs: use-site targets @param:, @field:, etc.
+Kotlin's docs: use-site targets @param:, @field:, etc.
 
 Task 1.1: Apply @param: to Hilt qualifier annotations on constructor properties
 Wherever you have:
@@ -759,7 +759,7 @@ The KT-73255 warning lines related to Hilt qualifiers disappear.
 
 No functional changes (app still runs; Hilt graph unchanged).
 
-Phase 2 ƒ?" Fix KT-73255 (Moshi DTOs)
+Phase 2 — Fix KT-73255 (Moshi DTOs)
 
 Moshi + Kotlin often benefits from explicit field targeting for JSON name mapping; Kotlin docs explain why ambiguity exists and how @field: pins it.
 
@@ -804,7 +804,7 @@ All KT-73255 warnings in DTO packages are gone.
 
 Existing parsing/golden tests still pass.
 
-Phase 3 ƒ?" Fix Room deprecation
+Phase 3 — Fix Room deprecation
 
 Room docs: the no-arg fallbackToDestructiveMigration call is deprecated; use overload with dropAllTables (recommended true).
 
@@ -823,7 +823,7 @@ With:
 
 Rules
 
-Keep your current ƒ?opre-production destructive migrationƒ?? policy unchanged.
+Keep your current "pre-production destructive migration" policy unchanged.
 
 Keep the existing inline comment but update it if it mentions the old signature.
 
@@ -840,7 +840,7 @@ Room deprecation warning disappears.
 
 App DB init behavior unchanged (still destructive migration in pre-prod).
 
-Phase 4 ƒ?" Fix Compose Material3 deprecations
+Phase 4 — Fix Compose Material3 deprecations
 
 Material3 release notes: TabRow is deprecated in favor of Primary/Secondary variants.
 TopAppBarDefaults API: centerAlignedTopAppBarColors deprecated; use topAppBarColors.
@@ -858,7 +858,7 @@ Rules
 
 Choose PrimaryTabRow specifically to minimize visual drift from the old default TabRow behavior.
 
-Donƒ?Tt change the Tab contents.
+Don't change the Tab contents.
 
 Keep semantics and state logic identical.
 
@@ -920,7 +920,7 @@ Docs-as-code
 
 When to use @param: vs @field: (DI vs JSON DTOs)
 
-Rationale referencing Kotlinƒ?Ts use-site target rules (link/citation for future maintainers).
+Rationale referencing Kotlin's use-site target rules (link/citation for future maintainers).
 
 Rollback strategy
 
@@ -930,14 +930,14 @@ Revert Phase 2 (DTO annotations) first.
 
 Revert Phase 4 (Compose) next.
 
-Keep Phase 3 (Room) unless Room version is pinned pre-2.7 (but your warning confirms youƒ?Tre on the deprecated API).
+Keep Phase 3 (Room) unless Room version is pinned pre-2.7 (but your warning confirms you're on the deprecated API).
 
-Notes for the agent (to prevent ƒ?odrift by creativityƒ??)
+Notes for the agent (to prevent "drift by creativity")
 
 Do not refactor architecture, DI modules, or UI structure.
 
-Do not change any runtime logicƒ?"only annotation targets and API replacements.
+Do not change any runtime logic—only annotation targets and API replacements.
 
 Keep diffs minimal and reviewable.
 
-If you encounter another warning of the same kind, fix it in the same pass (donƒ?Tt leave ƒ?oweƒ?Tll do it laterƒ??).
+If you encounter another warning of the same kind, fix it in the same pass (don't leave "we'll do it later").
