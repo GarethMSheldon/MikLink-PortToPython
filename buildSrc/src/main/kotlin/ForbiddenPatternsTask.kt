@@ -43,7 +43,7 @@ abstract class ForbiddenPatternsTask : DefaultTask() {
             ),
             ForbiddenPattern(
                 regex = Regex("""@(?!(field:|param:))Json\([^)]*\)\s+(val|var)"""),
-                message = "Apply @field:Json on Moshi-mapped constructor properties"
+                message = "Apply explicit use-site target: @param:Json or @field:Json on Moshi-mapped constructor properties"
             )
         )
 
