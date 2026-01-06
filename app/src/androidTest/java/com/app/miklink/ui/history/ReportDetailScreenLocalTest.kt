@@ -8,6 +8,8 @@ import com.app.miklink.core.domain.model.report.PingSample
 import com.app.miklink.core.domain.model.report.ReportData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.app.miklink.core.data.pdf.PdfExportConfig
+import java.io.File
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,13 +52,18 @@ class ReportDetailScreenLocalTest {
             )
         )
         private val _pdfStatus = MutableStateFlow("")
+        private val _clientName = MutableStateFlow("")
         override val report: StateFlow<TestReport?> = _report
         override val parsedResults: StateFlow<ReportData?> = _results
         override val pdfStatus: StateFlow<String> = _pdfStatus
+        override val clientName: StateFlow<String> = _clientName
         override val socketName = MutableStateFlow("")
         override val notes = MutableStateFlow("")
         override fun updateReportDetails() { }
         override fun exportReportToPdf() { _pdfStatus.value = "EXPORT" }
+        override suspend fun generatePdf(config: PdfExportConfig): File? = null
+        override suspend fun buildRepeatRoute(): String? = null
+        override suspend fun deleteReport() { _report.value = null }
     }
 
     @Test
