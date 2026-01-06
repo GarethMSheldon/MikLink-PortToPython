@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +35,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -60,8 +65,6 @@ import com.app.miklink.ui.components.PrimaryStickyCTA
 import com.app.miklink.ui.components.SetupWizardCard
 import com.app.miklink.ui.profile.TestBadge
 import com.app.miklink.ui.theme.MikLinkThemeTokens
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -166,16 +169,14 @@ fun DashboardScreen(
             )
         }
 
-        androidx.compose.material3.Scaffold(
+        Scaffold(
             containerColor = Color.Transparent,
             topBar = {
                 AppTopBar(
                     title = stringResource(id = R.string.dashboard_title),
                     subtitle = if (isTestButtonEnabled) {
                         stringResource(id = R.string.dashboard_subtitle_ready)
-                    } else {
-                        stringResource(id = R.string.dashboard_subtitle_setup)
-                    },
+                    } else null,
                     leadingContent = {
                         Icon(
                             painter = painterResource(id = R.drawable.logo),
@@ -249,108 +250,120 @@ fun DashboardScreen(
         }
     }
 
-    if (showClientSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showClientSheet = false },
-            sheetState = sheetState,
-            shape = MaterialTheme.shapes.extraLarge,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            var searchQuery by remember { mutableStateOf("") }
-            val filteredClients = remember(clients, searchQuery) {
-                if (searchQuery.isBlank()) clients
-                else clients.filter {
-                    it.companyName.contains(searchQuery, ignoreCase = true) ||
-                        (it.location?.contains(searchQuery, ignoreCase = true) == true)
-                }
+    DashboardSheet(
+        show = showClientSheet,
+        sheetState = sheetState,
+        onDismissRequest = { showClientSheet = false },
+        titleResId = R.string.dashboard_select_client
+    ) {
+        var searchQuery by remember { mutableStateOf("") }
+        val filteredClients = remember(clients, searchQuery) {
+            if (searchQuery.isBlank()) clients
+            else clients.filter {
+                it.companyName.contains(searchQuery, ignoreCase = true) ||
+                    (it.location?.contains(searchQuery, ignoreCase = true) == true)
             }
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(id = R.string.dashboard_select_client),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                androidx.compose.material3.OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(id = R.string.dashboard_search_client)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                )
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 32.dp)
-                ) {
-                    items(filteredClients) { client ->
-                        MinimalListItem(
-                            title = client.companyName,
-                            subtitle = client.location ?: "",
-                            icon = Icons.Default.Business,
-                            isSelected = selectedClient == client,
-                            onClick = {
-                                viewModel.onClientSelected(client)
-                                showClientSheet = false
-                            }
-                        )
+        }
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text(stringResource(id = R.string.dashboard_search_client)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium
+        )
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 32.dp)
+        ) {
+            items(filteredClients) { client ->
+                MinimalListItem(
+                    title = client.companyName,
+                    subtitle = client.location ?: "",
+                    icon = Icons.Default.Business,
+                    isSelected = selectedClient == client,
+                    onClick = {
+                        viewModel.onClientSelected(client)
+                        showClientSheet = false
                     }
-                    if (filteredClients.isEmpty()) {
-                        item {
-                            Text(
-                                stringResource(id = R.string.dashboard_no_clients_found),
-                                modifier = Modifier.padding(12.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                )
+            }
+            if (filteredClients.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(id = R.string.dashboard_no_clients_found),
+                        modifier = Modifier.padding(12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
     }
 
-    if (showProfileSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showProfileSheet = false },
-            sheetState = sheetState,
-            shape = MaterialTheme.shapes.extraLarge,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+    DashboardSheet(
+        show = showProfileSheet,
+        sheetState = sheetState,
+        onDismissRequest = { showProfileSheet = false },
+        titleResId = R.string.dashboard_select_profile
+    ) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(id = R.string.dashboard_select_profile),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+            items(profiles) { profile ->
+                MinimalListItem(
+                    title = profile.profileName,
+                    subtitle = profile.profileDescription ?: "",
+                    icon = Icons.Default.Speed,
+                    isSelected = selectedProfile == profile,
+                    onClick = {
+                        viewModel.selectedProfile.value = profile
+                        showProfileSheet = false
+                    },
+                    trailingContent = { ProfileTestsRow(profile = profile) }
                 )
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 32.dp)
-                ) {
-                    items(profiles) { profile ->
-                        MinimalListItem(
-                            title = profile.profileName,
-                            subtitle = profile.profileDescription ?: "",
-                            icon = Icons.Default.Speed,
-                            isSelected = selectedProfile == profile,
-                            onClick = {
-                                viewModel.selectedProfile.value = profile
-                                showProfileSheet = false
-                            },
-                            trailingContent = { ProfileTestsRow(profile = profile) }
-                        )
-                    }
-                    if (profiles.isEmpty()) {
-                        item {
-                            Text(
-                                stringResource(id = R.string.dashboard_no_profiles),
-                                modifier = Modifier.padding(12.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+            }
+            if (profiles.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(id = R.string.dashboard_no_profiles),
+                        modifier = Modifier.padding(12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
     }
 
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DashboardSheet(
+    show: Boolean,
+    sheetState: SheetState,
+    onDismissRequest: () -> Unit,
+    titleResId: Int,
+    content: @Composable () -> Unit
+) {
+    if (!show) return
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(id = titleResId),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            content()
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

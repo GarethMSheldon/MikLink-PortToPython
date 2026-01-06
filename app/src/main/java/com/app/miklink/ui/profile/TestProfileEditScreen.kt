@@ -59,6 +59,15 @@ fun TestProfileEditScreen(
     var pingConfigExpanded by remember { mutableStateOf(false) }
     var showTarget2 by remember { mutableStateOf(pingTarget2.isNotBlank()) }
     var showTarget3 by remember { mutableStateOf(pingTarget3.isNotBlank()) }
+    LaunchedEffect(pingTarget2, pingTarget3) {
+        if (pingTarget2.isNotBlank()) {
+            showTarget2 = true
+        }
+        if (pingTarget3.isNotBlank()) {
+            showTarget2 = true
+            showTarget3 = true
+        }
+    }
 
     Scaffold(
         topBar = {

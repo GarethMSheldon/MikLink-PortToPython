@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.Check
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,10 +64,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.app.miklink.R
@@ -194,7 +198,7 @@ private fun RunningContent(
     val sections = TestSectionDisplayPolicy.visibleForRunning(
         TestSectionDisplayPolicy.ordered(snapshot?.sections.orEmpty())
     )
-    androidx.compose.foundation.lazy.LazyColumn(
+    LazyColumn(
         modifier = modifier
             .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(bottom = 24.dp, top = 16.dp),
@@ -211,30 +215,17 @@ private fun RunningContent(
             )
         }
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = onToggleLogs,
-                    modifier = Modifier.testTag(TestExecutionTags.IN_PROGRESS_TOGGLE)
-                ) {
-                    Text(
-                        text = stringResource(
-                            id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
-                        )
-                    )
-                }
-            }
+            LogsToggleRow(
+                showLogs = showLogs,
+                onToggleLogs = onToggleLogs,
+                tag = TestExecutionTags.IN_PROGRESS_TOGGLE
+            )
         }
         if (showLogs) {
             item {
-                RawLogsPane(
+                LogsPane(
                     logs = logs,
-                    emptyLabel = stringResource(id = R.string.test_logs_empty),
-                    title = null,
-                    autoScroll = true,
-                    colorize = true
+                    autoScroll = true
                 )
             }
         }
@@ -276,7 +267,7 @@ private fun CompletedContent(
     val isFailed = report.overallStatus != "PASS"
     val failureReason = if (isFailed) resolveFailureReason(snapshot) else null
 
-    androidx.compose.foundation.lazy.LazyColumn(
+    LazyColumn(
         modifier = modifier.padding(horizontal = 16.dp),
         contentPadding = PaddingValues(
             top = 16.dp,
@@ -312,30 +303,17 @@ private fun CompletedContent(
             KpiRow(sections = sections)
         }
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = onToggleLogs,
-                    modifier = Modifier.testTag(TestExecutionTags.COMPLETED_TOGGLE)
-                ) {
-                    Text(
-                        text = stringResource(
-                            id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
-                        )
-                    )
-                }
-            }
+            LogsToggleRow(
+                showLogs = showLogs,
+                onToggleLogs = onToggleLogs,
+                tag = TestExecutionTags.COMPLETED_TOGGLE
+            )
         }
         if (showLogs) {
             item {
-                RawLogsPane(
+                LogsPane(
                     logs = logs,
-                    emptyLabel = stringResource(id = R.string.test_logs_empty),
-                    title = null,
-                    autoScroll = false,
-                    colorize = true
+                    autoScroll = false
                 )
             }
         }
@@ -378,9 +356,26 @@ private fun FailureReasonCard(reason: String?) {
 @Composable
 private fun KpiRow(sections: List<TestSectionSnapshot>) {
     val semantic = MikLinkThemeTokens.semantic
-    val passed = sections.count { it.status == TestSectionStatus.PASS }
-    val failed = sections.count { it.status == TestSectionStatus.FAIL }
-    val skipped = sections.count { it.status == TestSectionStatus.SKIP }
+    val items = listOf(
+        KpiItem(
+            value = sections.count { it.status == TestSectionStatus.PASS },
+            icon = Icons.Default.CheckCircle,
+            contentDescription = stringResource(id = R.string.test_execution_kpi_passed_label),
+            color = semantic.success
+        ),
+        KpiItem(
+            value = sections.count { it.status == TestSectionStatus.FAIL },
+            icon = Icons.Default.Cancel,
+            contentDescription = stringResource(id = R.string.test_execution_kpi_failed_label),
+            color = semantic.failure
+        ),
+        KpiItem(
+            value = sections.count { it.status == TestSectionStatus.SKIP },
+            icon = Icons.Default.RemoveCircle,
+            contentDescription = stringResource(id = R.string.test_execution_kpi_skipped_label),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    )
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -394,32 +389,29 @@ private fun KpiRow(sections: List<TestSectionSnapshot>) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            KpiItemIcon(
-                value = passed,
-                icon = Icons.Default.CheckCircle,
-                contentDescription = stringResource(id = R.string.test_execution_kpi_passed_label),
-                color = semantic.success
-            )
-            KpiItemIcon(
-                value = failed,
-                icon = Icons.Default.Cancel,
-                contentDescription = stringResource(id = R.string.test_execution_kpi_failed_label),
-                color = semantic.failure
-            )
-            KpiItemIcon(
-                value = skipped,
-                icon = Icons.Default.RemoveCircle,
-                contentDescription = stringResource(id = R.string.test_execution_kpi_skipped_label),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            items.forEach { item ->
+                KpiItemIcon(
+                    value = item.value,
+                    icon = item.icon,
+                    contentDescription = item.contentDescription,
+                    color = item.color
+                )
+            }
         }
     }
 }
 
+private data class KpiItem(
+    val value: Int,
+    val icon: ImageVector,
+    val contentDescription: String,
+    val color: Color
+)
+
 @Composable
 private fun KpiItemIcon(
     value: Int,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     color: Color
 ) {
@@ -442,6 +434,7 @@ private fun KpiItemIcon(
 }
 
 @Composable
+// Groups info sections separately from tests for display.
 private fun TestSectionList(
     sections: List<TestSectionSnapshot>,
     rendererRegistry: SectionRendererRegistry
@@ -509,6 +502,45 @@ private fun SectionCard(
 }
 
 @Composable
+private fun LogsToggleRow(
+    showLogs: Boolean,
+    onToggleLogs: () -> Unit,
+    tag: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End
+    ) {
+        TextButton(
+            onClick = onToggleLogs,
+            modifier = Modifier.testTag(tag)
+        ) {
+            Text(text = logToggleLabel(showLogs))
+        }
+    }
+}
+
+@Composable
+private fun LogsPane(
+    logs: List<String>,
+    autoScroll: Boolean
+) {
+    RawLogsPane(
+        logs = logs,
+        emptyLabel = stringResource(id = R.string.test_logs_empty),
+        title = null,
+        autoScroll = autoScroll,
+        colorize = true
+    )
+}
+
+@Composable
+private fun logToggleLabel(showLogs: Boolean): String =
+    stringResource(
+        id = if (showLogs) R.string.test_toggle_hide_logs else R.string.test_toggle_show_logs
+    )
+
+@Composable
 private fun CompletedActionBar(
     isFailed: Boolean,
     onClose: () -> Unit,
@@ -533,32 +565,30 @@ private fun CompletedActionBar(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
+                ActionButton(
+                    icon = Icons.Default.Close,
+                    labelResId = R.string.test_execution_action_close,
                     onClick = onClose,
                     modifier = Modifier
                         .weight(1f)
                         .testTag(TestExecutionTags.BOTTOM_CLOSE)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(stringResource(id = R.string.test_execution_action_close))
-                }
-                OutlinedButton(
+                )
+                ActionButton(
+                    icon = Icons.Default.Refresh,
+                    labelResId = R.string.test_execution_action_repeat_short,
                     onClick = onRepeat,
                     modifier = Modifier
                         .weight(1f)
                         .testTag(TestExecutionTags.BOTTOM_REPEAT)
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(stringResource(id = R.string.test_execution_action_repeat_short))
-                }
+                )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
+                ActionButton(
+                    icon = if (isFailed) Icons.Default.Error else Icons.Default.Check,
+                    labelResId = R.string.test_execution_action_save,
                     onClick = onSave,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -566,18 +596,32 @@ private fun CompletedActionBar(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isFailed) semantic.failure else semantic.success,
                         contentColor = if (isFailed) semantic.onFailure else semantic.onSuccess
-                    )
-                ) {
-                    Icon(
-                        if (isFailed) Icons.Default.Error else Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(stringResource(id = R.string.test_execution_action_save))
-                }
+                    ),
+                    outlined = false
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun ActionButton(
+    icon: ImageVector,
+    labelResId: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
+    outlined: Boolean = true
+) {
+    val content = @Composable {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.size(6.dp))
+        Text(stringResource(id = labelResId))
+    }
+    if (outlined) {
+        OutlinedButton(onClick = onClick, modifier = modifier) { content() }
+    } else {
+        Button(onClick = onClick, modifier = modifier, colors = colors) { content() }
     }
 }
 
@@ -653,8 +697,8 @@ private fun ErrorState(
 }
 
 @Composable
-private fun sectionTitle(section: TestSectionSnapshot): String {
-    return section.title ?: when (section.id) {
+private fun sectionTitle(section: TestSectionSnapshot): String =
+    section.title ?: when (section.id) {
         TestSectionId.NETWORK -> stringResource(id = R.string.section_network)
         TestSectionId.LINK -> stringResource(id = R.string.section_link)
         TestSectionId.TDR -> stringResource(id = R.string.section_tdr)
@@ -665,10 +709,9 @@ private fun sectionTitle(section: TestSectionSnapshot): String {
         TestSectionId.REPORT -> stringResource(id = R.string.test_execution_section_report)
         else -> stringResource(id = R.string.test_execution_section_unknown)
     }
-}
 
 @Composable
-private fun sectionIcon(id: TestSectionId): androidx.compose.ui.graphics.vector.ImageVector =
+private fun sectionIcon(id: TestSectionId): ImageVector =
     when (id) {
         TestSectionId.NETWORK -> Icons.Default.SettingsEthernet
         TestSectionId.LINK -> Icons.Default.Link
@@ -707,8 +750,8 @@ private fun statusTint(status: TestSectionStatus): Color =
     }
 
 @Composable
-private fun topBarTitle(uiState: UiState<TestReport>, isRunning: Boolean): String {
-    return when {
+private fun topBarTitle(uiState: UiState<TestReport>, isRunning: Boolean): String =
+    when {
         isRunning -> stringResource(id = R.string.test_execution_running_topbar)
         uiState is UiState.Success && uiState.data.overallStatus == "PASS" -> stringResource(
             id = R.string.test_execution_completed_title_pass
@@ -718,11 +761,10 @@ private fun topBarTitle(uiState: UiState<TestReport>, isRunning: Boolean): Strin
         uiState is UiState.Idle -> stringResource(id = R.string.test_execution_title_ready)
         else -> stringResource(id = R.string.test_execution_title_running)
     }
-}
 
 @Composable
-private fun topBarSubtitle(uiState: UiState<TestReport>, isRunning: Boolean): String {
-    return when {
+private fun topBarSubtitle(uiState: UiState<TestReport>, isRunning: Boolean): String =
+    when {
         isRunning -> stringResource(id = R.string.test_execution_subtitle_running)
         uiState is UiState.Success && uiState.data.overallStatus == "PASS" -> stringResource(
             id = R.string.test_execution_subtitle_success
@@ -732,14 +774,14 @@ private fun topBarSubtitle(uiState: UiState<TestReport>, isRunning: Boolean): St
         uiState is UiState.Idle -> stringResource(id = R.string.test_execution_subtitle_ready)
         else -> ""
     }
-}
 
-private fun resolveFailureReason(snapshot: TestRunSnapshot?): String? {
-    val firstWarning = snapshot?.sections?.firstOrNull { it.status == TestSectionStatus.FAIL }?.warning
-    return firstWarning ?: snapshot?.notes
-}
+// Picks the first failure warning if present, otherwise falls back to snapshot notes.
+private fun resolveFailureReason(snapshot: TestRunSnapshot?): String? =
+    snapshot?.sections?.firstOrNull { it.status == TestSectionStatus.FAIL }?.warning
+        ?: snapshot?.notes
 
 @Composable
+// Memoizes renderers to avoid recreating heavy detail renderers on every recomposition.
 private fun rememberRendererRegistry(): SectionRendererRegistry {
     return remember {
         SectionRendererRegistry(
@@ -755,7 +797,7 @@ private fun rememberRendererRegistry(): SectionRendererRegistry {
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable
 private fun PreviewExecutionRunning() {
     val registry = rememberRendererRegistry()
@@ -777,7 +819,7 @@ private fun PreviewExecutionRunning() {
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable
 private fun PreviewExecutionCompleted() {
     val registry = rememberRendererRegistry()
@@ -830,7 +872,7 @@ private fun PreviewExecutionCompleted() {
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(
+@Preview(
     showBackground = true,
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )

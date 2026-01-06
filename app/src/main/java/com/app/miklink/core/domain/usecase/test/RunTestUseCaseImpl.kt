@@ -1,7 +1,5 @@
-// UI component/screen: test execution flow; input state: TestPlan + repositories; output rendering: TestEvent flow.
 package com.app.miklink.core.domain.usecase.test
 
-import com.app.miklink.core.domain.model.Client
 import com.app.miklink.core.domain.model.ProbeConfig
 import com.app.miklink.core.domain.model.TestProfile
 import com.app.miklink.core.domain.model.report.LinkStatusData
@@ -47,18 +45,7 @@ import java.util.LinkedHashMap
 import com.app.miklink.core.domain.policy.TestQualityPolicy
 import com.app.miklink.utils.normalizeTime
 
-/**
- * Implementazione di RunTestUseCase.
- * Orchestra tutti gli step necessari per eseguire un test completo.
- * 
- * Ordine degli step (replicato da TestViewModel):
- * 1. Link Status
- * 2. Network Config
- * 3. TDR
- * 4. LLDP/CDP
- * 5. Ping
- * 6. Speed Test
- */
+/** RunTestUseCase implementation. */
 class RunTestUseCaseImpl @Inject constructor(
     private val clientRepository: ClientRepository,
     private val probeRepository: ProbeRepository,
@@ -82,7 +69,6 @@ class RunTestUseCaseImpl @Inject constructor(
             }
         }
 
-        // 1. Carica entità
         val client = clientRepository.getClient(plan.clientId)
             ?: throw IllegalStateException("Client not found: ${plan.clientId}")
         val probe = probeRepository.getProbeConfig()
@@ -665,6 +651,7 @@ class RunTestUseCaseImpl @Inject constructor(
         return reportResultsCodec.encode(reportData).getOrElse { "{}" }
     }
 
+    // Flattens per-target ping results into report rows, keeping target-level loss when present.
     private fun mapPingOutcomes(outcomes: List<PingTargetOutcome>): List<PingSample> {
         val samples = mutableListOf<PingSample>()
         outcomes.forEach { outcome ->
@@ -689,6 +676,7 @@ class RunTestUseCaseImpl @Inject constructor(
         return samples
     }
 
+    // Collects report payloads and per-step metadata during execution.
     private class ReportDataAccumulator {
         var network: NetworkData? = null
         var linkStatus: LinkStatusData? = null
@@ -735,6 +723,7 @@ class RunTestUseCaseImpl @Inject constructor(
             return sanitized
         }
 
+        // Normalizes mixed raw values into strings for report extras.
         private fun sanitizeValue(value: Any?): String? = when (value) {
             null -> null
             is String, is Number, is Boolean -> value.toString()
@@ -892,9 +881,6 @@ class RunTestUseCaseImpl @Inject constructor(
             "warning" to speed.warning
         )
 
-    fun executeTest(client: Client, probeConfig: ProbeConfig, testProfile: TestProfile) {
-        // ...updated logic using domain models...
-    }
 }
 
 private const val SECTION_NETWORK = "NETWORK"
@@ -914,6 +900,7 @@ private fun TestSectionId.toLegacyName(): String = when (this) {
     else -> name
 }
 
+// Initializes section list with default status based on profile flags and hardware support.
 private fun buildInitialTypedSections(profile: TestProfile, probe: ProbeConfig): MutableList<TestSectionSnapshot> {
     val sections = mutableListOf<TestSectionSnapshot>()
     sections += when {
@@ -983,6 +970,7 @@ private fun updateTypedSection(
     warning: String? = null,
     title: String? = null
 ) {
+    // Preserve existing payload unless a real payload is provided.
     val index = typedSections.indexOfFirst { it.id == id }
     val existing = typedSections.getOrNull(index)
     val resolvedPayload = if (payload is TestSectionPayload.None && existing?.payload !is TestSectionPayload.None) {

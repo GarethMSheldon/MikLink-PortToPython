@@ -56,6 +56,14 @@ val StatusFailureContainer = Color(0xFF3A1B1B)
 val StatusOnFailure = Color(0xFFF9E6E6)
 val StatusOnFailureContainer = Color(0xFFF5C7C7)
 
+// Warning (desaturated yellow)
+val StatusWarning = Color(0xFFB48A3A)
+val StatusOnWarning = Color(0xFF2F2208)
+val StatusWarningContainerLight = Color(0xFFF5EED3)
+val StatusOnWarningContainerLight = Color(0xFF5A461B)
+val StatusWarningContainerDark = Color(0xFF3A3322)
+val StatusOnWarningContainerDark = Color(0xFFF1E2B7)
+
 // Running is tied to primary per scheme
 val StatusRunningDark = MikLinkPrimaryDark
 val StatusRunningDarkContainer = MikLinkPrimaryContainerDark
