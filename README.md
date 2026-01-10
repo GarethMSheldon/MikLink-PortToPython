@@ -40,34 +40,11 @@ Use a **€50 MikroTik RouterBoard** as your probe. MikLink does the rest.
 
 ```mermaid
 flowchart LR
-    %% Styles
-    classDef hardware fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef network fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef app fill:#bfb,stroke:#333,stroke-width:2px;
-
-    subgraph UserSide [Infrastructure]
-        direction TB
-        A(RJ45 Wall Outlet):::hardware
-        B(Patch Panel):::hardware
-    end
-
-    subgraph NetSide [Active Network]
-        direction TB
-        C(Network Switch):::network
-        D(MikroTik Probe):::network
-    end
-
-    subgraph TestSide [Testing Tool]
-        direction TB
-        E(MikLink MOBILE):::app
-        F[PDF Report]:::app
-    end
-
-    A == Ethernet Cable ==> B
-    B == Patch Cord ==> C
-    C -.-> D
-    D <== REST API ==> E
-    E --> F
+    A[Wall Outlet] --> B[Patch Panel]
+    B --> C[Switch]
+    C --> D[MikroTik]
+    D <--> E[MikLink App]
+    E --> F[PDF]
 ```
 
 ---
@@ -104,60 +81,51 @@ Professional-looking reports with all test results. Attach to acceptance documen
 
 ```mermaid
 flowchart TB
-    %% Styles
-    classDef ui fill:#ffcc80,stroke:#333,stroke-width:2px;
-    classDef domain fill:#81d4fa,stroke:#333,stroke-width:2px;
-    classDef data fill:#a5d6a7,stroke:#333,stroke-width:2px;
-    classDef ext fill:#e1bee7,stroke:#333,stroke-width:2px;
-
-    subgraph UI_Layer [📱 UI Layer]
-        DS[Dashboard]:::ui
-        TE[Test Execution]:::ui
-        SE[Settings]:::ui
+    subgraph UI[UI Layer]
+        Dashboard
+        TestExecution
+        Settings
     end
 
-    subgraph Domain_Layer [🧠 Domain Layer]
-        UC[Use Cases]:::domain
-        PO[Policies]:::domain
+    subgraph Domain[Domain Layer]
+        UseCases
+        Policies
     end
 
-    subgraph Data_Layer [💾 Data Layer]
-        RM[(Room DB)]:::data
-        RT[Retrofit API]:::data
-        PDF[iText PDF]:::data
+    subgraph Data[Data Layer]
+        RoomDB[(Room)]
+        Retrofit
+        PDF[iText]
     end
 
-    subgraph External [📡 External]
-        MT(MikroTik RouterOS):::ext
-    end
+    MikroTik([RouterOS API])
 
-    UI_Layer --> Domain_Layer
-    Domain_Layer --> Data_Layer
-    RT <==> MT
+    UI --> Domain
+    Domain --> Data
+    Retrofit <--> MikroTik
 ```
 
 ### Test Execution Flow
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant App as 📱 MikLink
+    participant App
     participant VM as ViewModel
-    participant UC as RunTestUseCase
-    participant Probe as 📡 MikroTik
+    participant UC as UseCase
+    participant MT as MikroTik
 
-    Note over App, Probe: Test Initialization
-    App->>VM: Start Test Action
-    VM->>UC: Execute(client, profile)
+    App->>VM: Start Test
+    VM->>UC: Execute
 
-    rect rgb(240, 248, 255)
-        Note right of VM: Execution Loop
-        loop For each step
-            UC->>Probe: GET /rest/command
-            Probe-->>UC: JSON Result
-            UC-->>VM: Emit TestEvent.Progress
-            VM-->>App: Update Progress Bars
-        end
+    loop Each Step
+        UC->>MT: API Call
+        MT-->>UC: Result
+        UC-->>VM: Progress
+        VM-->>App: Update UI
+    end
+
+    UC-->>VM: Completed
+    VM->>App: Show Results
     end
 
     UC-->>VM: Emit TestEvent.Completed
