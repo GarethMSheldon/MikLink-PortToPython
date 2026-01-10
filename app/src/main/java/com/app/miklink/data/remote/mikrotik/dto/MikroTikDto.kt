@@ -29,7 +29,8 @@ data class DhcpClientStatus(
     val status: String? = null,
     val address: String? = null,
     val gateway: String? = null,
-    val dns: String? = null
+    // RouterOS returns DNS as "primary-dns", not "dns"
+    @param:Json(name = "primary-dns") val dns: String? = null
 )
 
 // IP address management
