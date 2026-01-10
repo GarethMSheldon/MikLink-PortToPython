@@ -88,6 +88,10 @@
     <string name="dashboard_probe_ip">IP address</string>
     <string name="dashboard_probe_interface">Interface</string>
     <string name="dashboard_probe_transport">Transport</string>
+    <string name="dashboard_btn_probe_missing">CONFIGURE PROBE</string>
+    <string name="dashboard_btn_probe_offline">PROBE OFFLINE</string>
+    <string name="dashboard_hint_probe_missing">Configure a MikroTik probe to start.</string>
+    <string name="dashboard_hint_probe_offline">Check probe power and connection.</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

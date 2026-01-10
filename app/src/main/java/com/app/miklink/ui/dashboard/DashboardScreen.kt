@@ -30,7 +30,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,7 +86,42 @@ fun DashboardScreen(
     val glowIntensity by viewModel.dashboardGlowIntensity.collectAsStateWithLifecycle()
 
     val isTestButtonEnabled = selectedClient != null && currentProbe != null &&
-        selectedProfile != null && socketName.isNotBlank()
+        selectedProfile != null && socketName.isNotBlank() && isProbeOnline
+
+    // Smart CTA Logic
+    val (ctaLabel, ctaIcon, ctaAction, ctaEnabled, ctaSubtitle) = when {
+        currentProbe == null -> {
+            val label = stringResource(id = R.string.dashboard_btn_probe_missing)
+            val subtitle = stringResource(id = R.string.dashboard_hint_probe_missing)
+            val action = { navController.navigate("probe_config") }
+            TestCtaState(label, Icons.Default.Settings, action, true, subtitle)
+        }
+        !isProbeOnline -> {
+            val label = stringResource(id = R.string.dashboard_btn_probe_offline)
+            val subtitle = stringResource(id = R.string.dashboard_hint_probe_offline)
+            TestCtaState(label, Icons.Default.WifiOff, {}, false, subtitle)
+        }
+        !isTestButtonEnabled -> {
+            val label = stringResource(id = R.string.dashboard_btn_configure_test)
+            val subtitle = stringResource(id = R.string.dashboard_cta_hint)
+            TestCtaState(label, Icons.Default.PlayArrow, {}, false, subtitle)
+        }
+        else -> {
+            val label = stringResource(id = R.string.dashboard_btn_start_test)
+            val subtitle = stringResource(id = R.string.dashboard_cta_ready)
+            val action = {
+                selectedClient?.let { client ->
+                    selectedProfile?.let { profile ->
+                        val encodedSocket = Uri.encode(socketName)
+                        navController.navigate(
+                            "test_execution/${client.clientId}/${profile.profileId}/$encodedSocket"
+                        )
+                    }
+                } ?: Unit
+            }
+            TestCtaState(label, Icons.Default.PlayArrow, action, true, subtitle)
+        }
+    }
 
     val semantic = MikLinkThemeTokens.semantic
     val normalizedGlow = glowIntensity.coerceIn(0f, 1f)
@@ -176,6 +214,8 @@ fun DashboardScreen(
                     title = stringResource(id = R.string.dashboard_title),
                     subtitle = if (isTestButtonEnabled) {
                         stringResource(id = R.string.dashboard_subtitle_ready)
+                    } else if (currentProbe == null) {
+                        stringResource(id = R.string.dashboard_probe_missing)
                     } else null,
                     leadingContent = {
                         Icon(
@@ -193,26 +233,11 @@ fun DashboardScreen(
             },
             bottomBar = {
                 PrimaryStickyCTA(
-                    label = if (isTestButtonEnabled) {
-                        stringResource(id = R.string.dashboard_btn_start_test)
-                    } else {
-                        stringResource(id = R.string.dashboard_btn_configure_test)
-                    },
-                    supportingText = if (isTestButtonEnabled) null else stringResource(id = R.string.dashboard_cta_hint),
-                    icon = Icons.Default.PlayArrow,
-                    enabled = isTestButtonEnabled,
-                    onClick = {
-                        selectedClient?.let { client ->
-                            currentProbe?.let {
-                                selectedProfile?.let { profile ->
-                                    val encodedSocket = Uri.encode(socketName)
-                                    navController.navigate(
-                                        "test_execution/${client.clientId}/${profile.profileId}/$encodedSocket"
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    label = ctaLabel,
+                    supportingText = if (ctaEnabled) null else ctaSubtitle,
+                    icon = ctaIcon,
+                    enabled = ctaEnabled,
+                    onClick = ctaAction
                 )
             }
         ) { padding ->
@@ -401,3 +426,11 @@ private fun ProfileTestsRow(profile: TestProfile, modifier: Modifier = Modifier)
         }
     }
 }
+
+private data class TestCtaState(
+    val label: String,
+    val icon: ImageVector,
+    val action: () -> Unit,
+    val enabled: Boolean,
+    val subtitle: String?
+)

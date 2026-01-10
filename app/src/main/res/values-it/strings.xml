@@ -88,6 +88,10 @@
     <string name="dashboard_probe_ip">Indirizzo IP</string>
     <string name="dashboard_probe_interface">Interfaccia</string>
     <string name="dashboard_probe_transport">Trasporto</string>
+    <string name="dashboard_btn_probe_missing">CONFIGURA SONDA</string>
+    <string name="dashboard_btn_probe_offline">SONDA OFFLINE</string>
+    <string name="dashboard_hint_probe_missing">Configura una sonda MikroTik per iniziare.</string>
+    <string name="dashboard_hint_probe_offline">Controlla l\'alimentazione e la connessione.</string>
 
     <!-- Settings -->
     <string name="settings_title">Impostazioni</string>
