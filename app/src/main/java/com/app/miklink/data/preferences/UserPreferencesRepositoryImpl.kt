@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.app.miklink.core.data.repository.preferences.UserPreferencesRepository
 import com.app.miklink.core.domain.model.preferences.IdNumberingStrategy
+import com.app.miklink.core.data.pdf.ExportColumn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -36,7 +37,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         .map { preferences -> preferences[PDF_INCLUDE_EMPTY_TESTS_KEY] ?: true }
 
     override val pdfSelectedColumns: Flow<Set<String>> = dataStore.data
-        .map { preferences -> preferences[PDF_SELECTED_COLUMNS_KEY] ?: emptySet() }
+        .map { preferences -> preferences[PDF_SELECTED_COLUMNS_KEY] ?: ExportColumn.values().map { it.name }.toSet() }
 
     override suspend fun setPdfIncludeEmptyTests(include: Boolean) {
         dataStore.edit { preferences ->
@@ -96,6 +97,15 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override suspend fun setProbePollingInterval(interval: Long) {
         dataStore.edit { preferences ->
             preferences[PROBE_POLLING_INTERVAL_KEY] = interval
+        }
+    }
+    
+    override suspend fun resetPdfPreferencesToDefaults() {
+        dataStore.edit { preferences ->
+            preferences.remove(PDF_INCLUDE_EMPTY_TESTS_KEY)
+            preferences.remove(PDF_SELECTED_COLUMNS_KEY)
+            preferences.remove(PDF_REPORT_TITLE_KEY)
+            preferences.remove(PDF_HIDE_EMPTY_COLUMNS_KEY)
         }
     }
 }

@@ -80,6 +80,8 @@ fun HistoryScreen(
 
     val pdfReportTitle by viewModel.pdfReportTitle.collectAsStateWithLifecycle()
     val pdfHideEmptyColumns by viewModel.pdfHideEmptyColumns.collectAsStateWithLifecycle()
+    val pdfIncludeEmptyTests by viewModel.pdfIncludeEmptyTests.collectAsStateWithLifecycle()
+    val pdfSelectedColumns by viewModel.pdfSelectedColumns.collectAsStateWithLifecycle()
 
     val exportingClientMessage = stringResource(R.string.history_exporting_client)
     val exportSuccessMessage = stringResource(R.string.history_export_success)
@@ -337,6 +339,8 @@ fun HistoryScreen(
     showExportDialog?.let { clientData ->
             PdfExportDialog(
                 clientName = clientData.client?.companyName ?: "Report",
+                globalIncludeEmpty = pdfIncludeEmptyTests,
+                globalColumns = pdfSelectedColumns,
                 globalReportTitle = pdfReportTitle,
                 globalHideEmptyColumns = pdfHideEmptyColumns,
                 onDismiss = { showExportDialog = null },
@@ -385,6 +389,10 @@ fun HistoryScreen(
     singleExportContext?.let { (report, clientName) ->
             PdfExportDialog(
                 clientName = clientName,
+                globalIncludeEmpty = pdfIncludeEmptyTests,
+                globalColumns = pdfSelectedColumns,
+                globalReportTitle = pdfReportTitle,
+                globalHideEmptyColumns = pdfHideEmptyColumns,
                 onDismiss = { singleExportContext = null },
                 onConfirm = { config ->
                     singleExportContext = null

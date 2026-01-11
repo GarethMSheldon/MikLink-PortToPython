@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlinx.coroutines.withContext
+import com.app.miklink.core.data.pdf.ExportColumn
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
@@ -36,7 +37,7 @@ class HistoryViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val pdfSelectedColumns = userPreferencesRepository.pdfSelectedColumns
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExportColumn.values().map { it.name }.toSet())
 
     val pdfReportTitle = userPreferencesRepository.pdfReportTitle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")

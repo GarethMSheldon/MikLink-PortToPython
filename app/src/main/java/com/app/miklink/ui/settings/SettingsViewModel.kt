@@ -68,6 +68,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updatePdfSelectedColumns(columns: Set<String>) {
+        if (columns.isEmpty()) return // Prevent deselecting all columns
         viewModelScope.launch {
             userPreferencesRepository.setPdfSelectedColumns(columns)
         }
@@ -122,6 +123,12 @@ class SettingsViewModel @Inject constructor(
     fun updateProbePollingInterval(interval: Long) {
         viewModelScope.launch {
             userPreferencesRepository.setProbePollingInterval(interval)
+        }
+    }
+    
+    fun resetPdfPreferences() {
+        viewModelScope.launch {
+            userPreferencesRepository.resetPdfPreferencesToDefaults()
         }
     }
 

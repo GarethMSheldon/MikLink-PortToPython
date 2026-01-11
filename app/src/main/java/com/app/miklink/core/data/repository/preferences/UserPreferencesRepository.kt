@@ -21,4 +21,6 @@ interface UserPreferencesRepository {
     suspend fun setPdfHideEmptyColumns(hide: Boolean)
     suspend fun setDashboardGlowIntensity(intensity: Float)
     suspend fun setProbePollingInterval(interval: Long)
+    
+    suspend fun resetPdfPreferencesToDefaults()
 }

@@ -104,9 +104,18 @@ fun ReportDetailScreen(
     navController: NavController,
     viewModel: ReportDetailViewModel = hiltViewModel()
 ) {
+    val pdfIncludeEmptyTests by viewModel.pdfIncludeEmptyTests.collectAsStateWithLifecycle()
+    val pdfSelectedColumns by viewModel.pdfSelectedColumns.collectAsStateWithLifecycle()
+    val pdfReportTitle by viewModel.pdfReportTitle.collectAsStateWithLifecycle()
+    val pdfHideEmptyColumns by viewModel.pdfHideEmptyColumns.collectAsStateWithLifecycle()
+    
     ReportDetailScreen(
         navController = navController,
-        stateProvider = viewModel
+        stateProvider = viewModel,
+        pdfIncludeEmptyTests = pdfIncludeEmptyTests,
+        pdfSelectedColumns = pdfSelectedColumns,
+        pdfReportTitle = pdfReportTitle,
+        pdfHideEmptyColumns = pdfHideEmptyColumns
     )
 }
 
@@ -114,7 +123,11 @@ fun ReportDetailScreen(
 @Composable
 fun ReportDetailScreen(
     navController: NavController,
-    stateProvider: ReportDetailScreenStateProvider
+    stateProvider: ReportDetailScreenStateProvider,
+    pdfIncludeEmptyTests: Boolean = true,
+    pdfSelectedColumns: Set<String> = com.app.miklink.core.data.pdf.ExportColumn.values().map { it.name }.toSet(),
+    pdfReportTitle: String = "",
+    pdfHideEmptyColumns: Boolean = false
 ) {
     val report by stateProvider.report.collectAsStateWithLifecycle()
     val results by stateProvider.parsedResults.collectAsStateWithLifecycle()
@@ -232,6 +245,10 @@ fun ReportDetailScreen(
     if (showExportDialog && report != null) {
         PdfExportDialog(
             clientName = clientName.ifBlank { "Report" },
+            globalIncludeEmpty = pdfIncludeEmptyTests,
+            globalColumns = pdfSelectedColumns,
+            globalReportTitle = pdfReportTitle,
+            globalHideEmptyColumns = pdfHideEmptyColumns,
             onDismiss = { showExportDialog = false },
             onConfirm = { config ->
                 showExportDialog = false

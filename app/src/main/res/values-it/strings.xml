@@ -132,6 +132,8 @@
     <string name="pdf_settings_include_empty_description">Mostra anche test falliti o senza dati</string>
     <string name="pdf_settings_hide_empty_columns_title">Nascondi Colonne Vuote</string>
     <string name="pdf_settings_hide_empty_columns_description">Non stampare colonne senza dati (override)</string>
+    <string name="reset_to_defaults">Ripristina Default</string>
+    <string name="reset_pdf_confirm_message">Verranno ripristinati tutti i valori predefiniti delle impostazioni PDF. Continuare?</string>
     <string name="settings_id_numbering">Numerazione ID</string>
     <string name="settings_id_strategy">Strategia Numerazione</string>
     <string name="settings_category_info">Informazioni</string>

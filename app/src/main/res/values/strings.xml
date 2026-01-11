@@ -133,6 +133,8 @@
     <string name="pdf_settings_include_empty_description">Also show failed or empty tests.</string>
     <string name="pdf_settings_hide_empty_columns_title">Hide Empty Columns</string>
     <string name="pdf_settings_hide_empty_columns_description">Do not print columns without data (override).</string>
+    <string name="reset_to_defaults">Reset to Defaults</string>
+    <string name="reset_pdf_confirm_message">This will restore all PDF report settings to their default values. Continue?</string>
     <string name="settings_id_numbering">ID Numbering</string>
     <string name="settings_id_strategy">Numbering Strategy</string>
     <string name="settings_category_info">Information</string>

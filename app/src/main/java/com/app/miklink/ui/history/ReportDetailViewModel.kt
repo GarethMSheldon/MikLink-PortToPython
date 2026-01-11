@@ -21,6 +21,7 @@ import com.app.miklink.core.data.pdf.PdfGenerator
 import com.app.miklink.core.data.pdf.PdfExportConfig
 import com.app.miklink.core.domain.usecase.report.ParseReportResultsUseCase
 import com.app.miklink.ui.navigation.RepeatTestRouteBuilder
+import com.app.miklink.core.data.pdf.ExportColumn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -45,7 +46,7 @@ class ReportDetailViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val pdfSelectedColumns = userPreferencesRepository.pdfSelectedColumns
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExportColumn.values().map { it.name }.toSet())
 
     val pdfReportTitle = userPreferencesRepository.pdfReportTitle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
