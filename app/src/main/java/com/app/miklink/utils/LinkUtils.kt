@@ -1,21 +1,27 @@
 package com.app.miklink.utils
 
+import androidx.annotation.StringRes
+import com.app.miklink.R
+
 /**
  * Normalizes link status strings for consistent display.
  * 
  * Logic:
- * - "link-ok", "up", "running", "ok" -> "Connesso"
- * - "no-link", "down" -> "Disconnesso"
- * - "unknown" -> "Sconosciuto"
- * - Everything else -> "N/A" (fallback)
+ * - "link-ok", "up", "running", "ok" -> R.string.link_status_connected
+ * - "no-link", "down" -> R.string.link_status_disconnected
+ * - "unknown" -> R.string.link_status_unknown
+ * - Everything else -> R.string.link_status_na (fallback)
+ * 
+ * @return String resource ID for the normalized status
  */
-fun normalizeLinkStatus(status: String?): String {
-    if (status.isNullOrBlank()) return "N/A"
+@StringRes
+fun normalizeLinkStatus(status: String?): Int {
+    if (status.isNullOrBlank()) return R.string.link_status_na
     return when (status.lowercase().trim()) {
-        "link-ok", "up", "running", "ok" -> "Connesso"
-        "no-link", "down" -> "Disconnesso"
-        "unknown" -> "Sconosciuto"
-        else -> "N/A"
+        "link-ok", "up", "running", "ok" -> R.string.link_status_connected
+        "no-link", "down" -> R.string.link_status_disconnected
+        "unknown" -> R.string.link_status_unknown
+        else -> R.string.link_status_na
     }
 }
 

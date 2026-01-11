@@ -133,7 +133,7 @@ class ReportDetailViewModel @Inject constructor(
                 config = config
             )
         } catch (e: Exception) {
-            android.util.Log.e("ReportDetailVM", "Error generating PDF", e)
+            if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("ReportDetailVM", "Error generating PDF", e)
             null
         }
     }

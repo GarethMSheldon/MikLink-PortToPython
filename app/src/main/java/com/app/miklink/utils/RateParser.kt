@@ -1,6 +1,7 @@
 package com.app.miklink.utils
 
 import android.util.Log
+import com.app.miklink.BuildConfig
 
 object RateParser {
     private const val TAG = "RateParser"
@@ -43,13 +44,13 @@ object RateParser {
                     // Try to extract digits
                     val digits = s.filter { it.isDigit() }
                     digits.toIntOrNull() ?: run {
-                        Log.w(TAG, "Unrecognized rate format: '$raw'")
+                        if (BuildConfig.DEBUG) Log.w(TAG, "Unrecognized rate format: '$raw'")
                         0
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse rate '$raw': ${e.message}")
+            if (BuildConfig.DEBUG) Log.w(TAG, "Failed to parse rate '$raw': ${e.message}")
             0
         }
     }

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.app.miklink.BuildConfig
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
 import com.app.miklink.R
@@ -328,9 +329,9 @@ fun SettingsScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        InfoRow(stringResource(R.string.settings_version), "1.0.0")
+                        InfoRow(stringResource(R.string.settings_version), BuildConfig.VERSION_NAME)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        InfoRow(stringResource(R.string.settings_build), "Debug")
+                        InfoRow(stringResource(R.string.settings_build), BuildConfig.BUILD_TYPE)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         InfoRow(stringResource(R.string.settings_developed_by), stringResource(R.string.settings_developer))
                     }

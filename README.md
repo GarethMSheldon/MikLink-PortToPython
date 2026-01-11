@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Branding/Miklink - WithTypo - Black.png" alt="MikLink Logo" width="300">
+  <img src="Branding/Miklink - WithTypo - White.png" alt="MikLink Logo" width="400">
 </p>
 
 <h1 align="center">MikLink</h1>

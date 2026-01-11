@@ -34,7 +34,7 @@ class LinkSectionRenderer : SectionRenderer {
             return
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = modifier.fillMaxWidth()) {
-            InfoRow(stringResource(id = R.string.detail_label_status), normalizeLinkStatus(data.status))
+            InfoRow(stringResource(id = R.string.detail_label_status), stringResource(id = normalizeLinkStatus(data.status)))
             InfoRow(stringResource(id = R.string.detail_label_speed), normalizeLinkSpeed(data.rate))
         }
     }

@@ -117,7 +117,7 @@ class HistoryViewModel @Inject constructor(
                 val report = reportRepository.getReport(reportId)
                 report?.let { reportRepository.deleteReport(it) }
             } catch (e: Exception) {
-                android.util.Log.e("HistoryViewModel", "Error deleting report", e)
+                if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("HistoryViewModel", "Error deleting report", e)
             }
         }
     }
@@ -134,7 +134,7 @@ class HistoryViewModel @Inject constructor(
                     reportRepository.saveReport(duplicate)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("HistoryViewModel", "Error duplicating report", e)
+                if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("HistoryViewModel", "Error duplicating report", e)
             }
         }
     }

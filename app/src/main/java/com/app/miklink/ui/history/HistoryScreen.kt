@@ -375,7 +375,7 @@ fun HistoryScreen(
                                 snackbarHostState.showSnackbar(noFileGeneratedMessage)
                             }
                         } catch (e: Exception) {
-                            android.util.Log.e("HistoryPDF", "Export Error", e)
+                            if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("HistoryPDF", "Export Error", e)
                             snackbarHostState.showSnackbar(
                                 String.format(Locale.getDefault(), errorPrefixTemplate, e.message ?: "")
                             )
@@ -422,7 +422,7 @@ fun HistoryScreen(
                                 snackbarHostState.showSnackbar(pdfGenerationErrorMessage)
                             }
                         } catch (e: Exception) {
-                             android.util.Log.e("HistoryPDF", "Error generating single PDF", e)
+                             if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("HistoryPDF", "Error generating single PDF", e)
                              snackbarHostState.showSnackbar(
                                  String.format(Locale.getDefault(), errorPrefixTemplate, e.message ?: "")
                              )

@@ -221,7 +221,7 @@ fun ClientListScreen(
                                                     snackbarHostState.showSnackbar("Errore generazione PDF")
                                                 }
                                             } catch (e: Exception) {
-                                                android.util.Log.e("ClientPDF", "Export error", e)
+                                                if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("ClientPDF", "Export error", e)
                                                 snackbarHostState.showSnackbar("Errore export: ${e.message}")
                                             }
                                         }

@@ -31,7 +31,7 @@ class RouteManagerImpl @javax.inject.Inject constructor() : RouteManager {
         }
 
         if (dryRun) {
-            android.util.Log.d("RouteManager", "Dry-run removeDefaultRoutes: candidates = ${candidates.map { it.id }}")
+            if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.d("RouteManager", "Dry-run removeDefaultRoutes: candidates = ${candidates.map { it.id }}")
             return
         }
 
@@ -45,12 +45,12 @@ class RouteManagerImpl @javax.inject.Inject constructor() : RouteManager {
             }
         } catch (e: Exception) {
             // rollback
-            android.util.Log.e("RouteManager", "removeDefaultRoutes failed - rolling back", e)
+            if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("RouteManager", "removeDefaultRoutes failed - rolling back", e)
             removedRoutes.forEach { r ->
                 try {
                     api.addRoute(RouteAdd(dstAddress = r.dstAddress ?: "0.0.0.0/0", gateway = r.gateway ?: "", comment = r.comment))
                 } catch (re: Exception) {
-                    android.util.Log.e("RouteManager", "Rollback failed for route ${r.id}", re)
+                    if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("RouteManager", "Rollback failed for route ${r.id}", re)
                 }
             }
             throw e

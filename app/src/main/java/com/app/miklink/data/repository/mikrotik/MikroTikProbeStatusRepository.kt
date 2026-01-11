@@ -72,7 +72,7 @@ class MikroTikProbeStatusRepository @Inject constructor(
                         }
                         outcome.getOrThrow()
                     } catch (e: Exception) {
-                        android.util.Log.w("ProbeStatusRepository", "Sonda @ ${probe.ipAddress} offline: ${e.message}")
+                        if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.w("ProbeStatusRepository", "Sonda @ ${probe.ipAddress} offline: ${e.message}")
                         false
                     }
                     listOf(ProbeStatusInfo(probe, isOnline))

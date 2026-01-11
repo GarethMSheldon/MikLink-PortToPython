@@ -355,6 +355,10 @@
     <string name="detail_label_reason">Motivo</string>
     <string name="detail_label_status">Stato</string>
     <string name="detail_label_speed">Velocita</string>
+    <string name="link_status_connected">Connesso</string>
+    <string name="link_status_disconnected">Disconnesso</string>
+    <string name="link_status_unknown">Sconosciuto</string>
+    <string name="link_status_na">N/A</string>
     <string name="detail_label_neighbors">Vicini</string>
     <string name="detail_label_identity">Identita</string>
     <string name="detail_label_protocol">Protocollo</string>

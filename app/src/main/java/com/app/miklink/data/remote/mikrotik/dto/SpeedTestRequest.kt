@@ -6,7 +6,9 @@
 package com.app.miklink.data.remote.mikrotik.dto
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 data class SpeedTestRequest(
     @param:Json(name = "address") val address: String,
     @param:Json(name = "user") val user: String,

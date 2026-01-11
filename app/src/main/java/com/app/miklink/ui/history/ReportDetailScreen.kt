@@ -277,7 +277,7 @@ fun ReportDetailScreen(
                             snackbarHostState.showSnackbar(pdfGenerationErrorMessage)
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("ReportDetailPDF", "Error generating PDF", e)
+                        if (com.app.miklink.BuildConfig.DEBUG) android.util.Log.e("ReportDetailPDF", "Error generating PDF", e)
                         snackbarHostState.showSnackbar(pdfGenerationErrorMessage)
                     }
                 }

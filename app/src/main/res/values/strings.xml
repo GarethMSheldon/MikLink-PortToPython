@@ -357,6 +357,10 @@
     <string name="detail_label_reason">Reason</string>
     <string name="detail_label_status">Status</string>
     <string name="detail_label_speed">Speed</string>
+    <string name="link_status_connected">Connected</string>
+    <string name="link_status_disconnected">Disconnected</string>
+    <string name="link_status_unknown">Unknown</string>
+    <string name="link_status_na">N/A</string>
     <string name="detail_label_neighbors">Neighbors</string>
     <string name="detail_label_identity">Identity</string>
     <string name="detail_label_protocol">Protocol</string>
