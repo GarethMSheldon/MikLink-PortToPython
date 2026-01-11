@@ -21,6 +21,7 @@
 
 ## 📸 Screenshots
 
+<div align="center">
 <table>
   <tr>
     <td align="center"><img src="screenshot/dashboard-screen.jpg" alt="Dashboard" width="200"><br><sub><b>Dashboard</b><br>Your testing hub</sub></td>
@@ -38,6 +39,7 @@
     <td align="center"><img src="screenshot/addprobe_screen.jpg" alt="Add Probe" width="200"><br><sub><b>Add Probe</b><br>Connect your MikroTik</sub></td>
   </tr>
 </table>
+</div>
 
 ---
 
@@ -283,7 +285,7 @@ MIT – Do whatever you want, you owe me nothing.
 ## 🏴 Featured By
 
 <p align="center">
-  <img src="branding/asd.gif" alt="shitworks" width="120"><br>
+  <img src="./branding/asd.gif" alt="shitworks" width="120"><br>
   <strong>shitworks</strong><br>
   <em>'cause shit always works</em>
 </p>
