@@ -1,7 +1,8 @@
-# MikLink
+# MikLink (Python CLI)
 
-A command-line cable and network diagnostics tool for MikroTik RouterOS v6.x routers.
-Connects via the native RouterOS API (port 8728), runs a full test suite, and outputs a PDF report.
+*A Python command-line port of the [MikLink Android app](https://github.com/ShitWRKS/MikLink) for RouterOS v6.x routers.*
+
+This tool is **purely inspired** by the original Android project, which turns a MikroTik RouterBoard into a cable testing probe. The Python version achieves similar functionality using the native RouterOS API (port 8728) and outputs a PDF report — no Android device required.
 
 ---
 
@@ -140,6 +141,7 @@ python miklink.py --host 192.168.88.1 --user admin --password "x" \
 ```
 
 Result example:
+
 ```
 pair1: status=link-ok    dist=-
 pair2: status=open       dist=14
@@ -184,6 +186,12 @@ A distance value is the number of metres from the router port to the fault.
 | hAP ac² (RBD52G-5HacD2HnD) | 6.47.10 |
 
 ---
+
+## Acknowledgements
+
+This Python CLI tool is **purely inspired** by the **MikLink Android app** created by **ShitWRKS**. The original Android project (for RouterOS 7.x) turns a MikroTik RouterBoard into a cable testing probe with a beautiful UI and PDF reporting. This Python version adapts the same concept for RouterOS v6.x and command-line automation.
+
+Special thanks to the original authors for proving that a €100 MikroTik can replace a $2000 Fluke tester.
 
 ## License
 
